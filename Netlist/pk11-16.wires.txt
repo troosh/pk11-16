@@ -1,0 +1,467 @@
+[                 GND]	2xBAT1 C1 C2 C3 C6 C8 C9 C10 C11 C12 C13 C14 C16 C19 C20 C21 C22 C23 C25 C26 C27 C28 C29 C30 C31 C32 C33 3xD1 2xD2 2xD3 2xD4 2xD5 3xD6 3xD7 3xD8 3xD9 D10 D11 2xD12 D13 D14 2xD15 D16 2xD17 D18 D19 2xD20 2xD21 D22 D23 D24 2xD25 2xD26 D27 D28 D29 2xD30 2xD31 2xD32 2xD33 D34 D35 D36 D37 D38 2xD39 5xD40 5xD41 6xD42 5xD43 5xD44 2xD45 2xD46 D47 4xD48 4xD49 D50 D51 D52 D53 2xD54 2xD55 2xD56 2xD57 D58 D59 2xD60 2xD61 D62 2xD63 D64 2xD65 D66 D67 2xD68 D69 R6 R13 R32 R34 R38 R41 R63 R68 RAM1 RAM2 RAM3 RAM4 RN1 RP1 VD8 VD9 VD10 VT3 3xXP1 XP2 17xXP3 4xXP4 7xXP5 16xXP6 XP7 2xXS4 2xXS5
+[            VBAT    ]	2xBAT1 R69 R70 VD12
+[            VBAT_FLT]	C29 3xD23 R69
+[             +5V    ]	C1 C4 C5 C6 C10 C13 C14 C22 C23 C26 C28 C30 C31 C32 7xD1 D2 D3 D4 D5 D6 D7 D8 D9 3xD10 3xD11 D12 D13 D14 D15 4xD16 D17 D18 D19 D20 D21 D22 D24 D25 D26 D27 D28 D29 D30 D31 D32 D33 D34 D35 D36 D37 D38 D39 D40 D41 D42 D43 D44 D45 D46 3xD47 D48 D49 D50 D51 D52 D53 D54 D55 D56 D57 D58 2xD59 D62 D63 D64 D65 D66 D67 D68 2xD69 R3 R4 R14 R15 R16 R17 R18 R20 R21 R27 R39 R42 R65 RAM1 RAM2 RAM3 RAM4 RN2 VD2 VD11 2xXP1 4xXP3 XP6 XP7 XS3 2xXS4 2xXS5
+[             +12V   ]	D18 D19 R28 XP1 XP2 2xXP3 XP4 XP6 2xXS4 2xXS5
+[             -12V   ]	D18 D19 XP1 2xXS4 2xXS5
+[             +5V_FLT]	C27 2xD60 D61 R65
+[        A00         ]	D4 D45
+[        A01         ]	D4 D16 D17 D22 D24 D25 D26 D47 D54 D59 D62 D65 D66 D67 R31 XS4 XS5
+[        A02         ]	D4 D16 D22 D24 D26 D41 D62 D67 R30 XS4 XS5
+[        A03         ]	D4 D22 D35 D41 D62 D67 R9 XS4 XS5
+[        A04         ]	D5 D22 D35 D41 D67 R29 XS4 XS5
+[        A05         ]	D5 D22 D35 D41 D67 XS4 XS5
+[        A06         ]	D5 D12 D43
+[        A07         ]	D5 D12 D43
+[        A08         ]	D4 D12 D43
+[        A09         ]	D4 D12 D43
+[        A10         ]	D4 D12 D40
+[        A11         ]	D4 D12 D37 D40
+[        A12         ]	D5 D13 D37
+[        A13         ]	D5 D6 D7 D8 D9 D13
+[        A14         ]	D5 D6 D7 D8 D9 D13
+[        A15         ]	D5 D6 D7 D8 D9 D13
+[        A12M_~A12PG7]	D13 D40
+[        A13M_~A12PG7]	D13 D40
+[              ~ACLO ]	C5 D1 R7
+[            AD00    ]	D2 D4 D8 D10 D11 D16 D17 D23 D24 D25 D26 D27 D28 D47 D57 D58 RAM3 RAM4 XS4 XS5
+[            AD01    ]	D2 D4 D8 D10 D11 D16 D17 D23 D24 D25 D26 D27 D28 D47 D57 D58 RAM3 RAM4 XS4 XS5
+[            AD02    ]	D2 D4 D8 D10 D11 D16 D17 D23 D24 D25 D26 D27 D28 D47 D57 D58 RAM1 RAM2 XS4 XS5
+[            AD03    ]	D2 D4 D8 D10 D11 D16 D17 D23 D24 D25 D26 D27 D28 D47 D57 D58 RAM1 RAM2 XS4 XS5
+[            AD04    ]	D2 D5 D9 D10 D11 D16 D17 D23 D24 D25 D26 D27 D29 D47 D57 D58 RAM1 RAM2 XS4 XS5
+[            AD05    ]	D2 D5 D9 D10 D11 D16 D17 D23 D24 D25 D26 D27 D29 D47 D57 D58 RAM1 RAM2 XS4 XS5
+[            AD06    ]	D2 D5 D7 D10 D11 D16 D17 D23 D24 D25 D26 D27 D29 D47 D57 D58 RAM3 RAM4 XS4 XS5
+[            AD07    ]	D2 D5 D7 D10 D11 D16 D17 D23 D24 D25 D26 D27 D29 D47 D57 D58 RAM3 RAM4 XS4 XS5
+[            AD08    ]	D3 D4 D6 D10 D11 D28 D45 RAM1 RAM2 RN1 XS4 XS5
+[            AD09    ]	D3 D4 D6 D10 D11 D28 D45 RAM1 RAM2 RN1 XS4 XS5
+[            AD10    ]	D3 D4 D6 D10 D11 D28 D45 RAM3 RAM4 RN1 XS4 XS5
+[            AD11    ]	D3 D4 D6 D10 D11 D28 D45 RAM3 RAM4 RN1 XS4 XS5
+[            AD12    ]	D3 D5 D7 D10 D11 D29 D45 RAM3 RAM4 RN1 XS4 XS5
+[            AD13    ]	D3 D5 D7 D10 D11 D29 D45 RAM3 RAM4 RN1 XS4 XS5
+[            AD14    ]	D3 D5 D9 D10 D11 D29 D45 RAM1 RAM2 RN1 XS4 XS5
+[            AD15    ]	D3 D5 D9 D10 D11 D29 D45 RAM1 RAM2 RN1 XS4 XS5
+[            AD00OR01]	D45 D57
+[            AD02OR03]	D45 D57
+[            AD04OR05]	D45 D57
+[            AD06OR07]	D45 D57
+[      CA0           ]	D38 D48 D49
+[      CA1           ]	D38 D48 D49
+[      CA2           ]	D38 D48 D49
+[      CA3           ]	D38 D48 D49
+[      CA4           ]	D39 D48 D49 R2
+[      CA5           ]	D39 D48 D49 R11
+[      CA6           ]	D39 D48 D49 R1
+[      CA7           ]	D39 D48 D49 R8
+[      CA8           ]	D38 D48 D49
+[      CA9           ]	D38 D48 D49
+[     ~CA14~_~A12PG7 ]	D12 D13
+[               ~CAS ]	D36 D40 D41 D42 D43 D44 D54 RAM1 RAM2 RAM3 RAM4
+[                CD00]	D49 2xD51
+[                CD01]	D49 2xD51
+[                CD02]	D49 2xD51
+[                CD03]	D49 2xD51
+[                CD04]	D49 2xD53
+[                CD05]	D49 2xD53
+[                CD06]	D49 2xD53
+[                CD07]	D49 2xD53
+[                CD08]	D48 2xD50
+[                CD09]	D48 2xD50
+[                CD10]	D48 2xD50
+[                CD11]	D48 2xD50
+[                CD12]	D48 2xD52
+[                CD13]	D48 2xD52
+[                CD14]	D48 2xD52
+[                CD15]	D48 2xD52
+[          ~CPU_AD00 ]	D1 D2
+[          ~CPU_AD01 ]	D1 D2
+[          ~CPU_AD02 ]	D1 D2
+[          ~CPU_AD03 ]	D1 D2
+[          ~CPU_AD04 ]	D1 D2
+[          ~CPU_AD05 ]	D1 D2
+[          ~CPU_AD06 ]	D1 D2
+[          ~CPU_AD07 ]	D1 D2
+[          ~CPU_AD08 ]	D1 D3
+[          ~CPU_AD09 ]	D1 D3
+[          ~CPU_AD10 ]	D1 D3
+[          ~CPU_AD11 ]	D1 D3
+[          ~CPU_AD12 ]	D1 D3
+[          ~CPU_AD13 ]	D1 D3
+[          ~CPU_AD14 ]	D1 D3
+[          ~CPU_AD15 ]	D1 D3
+[          ~CS-FL    ]	D59 D67 R71
+[          ~CS-HD    ]	D62 D67 VD6
+[          ~CS-VI53D ]	D24 D35
+[          ~CS-VI53L ]	D16 D35
+[          ~CS-VN59  ]	D35 D47
+[          ~CS-VV51  ]	D17 D22
+[          ~CS-VV55  ]	D22 D26
+[          ~CS-VV79  ]	D22 D25
+[                CSYN]	R40 XP4
+[              ~CWR0 ]	D36 D49
+[              ~CWR1 ]	D36 D48
+[           DAC_BLUE ]	R44 R45 R47 R48 R49 XP4
+[          ~DAC_EN   ]	D46 D50 D51 D52 D53 D56
+[           DAC_GREEN]	R52 R53 R56 R57 R58 R59 XP4
+[           DAC_IB0  ]	D51 R49
+[           DAC_IB1  ]	D51 R45
+[           DAC_IB2  ]	D51 R47
+[           DAC_IB3  ]	D50 R48
+[           DAC_IB4  ]	D50 R44
+[           DAC_IG0  ]	D53 R57
+[           DAC_IG1  ]	D53 R53
+[           DAC_IG2  ]	D53 R59
+[           DAC_IG3  ]	D52 R56
+[           DAC_IG4  ]	D52 R52
+[           DAC_IG5  ]	D52 R58
+[           DAC_IR0  ]	D51 R51
+[           DAC_IR1  ]	D53 R55
+[           DAC_IR2  ]	D50 R46
+[           DAC_IR3  ]	D50 R50
+[           DAC_IR4  ]	D52 R54
+[           DAC_RED  ]	R46 R50 R51 R54 R55 XP4
+[                 DB0]	D58 D59 D61 D62 D65
+[                 DB1]	D58 D59 D61 D62 D65
+[                 DB2]	D58 D59 D61 D62 D66
+[                 DB3]	D58 D59 D61 D62 D66
+[                 DB4]	D58 D59 D61 D62 D65
+[                 DB5]	D58 D59 D61 D62
+[                 DB6]	D58 D59 D61 D62
+[                 DB7]	D58 D59 D61 D62
+[              ~DCLO ]	D1 D23 D62 R3 R7 VT2
+[               ~DIN ]	D1 D10 D11 D13 D55 R10
+[                 DIR]	D64 XP3 XP6
+[              ~DOUT ]	D1 D21 D37 D55
+[                 EF0]	D26 D37
+[                 EF1]	D26 D37
+[               F0SEL]	D66 XP3 XP6
+[               F1SEL]	D66 XP3 XP6
+[           ~FL-DACK ]	D59 D67
+[            FL-DRQ  ]	C4 D59 R26
+[            FL-DW   ]	D59 D62 D63
+[            FL-IDX  ]	D59 D62 D66
+[            FL-PS0  ]	D59 D64
+[            FL-PS1  ]	D59 D64
+[            FL-RDD  ]	C18 D59 D62 D64
+[           ~FL-RD   ]	D58 D59 D62 D67
+[            FL-WE   ]	D59 D64
+[            FL-WRCLK]	D59 D63
+[           ~FL-WR   ]	D59 D62 D67
+[            FLT/TRK0]	D59 D62 D66
+[              FR/STP]	D59 D66
+[              ~HALT ]	D1 D37
+[           ~HD-BCS  ]	D62 D65 D67
+[            HD-BDRQ ]	2xD62 D65
+[            HD-DIR  ]	D62 D64
+[            HD-DRDY ]	D62 D64 R19
+[            HD-DRUN ]	D62 D63
+[            HD-STEP ]	D62 D66
+[            HD-WRCLK]	2xD62 D63
+[            HD-WRD  ]	D62 D63 R20
+[            HD-WRG  ]	D62 D64
+[            HDBUFA00]	D60 D61
+[            HDBUFA01]	D60 D61
+[            HDBUFA02]	D60 D61
+[            HDBUFA03]	2xD60 D61
+[            HDBUFA04]	D60 D61
+[            HDBUFA05]	D60 D61
+[            HDBUFA06]	D60 D61
+[            HDBUFA07]	C15 D60 D61 D65
+[            HDBUFA08]	D61 D65
+[            HDBUFA09]	D61 D65
+[            HDBUFA10]	C17 D61 D65
+[           ~HDBUFCS ]	D60 D61 D67
+[                 HN0]	D65 XP3 XP6
+[                 HN1]	D63 D65 XP3 XP6
+[                 HN2]	D66 XP3 XP6
+[                IHLT]	2xD26 D37
+[                -IND]	D66 R16 XP3 XP6
+[           INT0-INIT]	D1 D47
+[           INT1-DSKS]	D47 R66 VD7
+[           INT2-RX  ]	D17 D47
+[           INT3-TX  ]	D17 D47
+[           INT4-KBD ]	D25 D47
+[           INT5-RTC ]	D23 D47
+[           INT6-SLOT]	D47 XS4 XS5
+[           INT7-SLOT]	D47 XS4 XS5
+[               IOINT]	D26 D37 D47
+[               ~IOR ]	D6 D7 D8 D9 D13 D16 D17 D24 D25 D26 D35 D47 D67 XS4 XS5
+[               ~IOW ]	D16 D17 D23 D24 D25 D26 D27 D35 D37 D47 D67 XS4 XS5
+[          ~LPT-ACK  ]	D26 RN2 XP5
+[           LPT-BUSY ]	D26 RN2 XP5
+[          ~LPT-ERR  ]	D26 RN2 XP5
+[          ~LPT-PAFD ]	D22 XP5
+[           LPT-PE   ]	D26 RN2 XP5
+[          ~LPT-PRST ]	D22 XP5
+[          ~LPT-PSEL ]	D22 XP5
+[          ~LPT-PSTB ]	D22 XP5
+[             LST/DIR]	D59 D64
+[              MA0   ]	D54 RAM1 RAM2 RAM3 RAM4
+[              MA1   ]	D43 D44 RAM1 RAM2 RAM3 RAM4
+[              MA2   ]	D43 D44 RAM1 RAM2 RAM3 RAM4
+[              MA3   ]	D43 D44 RAM1 RAM2 RAM3 RAM4
+[              MA4   ]	D43 D44 RAM1 RAM2 RAM3 RAM4
+[              MA5   ]	D40 D41 RAM1 RAM2 RAM3 RAM4
+[              MA6   ]	D40 D41 RAM1 RAM2 RAM3 RAM4
+[              MA7   ]	D40 D41 RAM1 RAM2 RAM3 RAM4
+[              MA8   ]	D40 D41 RAM1 RAM2 RAM3 RAM4
+[             MASK_M0]	D21 D45
+[             MASK_M1]	D21 D45
+[             ~MA_HI ]	D40 D44 D54
+[             ~MA_LO ]	D41 D43 D54
+[                MD00]	D28 D30 D41 D42 RAM3 RAM4
+[                MD01]	D28 D30 D41 D42 RAM3 RAM4
+[                MD02]	D28 D30 D41 D42 RAM1 RAM2
+[                MD03]	D28 D30 D41 D42 RAM1 RAM2
+[                MD04]	D14 D29 D33 D43 RAM1 RAM2
+[                MD05]	D14 D29 D33 D43 RAM1 RAM2
+[                MD06]	D14 D29 D33 D43 RAM3 RAM4
+[                MD07]	D14 D29 D33 D43 RAM3 RAM4
+[                MD08]	D14 D28 D31 D40 RAM1 RAM2
+[                MD09]	D14 D28 D31 D40 RAM1 RAM2
+[                MD10]	D28 D31 D40 D68 RAM3 RAM4
+[                MD11]	D28 D31 D40 D68 RAM3 RAM4
+[                MD12]	D29 D32 D44 D68 RAM3 RAM4
+[                MD13]	D29 D32 D44 D68 RAM3 RAM4
+[                MD14]	D29 D32 D44 D68 RAM1 RAM2
+[                MD15]	D14 D29 D32 D44 RAM1 RAM2
+[              MMBA12]	D9 D13
+[              MMBA13]	D9 D13
+[              MMBA14]	D7 D12
+[              MMBA15]	D7 D12
+[              MMBA16]	D6 D12
+[              MMBA17]	D6 D12
+[              MMBA18]	D6 D12
+[              MMBA19]	D6 D12
+[              MMBA20]	D7 D12
+[              MMBA21]	D7 D12
+[              MMBANK]	D6 D7 D8 D9 D10 D11 D13 D37
+[              MMPDIS]	D8 D55
+[               MMRA1]	D6 D7 D8 D9 D37 R31
+[               MMRA2]	D6 D7 D8 D9 D37 R30
+[               MMRA3]	D6 D7 D8 D9 D13 R9
+[               MMRA4]	D6 D7 D8 D9 D37 R29
+[              MMWM2B]	D8 D21
+[              MMWM4B]	D8 D21
+[                MSD0]	D26 RN2 XP7
+[                MSD1]	D26 RN2 XP7
+[                MSD2]	D26 RN2 XP7
+[                MSD3]	D26 RN2 XP7
+[                MSLK]	D26 RN2 XP7
+[                MSRK]	D26 XP7
+[                MSTB]	D26 XP7
+[                +MWD]	R38 R39 XP3
+[                -MWD]	D63 XP3 XP6
+[            NET00000]	C11 L1 R12
+[            NET00001]	C15 2xD60 D65 D66 D67
+[            NET00002]	2xD63 D64 R12
+[            NET00003]	C18 R72
+[            NET00004]	C12 C19 C33 D64 L1 R72
+[            NET00005]	D64 R13 VD14
+[            NET00006]	D63 D64
+[            NET00007]	D14 D15
+[            NET00008]	C20 D63 D64
+[            NET00009]	C21 D63 D64
+[            NET00010]	D14 D15
+[            NET00011]	D59 D63
+[            NET00012]	C16 2xD65
+[            NET00013]	D17 D35
+[            NET00016]	D59 D65
+[            NET00017]	D61 D67
+[            NET00018]	D17 D18
+[            NET00019]	C25 D67 R26
+[            NET00021]	C17 D59 R41
+[            NET00022]	D58 R71 VD6
+[            NET00023]	D59 R19
+[            NET00024]	D17 D18
+[            NET00025]	D17 R35 VD8
+[            NET00026]	D17 R67 VD10
+[            NET00027]	D17 D35
+[            NET00028]	D35 R33 VD9
+[            NET00031]	C3 D35 R27
+[            NET00032]	2xD19 D35
+[            NET00033]	D16 D24
+[            NET00034]	D16 D24
+[            NET00035]	D23 D35 R22
+[            NET00036]	C7 D23 R70
+[            NET00037]	BQ1 C9 D23 R74
+[            NET00038]	BQ1 C8 R74 2xRP2
+[            NET00039]	D23 RP2
+[            NET00040]	R28 VD11 VD12
+[            NET00041]	D24 R62
+[            NET00042]	D24 R60
+[            NET00043]	D24 R61
+[            NET00044]	C24 R60 R61 R62
+[            NET00045]	C24 R63 R64 VT3
+[            NET00046]	R64 VT3 XS3
+[            NET00047]	RP1 VD2
+[            NET00048]	R5 RP1
+[            NET00049]	C2 R5 VT1
+[            NET00050]	R4 VT1 VT2
+[            NET00051]	R6 VT1 VT2
+[            NET00052]	D20 D25
+[            NET00053]	D20 D25
+[            NET00054]	D20 D25
+[            NET00056]	D2 D3 R10 VD1
+[            NET00057]	D22 D27
+[            NET00058]	BQ2 R23
+[            NET00059]	BQ2 D54 D55 R25
+[            NET00060]	2xD54 D55 R23
+[            NET00061]	D55 R25
+[            NET00062]	D56 R24 R40
+[            NET00063]	D34 D54 D69
+[            NET00064]	D54 R24 VD13
+[            NET00065]	D41 D43
+[            NET00066]	D40 D43
+[            NET00067]	D40 D44
+[            NET00068]	D42 D44
+[            NET00069]	D62 R66
+[            NET00070]	D59 VD7
+[            NET00071]	XS4 XS5
+[            NET00072]	XS4 XS5
+[            NET00073]	XS4 XS5
+[            NET00074]	D14 D15
+[            NET00075]	D14 D15
+[            NET00076]	D14 D15
+[            NET00077]	D14 D15
+[            NET00078]	D14 D15
+[            NET00079]	R32 R33 XP2
+[            NET00080]	2xD19 XP2
+[            NET00081]	D18 XP2
+[            NET00082]	R34 R35 XP2
+[            NET00083]	D18 XP2
+[            NET00084]	R67 R68 XP2
+[            NET00097]	D20 XS1
+[            NET00098]	D20 XS1
+[            NET00099]	D20 XS1
+[            NET00100]	D20 XS1
+[            NET00101]	D20 XS1
+[            NET00102]	D20 XS1
+[            NET00103]	D20 XS1
+[            NET00104]	D20 2xXS1
+[            NET00109]	D39 D68
+[                OUT1]	D16 2xD17 D24
+[               P2-15]	D6 D7 D8 D9 D37
+[                PAFD]	D22 D26
+[                 PD0]	D27 XP5
+[                 PD1]	D27 XP5
+[                 PD2]	D27 XP5
+[                 PD3]	D27 XP5
+[                 PD4]	D27 XP5
+[                 PD5]	D27 XP5
+[                 PD6]	D27 XP5
+[                 PD7]	D27 XP5
+[              PF_PB ]	D15 D21 D38 D39
+[              PF_PN0]	D15 D38 D39
+[              PF_PN1]	D15 D39
+[              PF_VD0]	D15 D21 D46
+[              PF_VD1]	D15 D21 D46
+[              PF_VN0]	D15 D21 D34 D38 D39
+[              PF_VN1]	D15 D21 D38 D39
+[               ~PG7 ]	D12 D13 D37
+[      PHA14/&O1612XX]	D6 D7 D8 D9 D12 D37 D44
+[      PHA15/&O1614XX]	D12 D44 R22
+[      PHA16/&O1611XX]	D12 D44 XS4 XS5
+[      PHA17/&O1610XX]	D12 D22 D35 D44 D67
+[      PHA18/&O1615XX]	D12 D42 XS4 XS5
+[      PHA19/&O1613XX]	D12 D42 XS4 XS5
+[      PHA20/&O161XXX]	D12 D35 D42
+[      PHA21_IOHWH   ]	D12 D13 D42
+[                PRST]	D22 D26
+[                PSEL]	D22 D26
+[                PSTB]	D22 D26
+[           ~RAM-RD  ]	2xD28 2xD29 D55
+[           ~RAM_SEL ]	D13 D37 D55
+[              ~RAS0 ]	D36 D55 RAM1 RAM2 RAM3 RAM4
+[              ~RAS1 ]	D36 RAM1 RAM2 RAM3 RAM4
+[              ~RAS2 ]	D36 RAM1 RAM2 RAM3 RAM4
+[              ~RAS3 ]	D55 RAM1 RAM2 RAM3 RAM4
+[                 RDD]	R14 VD14 XP3 XP6
+[                 RDY]	D64 R15 XP3 XP6
+[               RL001]	D25 VD3 VD4 XS2
+[               RL002]	D25 VD3 VD5 XS2
+[               RL003]	VD3 XS2
+[               RL004]	D25 VD4 VD5 XS2
+[               RL005]	VD4 XS2
+[               RL006]	VD5 XS2
+[               RL010]	D25 XS2
+[               RL020]	D25 XS2
+[               RL040]	D25 XS2
+[               RL100]	D25 2xXS2
+[               RL200]	D25 XS2
+[              ~RPLY ]	D1 D10 D11 D35 D55 R21 XS4 XS5
+[            RTC-KICK]	C7 D26 R42
+[                 RUN]	D65 XP3 XP6
+[          ~RW~/SEEK ]	D59 D66
+[             RXD_INV]	D26 D35
+[               ~SEL ]	D1 D13
+[            SHIFT_M0]	D21 D34
+[            SHIFT_M1]	D21 D34
+[                SLCT]	D26 XP5
+[          ~SQ_FE    ]	D40 D41 D42 D43 D44 D46
+[           SQ_PUP_CI]	D40 2xD41 D42 D43 D44 D46
+[           SQ_S0    ]	D40 D41 D42 D43 D44 D46
+[           SQ_S1    ]	D40 D41 D42 D43 D44 D46
+[          ~SQ_ZA    ]	D40 D41 D42 D43 D44 D46
+[                STEP]	D66 XP3 XP6
+[             ~SYNC2 ]	D4 D5 D10 D11 D69 XS4 XS5
+[             ~SYNC  ]	2xD1 D13 D23 D37 2xD69 VD1
+[               TR000]	D66 R18 XP3 XP6
+[                USEL]	D63 D64 D66 XP3 XP6
+[               V6-19]	D36 D68
+[               V8-12]	D46 D68
+[               V8-13]	D21 D38 D68
+[               VA-F2]	D21 D39
+[               VA0  ]	D34 D38 R43
+[               VA1  ]	D34 D38 R73
+[               VA2  ]	D34 D38 R36
+[               VA3  ]	D34 D38 R37
+[                 VD0]	D30 D31 D34 D50 D51
+[                 VD1]	D30 D31 D34 D50 D51
+[                 VD2]	D30 D31 D34 D50 D51
+[                 VD3]	D30 D31 D34 D50 D51
+[                 VD4]	D32 D33 D34 D52 D53 R2
+[                 VD5]	D32 D33 D34 D52 D53 R11
+[                 VD6]	D32 D33 D34 D52 D53 R1
+[                 VD7]	D32 D33 D34 D52 D53 R8
+[              ~VIRQ ]	D1 D26
+[            ~VPTRHL ]	D14 D42 D46 D68
+[            ~VPTRLL ]	D40 D41 D43 D44 D46 D68
+[       ~VRF2CLUT_OE ]	D36 D46 D50 D51 D52 D53
+[       ~VRF_A0      ]	D21 D30 D31 D32 D33
+[       ~VRF_RD_HI   ]	D21 D31 D32
+[       ~VRF_RD_LO   ]	D21 D30 D33
+[       ~VRF_WR      ]	D30 D31 D32 D33 D36
+[               VSYNC]	D21 D34 D38 D39 D46 D56 VD13
+[              VU1-Y0]	D42 D54
+[              VU1-Y1]	D42 D55
+[              VU1-Y2]	D42 D55
+[              VU1-Y3]	D36 D42
+[          ~WE_00_01 ]	D45 RAM3 RAM4
+[          ~WE_02_03 ]	D45 RAM1 RAM2
+[          ~WE_04_05 ]	D45 RAM1 RAM2
+[          ~WE_06_07 ]	D45 RAM3 RAM4
+[          ~WE_08_09 ]	D45 RAM1 RAM2
+[          ~WE_10_11 ]	D45 RAM3 RAM4
+[          ~WE_12_13 ]	D45 RAM3 RAM4
+[          ~WE_14_15 ]	D45 RAM1 RAM2
+[                  WG]	D63 D64 XP3 XP6
+[               WP   ]	D66 R17 XP3 XP6
+[               WP/TS]	D59 D62 D66
+[              ~WTBT ]	D1 D45 XS4 XS5
+[         X0-8MHZ    ]	D1 D21 D36 D54 D55
+[        ~X1-4MHZ    ]	D21 D30 D31 D32 D33 D36 D46 D54 D55
+[        ~X2-2MHZ    ]	D15 3xD16 D17 D21 3xD24 D25 D36 D46 D54 D55 R43
+[        ~X3-1MHZ    ]	D14 D21 D30 D31 D32 D33 D36 D46 D54 D55 R73
+[        ~X4-500KHZ  ]	D21 D46 D54 D56 R36
+[        ~X5-250KHZ  ]	D21 D39 D46 D54 D56 R37
+[        ~X6-125HZ   ]	D39 D46 D56
+[        ~X7-62500HZ ]	D39 D46 D56
+[        ~X8-31250HZ ]	D39 D56
+[        ~X9-15625HZ ]	D39 2xD56
+[                 Y0 ]	D36 D46 D56
+[                ~Y1 ]	D38 D46 D56
+[                ~Y2 ]	D38 D46 D56
+[                ~Y3 ]	D46 D56
+[                ~Y4 ]	D56 D57
+[                ~Y5 ]	D56 D57
+[                ~Y8 ]	D56 D57

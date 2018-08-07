@@ -1,0 +1,35 @@
+[                 +5V]	C1 C2 C3 D1 D2 D3 D4 D5 D6 D7 D8 XP1
+[                  A0]	D1 D2 D3 D4 D5 D6 D7 D8 XP1
+[                  A1]	D1 D2 D3 D4 D5 D6 D7 D8 XP1
+[                  A2]	D1 D2 D3 D4 D5 D6 D7 D8 XP1
+[                  A3]	D1 D2 D3 D4 D5 D6 D7 D8 XP1
+[                  A4]	D1 D2 D3 D4 D5 D6 D7 D8 XP1
+[                  A5]	D1 D2 D3 D4 D5 D6 D7 D8 XP1
+[                  A6]	D1 D2 D3 D4 D5 D6 D7 D8 XP1
+[                  A7]	D1 D2 D3 D4 D5 D6 D7 D8 XP1
+[                  A8]	D1 D2 D3 D4 D5 D6 D7 D8 XP1
+[               ~CAS ]	D1 D2 D3 D4 D5 D6 D7 D8 R1
+[                 DI0]	D1 XP1
+[                 DI1]	D2 XP1
+[                 DI2]	D3 XP1
+[                 DI3]	D4 XP1
+[                 DI4]	D5 XP1
+[                 DI5]	D6 XP1
+[                 DI6]	D7 XP1
+[                 DI7]	D8 XP1
+[                 DO0]	D1 XP1
+[                 DO1]	D2 XP1
+[                 DO2]	D3 XP1
+[                 DO3]	D4 XP1
+[                 DO4]	D5 XP1
+[                 DO5]	D6 XP1
+[                 DO6]	D7 XP1
+[                 DO7]	D8 XP1
+[                 GND]	C1 C2 C3 D1 D2 D3 D4 D5 D6 D7 D8 XP1
+[            NET00005]	R2 4xXP1
+[            NET00103]	R1 XP1
+[               ~RAS ]	D1 D2 D3 D4 D5 D6 D7 D8 R2
+[            ~WE_0_1 ]	D1 D2 XP1
+[            ~WE_2_3 ]	D3 D4 XP1
+[            ~WE_4_5 ]	D5 D6 XP1
+[            ~WE_6_7 ]	D7 D8 XP1
