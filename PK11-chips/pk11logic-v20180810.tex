@@ -1,0 +1,863 @@
+\documentclass[a4paper,russian]{report}
+\usepackage[a4paper,margin=1cm,bottom=2cm]{geometry}
+\setcounter{secnumdepth}{3}\setcounter{tocdepth}{3}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{indentfirst}
+\usepackage{paralist}
+\usepackage{titlesec}
+\usepackage{tabularx}
+ \makeatletter
+ \let\tx@\TX@endtabularx
+ \def\restoretx{\let\TX@endtabularx\tx@}
+ \makeatother
+\usepackage{ltablex}
+ \newcolumntype{L}{>{\raggedright\arraybackslash}X}
+ \newcolumntype{C}{>{\centering\arraybackslash}X}
+ \newcolumntype{R}{>{\raggedleft\arraybackslash}X}
+\usepackage{refcount}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage[colorlinks=true,linkcolor=blue]{hyperref}
+ \usepackage{underscore}
+\usepackage{makecell}
+
+\sloppy
+\emergencystretch=10em
+\hyphenpenalty=10000
+\exhyphenpenalty=10000
+
+\titleformat{\chapter}[display]
+ {\normalfont\bfseries}{}{0pt}{\Large}\begin{document}
+
+Индекс у переменных -- номер вывода в корпусе соответствующей микросхемы!   (v20180810)
+
+Если переменная начинается с \emph{I}... то вывод используется только как вход,
+если начинается с \emph{O}... -- то это выход (но может быть использован также
+и как вход в логических выражениях), если же начинается с \emph{RF}... --
+то это выход с защелкой (который также может быть использован и как вход).
+
+Логические выражения, использующие вход \emph{OE} микросхем, удалены (за исключение
+микросхемы \emph{VB}, где данный вход реально используется, т.е. не посажен на землю). \\
+
+1) Микросхема: \emph{PAL16R4/V1/km1556hp4-v1  (3a18d7ec.jed)}, альтернативных дампов: 12
+\nopagebreak\begin{eqnarray*}
+    \overline{O_{12}} & = & \overline{I_{2}} \cdotp \overline{I_{5}} \cdotp \overline{I_{9}} \cdotp RF_{14} \cdotp RF_{15} \cdotp \overline{RF_{16}} \cdotp RF_{17} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{6}} \cdotp \overline{I_{9}} \cdotp RF_{14} \cdotp RF_{15} \cdotp \overline{RF_{16}} \cdotp RF_{17} + \\
+	& &  \overline{I_{4}} \cdotp \overline{RF_{14}} \cdotp RF_{15} \cdotp \overline{RF_{16}} + \\
+	& &  \overline{O_{12}} \cdotp RF_{15} + \\
+	& &  \overline{O_{12}} \cdotp RF_{16} + \\
+	& &  \overline{O_{12}} \cdotp \overline{RF_{17}} + \\
+	& &  I_{4} \cdotp \overline{O_{12}} \\
+    \overline{O_{13}} & = & \overline{I_{7}} \cdotp RF_{14} \cdotp RF_{15} \cdotp \overline{RF_{16}} + \\
+	& &  \overline{I_{7}} \cdotp \overline{RF_{14}} \cdotp RF_{15} \cdotp RF_{16} \cdotp RF_{17} + \\
+	& &  \overline{I_{7}} \cdotp \overline{RF_{14}} \cdotp RF_{15} \cdotp \overline{RF_{16}} \cdotp \overline{RF_{17}} + \\
+	& &  \overline{I_{8}} \cdotp RF_{14} \cdotp \overline{RF_{15}} \cdotp RF_{16} + \\
+	& &  \overline{I_{8}} \cdotp \overline{RF_{14}} \cdotp RF_{15} \cdotp \overline{RF_{16}} \cdotp RF_{17} + \\
+	& &  \overline{I_{8}} \cdotp \overline{RF_{14}} \cdotp \overline{RF_{15}} + \\
+	& &  I_{4} \cdotp \overline{O_{13}} \\
+    \overline{RF_{14}} & := & RF_{14} \cdotp \overline{RF_{15}} \cdotp \overline{RF_{16}} \cdotp RF_{17} + \\
+	& &  \overline{RF_{14}} \cdotp RF_{15} + \\
+	& &  \overline{RF_{14}} \cdotp RF_{16} + \\
+	& &  \overline{RF_{14}} \cdotp \overline{RF_{17}} \\
+    \overline{RF_{15}} & := & RF_{15} \cdotp \overline{RF_{16}} \cdotp RF_{17} + \\
+	& &  \overline{RF_{15}} \cdotp RF_{16} + \\
+	& &  \overline{RF_{15}} \cdotp \overline{RF_{17}} \\
+    \overline{RF_{16}} & := & RF_{16} \cdotp RF_{17} + \\
+	& &  \overline{RF_{16}} \cdotp \overline{RF_{17}} \\
+    \overline{RF_{17}} & := & RF_{17} \\
+    \overline{O_{18}} & = & \overline{I_{2}} \cdotp \overline{I_{4}} \cdotp \overline{I_{5}} \cdotp \overline{O_{12}} \cdotp RF_{14} \cdotp \overline{RF_{15}} \cdotp \overline{RF_{16}} \cdotp \overline{RF_{17}} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{6}} \cdotp \overline{O_{12}} \cdotp RF_{14} \cdotp \overline{RF_{15}} \cdotp \overline{RF_{16}} \cdotp \overline{RF_{17}} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{5}} \cdotp \overline{O_{18}} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{6}} \cdotp \overline{O_{18}} \\
+    O_{18}.OE & = & \overline{I_{2}} \cdotp \overline{I_{9}} \\ \\
+    \overline{O_{19}} & = & \overline{I_{2}} \cdotp \overline{I_{5}} \cdotp \overline{I_{9}} \cdotp \overline{O_{12}} \cdotp RF_{14} \cdotp \overline{RF_{15}} \cdotp \overline{RF_{16}} \cdotp \overline{RF_{17}} \cdotp \overline{O_{18}} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{5}} \cdotp \overline{I_{9}} \cdotp \overline{O_{19}} \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+
+2) Микросхема: \emph{PAL16R4/V2/km1556hp4-v2.3  (478ed276.jed)}, альтернативных дампов: 6
+\nopagebreak\begin{eqnarray*}
+    \overline{O_{12}} & = & \overline{I_{8}} \cdotp \overline{RF_{14}} + \\
+	& &  I_{7} \cdotp \overline{I_{9}} \cdotp \overline{RF_{15}} + \\
+	& &  I_{4} \cdotp \overline{I_{5}} \cdotp I_{6} \cdotp \overline{I_{7}} + \\
+	& &  I_{5} \cdotp \overline{I_{6}} \cdotp \overline{I_{7}} \\
+    \overline{O_{13}} & = & \overline{I_{2}} \\
+    \overline{RF_{14}} & := & I_{4} \cdotp \overline{I_{5}} \cdotp \overline{I_{6}} \cdotp \overline{I_{7}} + \\
+	& &  I_{5} \cdotp I_{6} \cdotp I_{7} + \\
+	& &  I_{3} \cdotp \overline{I_{5}} \cdotp \overline{I_{6}} \cdotp I_{7} + \\
+	& &  I_{3} \cdotp I_{5} \cdotp I_{6} \cdotp \overline{I_{7}} + \\
+	& &  \overline{I_{5}} \cdotp I_{6} \cdotp I_{7} \\
+    \overline{RF_{15}} & := & I_{4} \cdotp \overline{I_{5}} \cdotp I_{6} \cdotp I_{7} + \\
+	& &  I_{5} \cdotp \overline{I_{6}} \cdotp I_{7} + \\
+	& &  I_{3} \cdotp \overline{I_{5}} \cdotp I_{6} \cdotp \overline{I_{7}} + \\
+	& &  I_{3} \cdotp I_{4} \cdotp I_{5} \cdotp \overline{I_{6}} \cdotp \overline{I_{7}} + \\
+	& &  \overline{I_{3}} \cdotp I_{5} \cdotp I_{6} \cdotp \overline{I_{7}} \\
+    \overline{RF_{16}} & := & I_{4} \cdotp \overline{I_{5}} \cdotp \overline{I_{6}} \cdotp \overline{I_{7}} \cdotp RF_{16} + \\
+	& &  I_{7} \cdotp \overline{RF_{16}} + \\
+	& &  I_{6} \cdotp \overline{RF_{16}} + \\
+	& &  I_{5} \cdotp \overline{RF_{16}} + \\
+	& &  \overline{I_{4}} \cdotp \overline{RF_{16}} \\
+    \overline{RF_{17}} & := & I_{4} \cdotp \overline{I_{5}} \cdotp \overline{I_{6}} \cdotp \overline{I_{7}} \cdotp \overline{RF_{16}} \cdotp RF_{17} + \\
+	& &  RF_{16} \cdotp \overline{RF_{17}} + \\
+	& &  I_{7} \cdotp \overline{RF_{17}} + \\
+	& &  I_{6} \cdotp \overline{RF_{17}} + \\
+	& &  I_{5} \cdotp \overline{RF_{17}} + \\
+	& &  \overline{I_{4}} \cdotp \overline{RF_{17}} \\
+    \overline{O_{18}} & = & I_{4} \cdotp I_{5} \cdotp \overline{I_{6}} \cdotp I_{7} + \\
+	& &  \overline{I_{2}} \cdotp I_{3} \cdotp I_{4} \cdotp \overline{I_{5}} \cdotp I_{6} \cdotp \overline{I_{7}} + \\
+	& &  I_{3} \cdotp \overline{I_{4}} \cdotp \overline{I_{5}} \cdotp \overline{I_{6}} \cdotp \overline{I_{7}} \cdotp \overline{O_{19}} + \\
+	& &  \overline{I_{3}} \cdotp I_{4} \cdotp I_{5} \cdotp I_{6} \cdotp \overline{I_{7}} + \\
+	& &  \overline{RF_{15}} \cdotp \overline{O_{18}} + \\
+	& &  I_{2} \cdotp I_{4} \cdotp \overline{I_{5}} \cdotp \overline{O_{18}} + \\
+	& &  I_{3} \cdotp \overline{I_{4}} \cdotp I_{5} \cdotp \overline{I_{6}} \cdotp \overline{I_{7}} \\
+    \overline{O_{19}} & = & I_{2} \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+
+3) Микросхема: \emph{PAL16R6/V3/km1556hp6-v3.4  (c29d7927.jed)}, альтернативных дампов: 4
+\nopagebreak\begin{eqnarray*}
+    \overline{O_{12}} & = & I_{2} \cdotp I_{3} \cdotp I_{5} \cdotp I_{6} \cdotp I_{9} + \\
+	& &  I_{2} \cdotp I_{4} \cdotp I_{5} \cdotp I_{6} \cdotp I_{9} + \\
+	& &  I_{2} \cdotp I_{5} \cdotp I_{6} \cdotp I_{9} \cdotp RF_{15} \cdotp RF_{18} + \\
+	& &  I_{2} \cdotp I_{5} \cdotp I_{6} \cdotp I_{9} \cdotp RF_{14} \cdotp \overline{RF_{15}} \cdotp RF_{18} + \\
+	& &  I_{2} \cdotp \overline{O_{12}} + \\
+	& &  I_{6} \cdotp \overline{O_{12}} + \\
+	& &  I_{9} \cdotp \overline{O_{12}} \\
+    \overline{RF_{13}} & := & RF_{13} \\
+    \overline{RF_{14}} & := & RF_{13} \cdotp RF_{14} \cdotp \overline{RF_{16}} + \\
+	& &  \overline{RF_{14}} \cdotp RF_{16} + \\
+	& &  \overline{RF_{13}} \cdotp \overline{RF_{14}} \\
+    \overline{RF_{15}} & := & I_{3} \cdotp RF_{13} \cdotp \overline{RF_{14}} \cdotp RF_{15} \cdotp \overline{RF_{16}} + \\
+	& &  I_{4} \cdotp RF_{13} \cdotp \overline{RF_{14}} \cdotp RF_{15} \cdotp \overline{RF_{16}} + \\
+	& &  RF_{13} \cdotp \overline{RF_{14}} \cdotp RF_{15} \cdotp \overline{RF_{16}} \cdotp RF_{18} + \\
+	& &  RF_{14} \cdotp \overline{RF_{15}} + \\
+	& &  \overline{RF_{15}} \cdotp RF_{16} + \\
+	& &  \overline{RF_{13}} \cdotp \overline{RF_{15}} \\
+    \overline{RF_{16}} & := & RF_{13} \cdotp RF_{16} + \\
+	& &  \overline{RF_{13}} \cdotp \overline{RF_{16}} \\
+    \overline{RF_{17}} & := & \overline{I_{3}} \cdotp \overline{I_{4}} \cdotp RF_{13} \cdotp \overline{RF_{14}} \cdotp RF_{15} \cdotp \overline{RF_{16}} \cdotp \overline{RF_{18}} + \\
+	& &  I_{4} \cdotp \overline{RF_{17}} + \\
+	& &  I_{3} \cdotp \overline{RF_{17}} + \\
+	& &  RF_{15} \cdotp \overline{RF_{17}} + \\
+	& &  RF_{14} \cdotp \overline{RF_{17}} \\
+    \overline{RF_{18}} & := & RF_{13} \cdotp \overline{RF_{14}} \cdotp \overline{RF_{15}} \cdotp \overline{RF_{16}} \cdotp RF_{18} + \\
+	& &  I_{3} \cdotp RF_{15} \cdotp \overline{RF_{18}} + \\
+	& &  I_{4} \cdotp RF_{15} \cdotp \overline{RF_{18}} + \\
+	& &  RF_{14} \cdotp \overline{RF_{18}} + \\
+	& &  RF_{16} \cdotp \overline{RF_{18}} + \\
+	& &  \overline{RF_{13}} \cdotp \overline{RF_{18}} \\
+    \overline{O_{19}} & = & \overline{I_{2}} \cdotp I_{5} \cdotp \overline{I_{6}} \cdotp \overline{I_{7}} \cdotp I_{8} \cdotp \overline{I_{9}} + \\
+	& &  \overline{I_{2}} \cdotp I_{5} \cdotp \overline{I_{6}} \cdotp \overline{I_{9}} \cdotp \overline{O_{19}} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{5}} \cdotp \overline{I_{6}} \cdotp I_{8} \cdotp I_{9} \cdotp \overline{O_{19}} + \\
+	& &  I_{2} \cdotp \overline{O_{19}} + \\
+	& &  I_{6} \cdotp \overline{O_{19}} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{3}} \cdotp \overline{I_{4}} \cdotp \overline{I_{5}} \cdotp \overline{I_{6}} \cdotp RF_{13} \cdotp \overline{RF_{14}} \cdotp \overline{RF_{15}} \cdotp RF_{16} \cdotp RF_{18} \cdotp \overline{O_{19}} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{3}} \cdotp \overline{I_{4}} \cdotp \overline{I_{5}} \cdotp \overline{I_{6}} \cdotp \overline{RF_{14}} \cdotp \overline{RF_{15}} \cdotp \overline{RF_{16}} \cdotp RF_{18} \cdotp \overline{O_{19}} \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+
+4) Микросхема: \emph{PAL16R4/V4/neon1556hp4\_v4\_add2  (379daf18.jed)}, альтернативных дампов: 12
+\nopagebreak\begin{eqnarray*}
+    \overline{O_{12}} & = & \overline{I_{2}} \cdotp \overline{I_{8}} \\
+    \overline{O_{13}} & = & \overline{I_{7}} \cdotp \overline{I_{9}} \\
+    \overline{RF_{14}} & := & RF_{14} \cdotp RF_{16} \cdotp \overline{RF_{17}} + \\
+	& &  \overline{RF_{14}} \cdotp RF_{17} \\
+    \overline{RF_{15}} & := & \overline{RF_{14}} \cdotp RF_{15} \cdotp \overline{RF_{17}} + \\
+	& &  \overline{RF_{15}} \cdotp RF_{17} + \\
+	& &  RF_{14} \cdotp \overline{RF_{15}} \cdotp RF_{16} \\
+    \overline{RF_{16}} & := & \overline{RF_{14}} \cdotp \overline{RF_{15}} \cdotp RF_{16} \cdotp \overline{RF_{17}} + \\
+	& &  \overline{RF_{16}} \cdotp RF_{17} \\
+    \overline{RF_{17}} & := & RF_{17} \\
+    \overline{O_{18}} & = & \overline{I_{3}} \cdotp \overline{I_{4}} \\
+    \overline{O_{19}} & = & \overline{I_{5}} \cdotp \overline{I_{6}} \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+
+5) Микросхема: \emph{PLS100/V5/kr556rt2-v5  (9ae37ebb.jed)}, альтернативных дампов: 1
+\nopagebreak\begin{eqnarray*}
+    O_{18} & = & \overline{I_{9}} \cdotp \overline{I_{8}} + \\
+	& &  \overline{I_{7}} \cdotp I_{24} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp \overline{I_{6}} + \\
+	& &  \overline{I_{9}} \cdotp I_{8} \cdotp \overline{I_{6}} \cdotp \overline{I_{5}} \\
+    O_{17} & = & \overline{I_{9}} \cdotp \overline{I_{8}} + \\
+	& &  \overline{I_{7}} \cdotp \overline{I_{24}} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} + \\
+	& &  \overline{I_{9}} \cdotp I_{8} \cdotp \overline{I_{2}} \cdotp \overline{I_{27}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \\
+    O_{16} & = & \overline{I_{9}} \cdotp \overline{I_{8}} + \\
+	& &  \overline{I_{7}} \cdotp \overline{I_{24}} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp \overline{I_{4}} \cdotp \overline{I_{3}} + \\
+	& &  \overline{I_{9}} \cdotp I_{8} \cdotp \overline{I_{4}} \cdotp \overline{I_{3}} \cdotp \overline{I_{23}} \cdotp \overline{I_{22}} \\
+    O_{15} & = & \overline{I_{9}} \cdotp \overline{I_{8}} + \\
+	& &  \overline{I_{7}} \cdotp \overline{I_{24}} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp \overline{I_{23}} \cdotp \overline{I_{22}} + \\
+	& &  \overline{I_{9}} \cdotp I_{8} \cdotp \overline{I_{4}} \cdotp \overline{I_{3}} \cdotp \overline{I_{23}} \cdotp \overline{I_{22}} \\
+    O_{13} & = & \overline{I_{9}} \cdotp \overline{I_{8}} + \\
+	& &  \overline{I_{7}} \cdotp \overline{I_{24}} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp \overline{I_{2}} \cdotp \overline{I_{27}} + \\
+	& &  \overline{I_{9}} \cdotp I_{8} \cdotp \overline{I_{2}} \cdotp \overline{I_{27}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \\
+    O_{12} & = & \overline{I_{9}} \cdotp \overline{I_{8}} + \\
+	& &  \overline{I_{7}} \cdotp I_{24} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp \overline{I_{5}} + \\
+	& &  \overline{I_{9}} \cdotp I_{8} \cdotp \overline{I_{6}} \cdotp \overline{I_{5}} \\
+    O_{11} & = & \overline{I_{9}} \cdotp \overline{I_{8}} + \\
+	& &  \overline{I_{7}} \cdotp I_{24} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp \overline{I_{21}} + \\
+	& &  \overline{I_{9}} \cdotp I_{8} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} \\
+    O_{10} & = & \overline{I_{9}} \cdotp \overline{I_{8}} + \\
+	& &  \overline{I_{7}} \cdotp I_{24} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp I_{8} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+
+6) Микросхема: \emph{PAL16L8/V6/km1556hl8-v6  (50e71a2b.jed)}, альтернативных дампов: \emph{нет!}
+\nopagebreak\begin{eqnarray*}
+    \overline{O_{12}} & = & \overline{I_{8}} \cdotp \overline{I_{9}} \cdotp O_{18} \\
+    \overline{O_{13}} & = & \overline{I_{9}} \cdotp O_{18} \\
+    \overline{O_{14}} & = & I_{1} \cdotp I_{3} \cdotp \overline{I_{4}} \cdotp I_{5} \cdotp \overline{I_{7}} \cdotp \overline{I_{11}} + \\
+	& &  \overline{I_{1}} \cdotp I_{3} \cdotp \overline{I_{4}} \cdotp \overline{I_{5}} \cdotp \overline{I_{7}} \cdotp \overline{I_{11}} + \\
+	& &  \overline{I_{1}} \cdotp \overline{I_{11}} \cdotp \overline{O_{14}} + \\
+	& &  I_{1} \cdotp \overline{I_{3}} \cdotp I_{7} \cdotp \overline{O_{14}} + \\
+	& &  I_{1} \cdotp \overline{I_{3}} \cdotp \overline{I_{5}} \cdotp \overline{O_{14}} + \\
+	& &  \overline{I_{1}} \cdotp \overline{I_{2}} \cdotp I_{3} \cdotp \overline{I_{5}} \cdotp \overline{I_{7}} \cdotp \overline{I_{11}} \\
+    \overline{O_{15}} & = & I_{1} \cdotp I_{3} \cdotp I_{4} \cdotp I_{5} \cdotp \overline{I_{7}} \cdotp \overline{I_{11}} + \\
+	& &  \overline{I_{1}} \cdotp I_{3} \cdotp I_{4} \cdotp \overline{I_{5}} \cdotp \overline{I_{7}} \cdotp \overline{I_{11}} + \\
+	& &  \overline{I_{1}} \cdotp \overline{I_{11}} \cdotp \overline{O_{15}} + \\
+	& &  I_{1} \cdotp \overline{I_{3}} \cdotp I_{7} \cdotp \overline{O_{15}} + \\
+	& &  I_{1} \cdotp \overline{I_{3}} \cdotp \overline{I_{5}} \cdotp \overline{O_{15}} + \\
+	& &  \overline{I_{1}} \cdotp \overline{I_{2}} \cdotp I_{3} \cdotp \overline{I_{5}} \cdotp \overline{I_{7}} \cdotp \overline{I_{11}} \\
+    \overline{O_{16}} & = & \overline{I_{1}} \cdotp \overline{I_{2}} \cdotp \overline{I_{3}} \cdotp I_{5} \\
+    \overline{O_{18}} & = & \overline{I_{5}} \\
+    \overline{O_{19}} & = & \overline{I_{1}} \cdotp \overline{I_{3}} \cdotp \overline{I_{5}} \cdotp \overline{I_{7}} \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+
+7) Микросхема: \emph{PLS100/V7/kr556rt2-v7.2  (3e7f5dc3.jed)}, альтернативных дампов: 1
+\nopagebreak\begin{eqnarray*}
+    O_{18} & = & \overline{I_{6}} + \\
+	& &  I_{7} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} + \\
+	& &  \overline{I_{21}} \\
+    \overline{O_{17}} & = & \overline{I_{8}} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp I_{4} \cdotp \overline{I_{25}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{8} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp \overline{I_{4}} \cdotp I_{25} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{8}} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp \overline{I_{4}} \cdotp \overline{I_{25}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp I_{8} \cdotp I_{7} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp I_{8} \cdotp I_{7} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{8}} \cdotp I_{7} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp \overline{I_{6}} \cdotp \overline{I_{5}} \cdotp \overline{I_{24}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{6}} \cdotp \overline{I_{5}} \cdotp I_{24} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp \overline{I_{8}} \cdotp \overline{I_{7}} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp I_{26} \cdotp \overline{I_{25}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{7}} \cdotp I_{6} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{7} \cdotp I_{6} \cdotp I_{2} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{7} \cdotp I_{6} \cdotp I_{26} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{22}} \\
+    \overline{O_{16}} & = & \overline{I_{9}} \cdotp I_{8} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp I_{4} \cdotp \overline{I_{25}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{8}} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp I_{4} \cdotp \overline{I_{25}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{8} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp \overline{I_{4}} \cdotp I_{25} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp I_{8} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp \overline{I_{4}} \cdotp \overline{I_{25}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp I_{8} \cdotp I_{7} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp \overline{I_{6}} \cdotp \overline{I_{5}} \cdotp \overline{I_{24}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{6}} \cdotp \overline{I_{5}} \cdotp I_{24} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{7}} \cdotp I_{6} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{7} \cdotp I_{6} \cdotp I_{2} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{7} \cdotp I_{6} \cdotp I_{26} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{22}} \\
+    \overline{O_{15}} & = & \overline{I_{9}} \cdotp \overline{I_{8}} \cdotp I_{7} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp I_{25} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp \overline{I_{7}} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp I_{26} \cdotp \overline{I_{25}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} \\
+    \overline{O_{13}} & = & I_{9} \cdotp I_{8} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp I_{4} \cdotp \overline{I_{25}} + \\
+	& &  \overline{I_{9}} \cdotp I_{8} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp I_{4} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp I_{20} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp \overline{I_{4}} \cdotp I_{25} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp \overline{I_{4}} \cdotp I_{25} \cdotp \overline{I_{22}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp I_{8} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp \overline{I_{4}} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp I_{21} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp I_{8} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp \overline{I_{4}} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp \overline{I_{4}} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp I_{8} \cdotp I_{7} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp I_{7} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp \overline{I_{6}} \cdotp \overline{I_{5}} \cdotp \overline{I_{24}} \cdotp \overline{I_{22}} \cdotp I_{21} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp \overline{I_{6}} \cdotp \overline{I_{5}} \cdotp \overline{I_{24}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} \\
+ \end{eqnarray*}
+ \begin{eqnarray*}
+    O_{12} & = & \overline{I_{9}} \cdotp I_{8} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp I_{4} \cdotp \overline{I_{25}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{8}} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp I_{4} \cdotp \overline{I_{25}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{8} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp \overline{I_{4}} \cdotp I_{25} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp \overline{I_{4}} \cdotp I_{25} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp I_{8} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp \overline{I_{4}} \cdotp \overline{I_{25}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp I_{8} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp \overline{I_{4}} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp \overline{I_{4}} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp \overline{I_{8}} \cdotp I_{7} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp I_{25} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp I_{8} \cdotp I_{7} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp I_{8} \cdotp I_{7} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp I_{7} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp \overline{I_{6}} \cdotp \overline{I_{5}} \cdotp \overline{I_{24}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp \overline{I_{6}} \cdotp \overline{I_{5}} \cdotp \overline{I_{24}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp I_{8} \cdotp \overline{I_{6}} \cdotp \overline{I_{5}} \cdotp \overline{I_{27}} \cdotp I_{24} \cdotp \overline{I_{23}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp \overline{I_{8}} \cdotp \overline{I_{6}} \cdotp \overline{I_{5}} \cdotp I_{27} \cdotp I_{24} \cdotp \overline{I_{23}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp \overline{I_{6}} \cdotp \overline{I_{5}} \cdotp \overline{I_{27}} \cdotp I_{24} \cdotp I_{23} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{6}} \cdotp \overline{I_{5}} \cdotp I_{27} \cdotp I_{24} \cdotp I_{23} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp \overline{I_{7}} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp I_{26} \cdotp \overline{I_{25}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{7}} \cdotp I_{6} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{7} \cdotp I_{6} \cdotp I_{2} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{7} \cdotp I_{6} \cdotp I_{26} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} \\
+    \overline{O_{11}} & = & \overline{I_{9}} \cdotp I_{8} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp \overline{I_{4}} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp \overline{I_{4}} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp I_{8} \cdotp I_{7} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp I_{8} \cdotp I_{7} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp I_{7} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp \overline{I_{6}} \cdotp \overline{I_{5}} \cdotp \overline{I_{24}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp \overline{I_{7}} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp I_{26} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp \overline{I_{6}} \cdotp \overline{I_{5}} \cdotp \overline{I_{22}} \cdotp I_{21} \cdotp I_{20} \\
+    \overline{O_{10}} & = & \overline{I_{9}} \cdotp I_{8} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp \overline{I_{4}} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp I_{21} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{8}} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp \overline{I_{4}} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp I_{21} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp I_{8} \cdotp I_{7} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp I_{21} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp I_{8} \cdotp I_{7} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp I_{21} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp I_{7} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp I_{21} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp \overline{I_{6}} \cdotp \overline{I_{5}} \cdotp \overline{I_{24}} \cdotp \overline{I_{22}} \cdotp I_{21} \cdotp \overline{I_{20}} + \\
+	& &  I_{9} \cdotp \overline{I_{8}} \cdotp \overline{I_{7}} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp I_{26} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp I_{21} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp \overline{I_{8}} \cdotp I_{7} \cdotp I_{6} \cdotp \overline{I_{4}} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp \overline{I_{8}} \cdotp \overline{I_{6}} \cdotp I_{5} \cdotp \overline{I_{4}} \cdotp \overline{I_{25}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp \overline{I_{6}} \cdotp \overline{I_{5}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{9}} \cdotp \overline{I_{6}} \cdotp \overline{I_{5}} \cdotp \overline{I_{22}} \cdotp I_{21} \cdotp I_{20} \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+
+8) Микросхема: \emph{PAL16R6/V8/km1556hp6-v8.3  (e6489faf.jed)}, альтернативных дампов: 4
+\nopagebreak\begin{eqnarray*}
+    \overline{O_{12}} & = & \overline{RF_{14}} \cdotp \overline{RF_{15}} \cdotp \overline{RF_{16}} \cdotp \overline{RF_{17}} \cdotp \overline{RF_{18}} + \\
+	& &  I_{8} \cdotp \overline{O_{12}} \\
+    \overline{RF_{13}} & := & \overline{I_{2}} \cdotp \overline{RF_{14}} \cdotp \overline{RF_{15}} \cdotp \overline{RF_{16}} \cdotp \overline{RF_{17}} \cdotp \overline{RF_{18}} + \\
+	& &  I_{2} \cdotp I_{8} \cdotp \overline{RF_{13}} \\
+    \overline{RF_{14}} & := & I_{2} \cdotp \overline{I_{8}} \cdotp RF_{14} \cdotp RF_{15} \cdotp RF_{16} \cdotp RF_{17} \cdotp RF_{18} + \\
+	& &  I_{2} \cdotp \overline{RF_{14}} \cdotp \overline{RF_{15}} + \\
+	& &  I_{2} \cdotp \overline{RF_{14}} \cdotp \overline{RF_{16}} + \\
+	& &  I_{2} \cdotp \overline{RF_{14}} + \\
+	& &  I_{2} \cdotp \overline{RF_{14}} \cdotp \overline{RF_{18}} + \\
+	& &  I_{2} \cdotp I_{8} \cdotp \overline{RF_{14}} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{6}} \\
+    \overline{RF_{15}} & := & I_{2} \cdotp \overline{I_{8}} \cdotp RF_{15} \cdotp RF_{16} \cdotp RF_{17} \cdotp RF_{18} + \\
+	& &  I_{2} \cdotp \overline{RF_{15}} \cdotp \overline{RF_{16}} + \\
+	& &  I_{2} \cdotp \overline{RF_{15}} + \\
+	& &  I_{2} \cdotp \overline{RF_{15}} \cdotp \overline{RF_{18}} + \\
+	& &  I_{2} \cdotp I_{8} \cdotp \overline{RF_{15}} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{5}} \\
+    \overline{RF_{16}} & := & I_{2} \cdotp \overline{I_{8}} \cdotp RF_{16} \cdotp RF_{17} \cdotp RF_{18} + \\
+	& &  I_{2} \cdotp \overline{RF_{16}} \cdotp \overline{RF_{17}} + \\
+	& &  I_{2} \cdotp \overline{RF_{16}} \cdotp \overline{RF_{18}} + \\
+	& &  I_{2} \cdotp I_{8} \cdotp \overline{RF_{16}} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{7}} \\
+    \overline{RF_{17}} & := & I_{2} \cdotp \overline{I_{8}} \cdotp RF_{17} \cdotp RF_{18} + \\
+	& &  I_{2} \cdotp \overline{RF_{17}} \cdotp \overline{RF_{18}} + \\
+	& &  I_{2} \cdotp I_{8} \cdotp \overline{RF_{17}} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{3}} \\
+    \overline{RF_{18}} & := & I_{2} \cdotp \overline{I_{8}} \cdotp RF_{18} + \\
+	& &  I_{2} \cdotp I_{8} \cdotp \overline{RF_{18}} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{4}} \\
+    \overline{O_{19}} & = & \overline{I_{2}} \cdotp \overline{I_{8}} \cdotp \overline{RF_{13}} \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+
+9) Микросхема: \emph{PAL16R4/V9/neon1556hp4\_v9\_brd1  (07713384.jed)}, альтернативных дампов: 19
+\nopagebreak\begin{eqnarray*}
+    \overline{O_{12}} & = & I_{8} \cdotp RF_{14} + \\
+	& &  \overline{I_{5}} \cdotp \overline{I_{8}} + \\
+	& &  \overline{I_{3}} \cdotp \overline{I_{8}} + \\
+	& &  I_{4} \cdotp I_{5} \cdotp I_{7} \cdotp \overline{I_{8}} \\
+    O_{12}.OE & = & I_{9} \\ \\
+    \overline{O_{13}} & = & I_{8} \cdotp RF_{15} + \\
+	& &  \overline{I_{6}} \cdotp \overline{I_{8}} + \\
+	& &  \overline{I_{3}} \cdotp \overline{I_{8}} + \\
+	& &  I_{4} \cdotp I_{5} \cdotp I_{7} \cdotp \overline{I_{8}} \\
+    O_{13}.OE & = & I_{9} \\ \\
+    \overline{RF_{14}} & := & RF_{14} \cdotp \overline{RF_{15}} \cdotp \overline{RF_{16}} \cdotp \overline{RF_{17}} + \\
+	& &  \overline{RF_{14}} \cdotp RF_{16} + \\
+	& &  \overline{RF_{14}} \cdotp RF_{15} + \\
+	& &  \overline{RF_{14}} \cdotp RF_{17} \\
+    \overline{RF_{15}} & := & RF_{15} \cdotp \overline{RF_{17}} + \\
+	& &  \overline{RF_{15}} \cdotp RF_{17} \\
+    \overline{RF_{16}} & := & \overline{RF_{15}} \cdotp RF_{16} \cdotp \overline{RF_{17}} + \\
+	& &  RF_{15} \cdotp \overline{RF_{16}} + \\
+	& &  \overline{RF_{16}} \cdotp RF_{17} \\
+    \overline{RF_{17}} & := & RF_{17} \\
+    \overline{O_{18}} & = & I_{8} \cdotp RF_{17} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{8}} + \\
+	& &  \overline{I_{3}} \cdotp \overline{I_{8}} + \\
+	& &  I_{4} \cdotp I_{5} \cdotp I_{7} \cdotp \overline{I_{8}} \\
+    O_{18}.OE & = & I_{9} \\ \\
+    \overline{O_{19}} & = & I_{8} \cdotp RF_{16} + \\
+	& &  \overline{I_{7}} \cdotp \overline{I_{8}} + \\
+	& &  \overline{I_{3}} \cdotp \overline{I_{8}} + \\
+	& &  I_{4} \cdotp I_{5} \cdotp I_{7} \cdotp \overline{I_{8}} \\
+    O_{19}.OE & = & I_{9} \\ \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+
+10) Микросхема: \emph{PLS100/VA/kr556rt2-va  (5483badd.jed)}, альтернативных дампов: \emph{нет!}
+\nopagebreak\begin{eqnarray*}
+    \overline{O_{18}} & = & I_{27} \cdotp I_{24} + \\
+	& &  \overline{I_{27}} \cdotp \overline{I_{24}} \cdotp I_{22} \cdotp I_{21} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{27}} \cdotp I_{24} \cdotp I_{22} \cdotp I_{21} \cdotp I_{20} + \\
+	& &  \overline{I_{27}} \cdotp \overline{I_{24}} \cdotp \overline{I_{23}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{27}} \cdotp I_{24} \cdotp I_{23} \cdotp I_{22} \cdotp \overline{I_{21}} + \\
+	& &  \overline{I_{27}} \cdotp I_{23} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp I_{20} + \\
+	& &  \overline{I_{6}} \cdotp \overline{I_{27}} \cdotp \overline{I_{24}} \cdotp \overline{I_{23}} \cdotp \overline{I_{22}} \cdotp \overline{I_{20}} + \\
+	& &  I_{6} \cdotp \overline{I_{27}} \cdotp I_{23} \cdotp \overline{I_{22}} + \\
+	& &  I_{6} \cdotp \overline{I_{27}} \cdotp I_{24} \cdotp \overline{I_{22}} + \\
+	& &  I_{6} \cdotp \overline{I_{27}} \cdotp \overline{I_{22}} \cdotp I_{20} \\
+    \overline{O_{17}} & = & \overline{I_{26}} \cdotp I_{22} \cdotp I_{21} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{4}} \cdotp I_{26} \cdotp I_{22} \cdotp I_{21} + \\
+	& &  \overline{I_{26}} \cdotp \overline{I_{24}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{4}} \cdotp \overline{I_{2}} \cdotp I_{26} \cdotp I_{22} \cdotp \overline{I_{21}} + \\
+	& &  \overline{I_{4}} \cdotp \overline{I_{26}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp I_{20} + \\
+	& &  \overline{I_{26}} \cdotp \overline{I_{24}} \cdotp \overline{I_{23}} \cdotp \overline{I_{22}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{4}} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp \overline{I_{22}} \cdotp I_{20} + \\
+	& &  \overline{I_{4}} \cdotp \overline{I_{26}} \cdotp I_{24} \cdotp \overline{I_{22}} \cdotp \overline{I_{20}} \\
+    \overline{O_{16}} & = & I_{4} \cdotp I_{3} \cdotp I_{2} \cdotp \overline{I_{27}} \cdotp I_{25} \\
+    \overline{O_{15}} & = & I_{4} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp I_{25} \cdotp I_{21} \cdotp I_{20} + \\
+	& &  I_{4} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp I_{25} \cdotp I_{24} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{4}} \cdotp \overline{I_{26}} \cdotp I_{22} \cdotp I_{21} \cdotp I_{20} + \\
+	& &  \overline{I_{4}} \cdotp I_{26} \cdotp I_{22} \cdotp I_{21} + \\
+	& &  \overline{I_{4}} \cdotp \overline{I_{26}} \cdotp I_{24} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{4}} \cdotp \overline{I_{2}} \cdotp I_{26} \cdotp I_{22} \cdotp \overline{I_{21}} + \\
+	& &  \overline{I_{4}} \cdotp \overline{I_{26}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp I_{20} + \\
+	& &  \overline{I_{4}} \cdotp \overline{I_{26}} \cdotp \overline{I_{24}} \cdotp I_{23} \cdotp \overline{I_{22}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{4}} \cdotp \overline{I_{2}} \cdotp \overline{I_{26}} \cdotp \overline{I_{22}} \cdotp I_{20} + \\
+	& &  \overline{I_{4}} \cdotp \overline{I_{26}} \cdotp I_{24} \cdotp \overline{I_{22}} \cdotp \overline{I_{20}} + \\
+	& &  I_{4} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp I_{22} \cdotp I_{21} \cdotp I_{20} + \\
+	& &  I_{4} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp I_{24} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{4} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp \overline{I_{24}} \cdotp I_{23} \cdotp \overline{I_{22}} \cdotp \overline{I_{20}} \\
+    O_{13} & = & \overline{I_{9}} \cdotp \overline{I_{8}} \cdotp \overline{I_{7}} \cdotp \overline{I_{24}} \cdotp I_{23} + \\
+	& &  \overline{I_{9}} \cdotp I_{7} \cdotp \overline{I_{24}} \cdotp I_{23} \\
+    O_{12} & = & \overline{I_{9}} \cdotp \overline{I_{8}} \cdotp \overline{I_{7}} \cdotp \overline{I_{24}} \cdotp I_{23} + \\
+	& &  \overline{I_{9}} \cdotp I_{8} \cdotp \overline{I_{7}} \cdotp \overline{I_{24}} \cdotp I_{23} \\
+    O_{11} & = & I_{27} \cdotp I_{24} + \\
+	& &  \overline{I_{27}} \cdotp \overline{I_{24}} \cdotp I_{22} \cdotp I_{21} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{27}} \cdotp I_{24} \cdotp I_{22} \cdotp I_{21} \cdotp I_{20} + \\
+	& &  \overline{I_{27}} \cdotp \overline{I_{24}} \cdotp \overline{I_{23}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{27}} \cdotp I_{24} \cdotp I_{23} \cdotp I_{22} \cdotp \overline{I_{21}} + \\
+	& &  \overline{I_{27}} \cdotp I_{23} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp I_{20} + \\
+	& &  \overline{I_{6}} \cdotp \overline{I_{27}} \cdotp \overline{I_{24}} \cdotp \overline{I_{23}} \cdotp \overline{I_{22}} \cdotp \overline{I_{20}} + \\
+	& &  I_{6} \cdotp \overline{I_{27}} \cdotp I_{23} \cdotp \overline{I_{22}} + \\
+	& &  I_{6} \cdotp \overline{I_{27}} \cdotp I_{24} \cdotp \overline{I_{22}} + \\
+	& &  I_{6} \cdotp \overline{I_{27}} \cdotp \overline{I_{22}} \cdotp I_{20} \\
+ \end{eqnarray*}
+ \begin{eqnarray*}
+    \overline{O_{10}} & = & I_{27} \cdotp \overline{I_{23}} + \\
+	& &  \overline{I_{27}} \cdotp \overline{I_{24}} \cdotp I_{23} \cdotp I_{22} \cdotp I_{21} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{27}} \cdotp I_{24} \cdotp \overline{I_{23}} \cdotp I_{22} \cdotp I_{21} + \\
+	& &  \overline{I_{27}} \cdotp \overline{I_{23}} \cdotp I_{22} \cdotp I_{21} \cdotp I_{20} + \\
+	& &  I_{6} \cdotp \overline{I_{27}} \cdotp \overline{I_{24}} \cdotp \overline{I_{23}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{6}} \cdotp \overline{I_{27}} \cdotp I_{23} \cdotp I_{22} \cdotp \overline{I_{21}} + \\
+	& &  \overline{I_{6}} \cdotp \overline{I_{27}} \cdotp I_{24} \cdotp I_{22} \cdotp \overline{I_{21}} + \\
+	& &  \overline{I_{6}} \cdotp \overline{I_{27}} \cdotp I_{22} \cdotp \overline{I_{21}} \cdotp I_{20} + \\
+	& &  \overline{I_{6}} \cdotp I_{5} \cdotp \overline{I_{27}} \cdotp \overline{I_{24}} \cdotp \overline{I_{23}} \cdotp \overline{I_{22}} \cdotp I_{21} \cdotp \overline{I_{20}} + \\
+	& &  I_{6} \cdotp \overline{I_{5}} \cdotp \overline{I_{27}} \cdotp \overline{I_{22}} \cdotp I_{21} + \\
+	& &  \overline{I_{5}} \cdotp \overline{I_{27}} \cdotp I_{23} \cdotp \overline{I_{22}} \cdotp I_{21} + \\
+	& &  \overline{I_{5}} \cdotp \overline{I_{27}} \cdotp I_{24} \cdotp \overline{I_{22}} \cdotp I_{21} + \\
+	& &  \overline{I_{5}} \cdotp \overline{I_{27}} \cdotp \overline{I_{22}} \cdotp I_{21} \cdotp I_{20} + \\
+	& &  \overline{I_{6}} \cdotp \overline{I_{5}} \cdotp \overline{I_{27}} \cdotp \overline{I_{24}} \cdotp \overline{I_{23}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{6} \cdotp I_{5} \cdotp \overline{I_{27}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} + \\
+	& &  I_{5} \cdotp \overline{I_{27}} \cdotp I_{23} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} + \\
+	& &  I_{5} \cdotp \overline{I_{27}} \cdotp I_{24} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} + \\
+	& &  I_{5} \cdotp \overline{I_{27}} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} \cdotp I_{20} \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+
+11) Микросхема: \emph{PAL16R4/VB/km1556hp4-vb.4  (42f88cff.jed)}, альтернативных дампов: 3
+\nopagebreak\begin{eqnarray*}
+    \overline{RF_{14}} & := & I_{4} \cdotp I_{5} \cdotp \overline{RF_{14}} + \\
+	& &  I_{4} \cdotp \overline{I_{5}} \cdotp \overline{I_{13}} + \\
+	& &  \overline{I_{4}} \cdotp I_{5} \cdotp \overline{I_{9}} + \\
+	& &  I_{2} \cdotp \overline{I_{4}} \cdotp \overline{I_{5}} \cdotp \overline{RF_{15}} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{4}} \cdotp \overline{I_{5}} \cdotp \overline{RF_{17}} \\
+    \overline{RF_{15}} & := & I_{4} \cdotp I_{5} \cdotp \overline{RF_{15}} + \\
+	& &  I_{4} \cdotp \overline{I_{5}} \cdotp \overline{I_{19}} + \\
+	& &  \overline{I_{4}} \cdotp I_{5} \cdotp \overline{I_{6}} \\
+    \overline{RF_{16}} & := & I_{4} \cdotp I_{5} \cdotp \overline{RF_{16}} + \\
+	& &  I_{4} \cdotp \overline{I_{5}} \cdotp \overline{I_{18}} + \\
+	& &  \overline{I_{4}} \cdotp I_{5} \cdotp \overline{I_{8}} + \\
+	& &  I_{2} \cdotp \overline{I_{4}} \cdotp \overline{I_{5}} \cdotp \overline{RF_{17}} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{4}} \cdotp \overline{I_{5}} \cdotp \overline{RF_{14}} \\
+    \overline{RF_{17}} & := & I_{4} \cdotp I_{5} \cdotp \overline{RF_{17}} + \\
+	& &  I_{4} \cdotp \overline{I_{5}} \cdotp \overline{I_{12}} + \\
+	& &  \overline{I_{4}} \cdotp I_{5} \cdotp \overline{I_{7}} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{4}} \cdotp \overline{I_{5}} \cdotp \overline{RF_{15}} \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+
+12) Микросхема: \emph{PAL16L8/VC/km1556hl8-vc  (aff8d143.jed)}, альтернативных дампов: 2
+\nopagebreak\begin{eqnarray*}
+    \overline{O_{12}} & = & I_{1} \cdotp \overline{I_{7}} \cdotp I_{9} + \\
+	& &  \overline{I_{1}} \cdotp I_{7} \cdotp I_{9} + \\
+	& &  I_{2} \cdotp \overline{I_{9}} \cdotp I_{17} \cdotp I_{18} \\
+    \overline{O_{13}} & = & I_{7} \cdotp I_{9} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{9}} \cdotp I_{18} + \\
+	& &  \overline{I_{9}} \cdotp \overline{I_{17}} \cdotp I_{18} + \\
+	& &  I_{2} \cdotp I_{4} \cdotp \overline{I_{9}} \cdotp I_{17} \cdotp I_{18} \\
+    \overline{O_{14}} & = & \overline{I_{6}} \cdotp I_{9} + \\
+	& &  I_{6} \cdotp \overline{I_{9}} \cdotp I_{11} \cdotp I_{17} + \\
+	& &  \overline{I_{9}} \cdotp I_{11} \cdotp \overline{I_{17}} \\
+    \overline{O_{15}} & = & \overline{I_{3}} \cdotp I_{9} + \\
+	& &  I_{3} \cdotp \overline{I_{9}} \cdotp I_{11} \cdotp I_{17} + \\
+	& &  \overline{I_{9}} \cdotp I_{11} \cdotp \overline{I_{17}} \\
+    \overline{O_{16}} & = & \overline{I_{8}} \cdotp I_{9} + \\
+	& &  I_{8} \cdotp \overline{I_{9}} \cdotp I_{11} \cdotp I_{17} + \\
+	& &  I_{2} \cdotp I_{8} \cdotp \overline{I_{9}} \cdotp I_{11} \cdotp \overline{I_{17}} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{9}} \cdotp I_{11} \cdotp \overline{I_{17}} \\
+    \overline{O_{19}} & = & \overline{I_{5}} \cdotp I_{9} + \\
+	& &  I_{5} \cdotp \overline{I_{9}} \cdotp I_{11} \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+
+13) Микросхема: \emph{PAL16L8/P1/km1556hl8-p1  (5304637b.jed)}, альтернативных дампов: \emph{нет!}
+\nopagebreak\begin{eqnarray*}
+    \overline{O_{12}} & = & I_{1} \cdotp I_{2} \cdotp \overline{I_{8}} \cdotp I_{9} + \\
+	& &  I_{1} \cdotp I_{2} \cdotp \overline{I_{5}} \cdotp I_{9} + \\
+	& &  I_{1} \cdotp I_{2} \cdotp \overline{I_{6}} \cdotp I_{9} + \\
+	& &  I_{5} \cdotp I_{6} \cdotp I_{8} \cdotp I_{9} \\
+    O_{13} & = & 0 \\
+    O_{13}.OE & = & I_{5} \cdotp I_{6} \cdotp I_{8} \cdotp I_{9} \\ \\
+    \overline{O_{14}} & = & I_{3} \cdotp \overline{I_{7}} + \\
+	& &  \overline{I_{7}} \cdotp \overline{O_{14}} + \\
+	& &  \overline{I_{3}} \cdotp \overline{O_{14}} \\
+    \overline{O_{15}} & = & \overline{I_{3}} \cdotp \overline{I_{4}} \cdotp I_{5} \cdotp I_{6} \cdotp I_{8} \cdotp \overline{I_{9}} + \\
+	& &  \overline{I_{3}} \cdotp \overline{I_{4}} \cdotp I_{5} \cdotp I_{6} \cdotp I_{8} \cdotp I_{9} \cdotp I_{11} \\
+    \overline{O_{16}} & = & I_{5} \cdotp I_{6} \cdotp I_{8} \\
+    \overline{O_{17}} & = & \overline{I_{1}} \cdotp \overline{I_{2}} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{9}} + \\
+	& &  I_{1} \cdotp I_{2} \cdotp I_{9} + \\
+	& &  I_{5} \cdotp I_{6} \cdotp I_{8} \cdotp I_{9} \\
+    \overline{O_{18}} & = & \overline{I_{1}} \cdotp \overline{I_{9}} + \\
+	& &  I_{1} \cdotp I_{9} + \\
+	& &  I_{5} \cdotp I_{6} \cdotp I_{8} \cdotp I_{9} \\
+    \overline{O_{19}} & = & \overline{I_{3}} \cdotp I_{5} \cdotp I_{6} \cdotp I_{8} \cdotp I_{9} \cdotp \overline{I_{11}} + \\
+	& &  \overline{I_{3}} \cdotp I_{5} \cdotp I_{6} \cdotp \overline{I_{8}} + \\
+	& &  \overline{I_{3}} \cdotp \overline{I_{5}} \cdotp I_{6} + \\
+	& &  \overline{I_{3}} \cdotp I_{5} \cdotp \overline{I_{6}} + \\
+	& &  \overline{I_{3}} \cdotp \overline{I_{5}} \cdotp \overline{I_{6}} \cdotp O_{14} \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+
+14) Микросхема: \emph{PAL16L8/P2/km1556hl8-p2.3  (1f908a8a.jed)}, альтернативных дампов: 4
+\nopagebreak\begin{eqnarray*}
+    \overline{O_{12}} & = & O_{14} \\
+    O_{12}.OE & = & \overline{I_{5}} \cdotp I_{8} \cdotp I_{9} \\ \\
+    \overline{O_{13}} & = & \overline{I_{2}} \cdotp \overline{I_{3}} \cdotp \overline{I_{4}} \cdotp \overline{I_{5}} \cdotp I_{7} \cdotp I_{8} \cdotp I_{9} + \\
+	& &  \overline{O_{13}} \cdotp O_{15} + \\
+	& &  \overline{O_{13}} \cdotp O_{17} + \\
+	& &  \overline{O_{13}} \cdotp O_{18} + \\
+	& &  I_{9} \cdotp \overline{O_{13}} + \\
+	& &  I_{8} \cdotp \overline{O_{13}} \\
+    \overline{O_{14}} & = & \overline{I_{2}} \cdotp \overline{I_{3}} \cdotp \overline{I_{5}} \cdotp I_{7} \cdotp I_{8} \cdotp I_{9} + \\
+	& &  \overline{O_{14}} \cdotp O_{15} + \\
+	& &  \overline{O_{14}} \cdotp O_{17} + \\
+	& &  \overline{O_{14}} \cdotp O_{18} + \\
+	& &  I_{9} \cdotp \overline{O_{14}} + \\
+	& &  I_{8} \cdotp \overline{O_{14}} \\
+    \overline{O_{15}} & = & I_{2} \cdotp \overline{I_{3}} \cdotp \overline{I_{4}} \cdotp \overline{I_{5}} \cdotp I_{7} \cdotp \overline{I_{8}} \cdotp \overline{I_{9}} \cdotp \overline{I_{11}} \cdotp O_{17} + \\
+	& &  I_{2} \cdotp \overline{I_{3}} \cdotp \overline{I_{4}} \cdotp \overline{I_{5}} \cdotp \overline{I_{7}} \cdotp \overline{I_{8}} \cdotp \overline{I_{9}} \cdotp \overline{I_{11}} + \\
+	& &  I_{2} \cdotp \overline{I_{3}} \cdotp \overline{I_{5}} \cdotp I_{7} \cdotp I_{8} \cdotp I_{9} \\
+    \overline{O_{16}} & = & I_{2} \cdotp \overline{I_{3}} \cdotp \overline{I_{4}} \cdotp \overline{I_{5}} \\
+    O_{17} & = & 0 \\
+    O_{17}.OE & = & \overline{I_{5}} \cdotp I_{8} \cdotp I_{9} \\ \\
+    O_{18} & = & 0 \\
+    O_{18}.OE & = & \overline{I_{5}} \cdotp I_{8} \cdotp I_{9} \\ \\
+    \overline{O_{19}} & = & \overline{I_{5}} \cdotp I_{8} \cdotp I_{9} + \\
+	& &  \overline{O_{14}} + \\
+	& &  \overline{O_{13}} + \\
+	& &  I_{1} + \\
+	& &  \overline{I_{6}} \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+
+15) Микросхема: \emph{PLS100/P3/kr556rt2-p3.2  (1b53cec4.jed)}, альтернативных дампов: 2
+\nopagebreak\begin{eqnarray*}
+    \overline{O_{18}} & = & \overline{I_{7}} \cdotp I_{27} \cdotp I_{24} + \\
+	& &  I_{7} \cdotp I_{27} \cdotp \overline{I_{24}} + \\
+	& &  I_{5} \cdotp \overline{I_{27}} \cdotp \overline{I_{24}} + \\
+	& &  \overline{I_{5}} \cdotp I_{4} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp \overline{I_{27}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp I_{24} \\
+    O_{17} & = & I_{8} \cdotp \overline{I_{7}} \cdotp I_{27} + \\
+	& &  I_{8} \cdotp I_{27} \cdotp I_{24} + \\
+	& &  \overline{I_{8}} \cdotp I_{7} \cdotp I_{27} \cdotp \overline{I_{24}} + \\
+	& &  \overline{I_{5}} \cdotp I_{4} \cdotp \overline{I_{3}} \cdotp \overline{I_{2}} \cdotp \overline{I_{27}} \cdotp I_{26} \cdotp \overline{I_{25}} \cdotp I_{24} \\
+    \overline{O_{16}} & = & \overline{I_{8}} \cdotp I_{27} \cdotp \overline{I_{22}} + \\
+	& &  \overline{I_{7}} \cdotp I_{27} \cdotp \overline{I_{22}} + \\
+	& &  I_{27} \cdotp I_{24} \cdotp \overline{I_{22}} + \\
+	& &  I_{8} \cdotp I_{7} \cdotp I_{27} \cdotp \overline{I_{24}} \cdotp I_{22} + \\
+	& &  I_{5} \cdotp \overline{I_{27}} \cdotp \overline{I_{24}} + \\
+	& &  \overline{I_{5}} \cdotp I_{4} \cdotp \overline{I_{3}} \cdotp I_{2} \cdotp \overline{I_{27}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp I_{24} \\
+    \overline{O_{15}} & = & I_{27} \cdotp \overline{I_{23}} \cdotp \overline{I_{22}} + \\
+	& &  \overline{I_{8}} \cdotp I_{27} \cdotp \overline{I_{23}} + \\
+	& &  \overline{I_{7}} \cdotp I_{27} \cdotp \overline{I_{23}} + \\
+	& &  I_{27} \cdotp I_{24} \cdotp \overline{I_{23}} + \\
+	& &  I_{8} \cdotp I_{7} \cdotp I_{27} \cdotp \overline{I_{24}} \cdotp I_{23} \cdotp I_{22} + \\
+	& &  I_{5} \cdotp \overline{I_{27}} \cdotp \overline{I_{24}} + \\
+	& &  \overline{I_{5}} \cdotp I_{4} \cdotp \overline{I_{3}} \cdotp \overline{I_{2}} \cdotp \overline{I_{27}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp I_{24} \\
+    \overline{O_{13}} & = & I_{27} \cdotp \overline{I_{21}} \cdotp \overline{I_{20}} + \\
+	& &  I_{27} \cdotp \overline{I_{23}} \cdotp \overline{I_{21}} + \\
+	& &  I_{27} \cdotp \overline{I_{22}} \cdotp \overline{I_{21}} + \\
+	& &  \overline{I_{8}} \cdotp I_{27} \cdotp \overline{I_{21}} + \\
+	& &  \overline{I_{7}} \cdotp I_{27} \cdotp \overline{I_{21}} + \\
+	& &  I_{27} \cdotp I_{24} \cdotp \overline{I_{21}} + \\
+	& &  I_{8} \cdotp I_{7} \cdotp I_{27} \cdotp \overline{I_{24}} \cdotp I_{23} \cdotp I_{22} \cdotp I_{21} \cdotp I_{20} + \\
+	& &  I_{5} \cdotp \overline{I_{27}} \cdotp \overline{I_{24}} + \\
+	& &  \overline{I_{5}} \cdotp I_{4} \cdotp \overline{I_{3}} \cdotp I_{2} \cdotp \overline{I_{27}} \cdotp I_{26} \cdotp \overline{I_{25}} \cdotp I_{24} \\
+    \overline{O_{12}} & = & I_{27} \cdotp \overline{I_{23}} \cdotp \overline{I_{20}} + \\
+	& &  I_{27} \cdotp \overline{I_{22}} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{8}} \cdotp I_{27} \cdotp \overline{I_{20}} + \\
+	& &  \overline{I_{7}} \cdotp I_{27} \cdotp \overline{I_{20}} + \\
+	& &  I_{27} \cdotp I_{24} \cdotp \overline{I_{20}} + \\
+	& &  I_{8} \cdotp I_{7} \cdotp I_{27} \cdotp \overline{I_{24}} \cdotp I_{23} \cdotp I_{22} \cdotp I_{20} + \\
+	& &  I_{5} \cdotp \overline{I_{27}} \cdotp \overline{I_{24}} + \\
+	& &  \overline{I_{5}} \cdotp I_{4} \cdotp I_{3} \cdotp I_{2} \cdotp \overline{I_{27}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp I_{24} \\
+ \end{eqnarray*}
+ \begin{eqnarray*}
+    O_{11} & = & I_{6} \cdotp I_{27} \cdotp \overline{I_{21}} + \\
+	& &  I_{6} \cdotp I_{27} \cdotp \overline{I_{20}} + \\
+	& &  I_{6} \cdotp I_{27} \cdotp \overline{I_{23}} + \\
+	& &  I_{6} \cdotp I_{27} \cdotp \overline{I_{22}} + \\
+	& &  \overline{I_{8}} \cdotp I_{6} \cdotp I_{27} + \\
+	& &  \overline{I_{7}} \cdotp I_{6} \cdotp I_{27} + \\
+	& &  I_{6} \cdotp I_{27} \cdotp I_{24} + \\
+	& &  I_{8} \cdotp I_{7} \cdotp \overline{I_{6}} \cdotp I_{27} \cdotp \overline{I_{24}} \cdotp I_{23} \cdotp I_{22} \cdotp I_{21} \cdotp I_{20} + \\
+	& &  \overline{I_{5}} \cdotp I_{4} \cdotp \overline{I_{3}} \cdotp \overline{I_{2}} \cdotp \overline{I_{27}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp I_{24} + \\
+	& &  \overline{I_{5}} \cdotp I_{4} \cdotp \overline{I_{3}} \cdotp I_{2} \cdotp \overline{I_{27}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp I_{24} + \\
+	& &  \overline{I_{5}} \cdotp I_{4} \cdotp I_{3} \cdotp \overline{I_{2}} \cdotp \overline{I_{27}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp I_{24} + \\
+	& &  \overline{I_{5}} \cdotp I_{4} \cdotp I_{3} \cdotp I_{2} \cdotp \overline{I_{27}} \cdotp \overline{I_{26}} \cdotp \overline{I_{25}} \cdotp I_{24} + \\
+	& &  \overline{I_{5}} \cdotp I_{4} \cdotp \overline{I_{3}} \cdotp \overline{I_{2}} \cdotp \overline{I_{27}} \cdotp I_{26} \cdotp \overline{I_{25}} \cdotp I_{24} + \\
+	& &  \overline{I_{5}} \cdotp I_{4} \cdotp \overline{I_{3}} \cdotp I_{2} \cdotp \overline{I_{27}} \cdotp I_{26} \cdotp \overline{I_{25}} \cdotp I_{24} + \\
+	& &  \overline{I_{5}} \cdotp I_{4} \cdotp I_{3} \cdotp \overline{I_{27}} \cdotp I_{26} \cdotp \overline{I_{25}} \cdotp I_{24} \\
+    O_{10} & = & I_{9} \cdotp I_{27} + \\
+	& &  I_{8} \cdotp I_{7} \cdotp I_{6} \cdotp I_{27} \cdotp \overline{I_{24}} \cdotp I_{23} \cdotp I_{22} \cdotp I_{21} \cdotp I_{20} + \\
+	& &  \overline{I_{5}} \cdotp \overline{I_{27}} \cdotp \overline{I_{24}} + \\
+	& &  I_{5} \cdotp I_{4} \cdotp I_{3} \cdotp I_{2} \cdotp \overline{I_{27}} \cdotp I_{26} \cdotp I_{25} \cdotp \overline{I_{24}} \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+
+16) Микросхема: \emph{PAL16L8/P4/km1556hl8-p4  (abafa288.jed)}, альтернативных дампов: 1
+\nopagebreak\begin{eqnarray*}
+    O_{12} & = & 0 \\
+    O_{12}.OE & = & \overline{O_{16}} \\ \\
+    \overline{O_{13}} & = & \overline{I_{2}} \cdotp \overline{I_{3}} + \\
+	& &  I_{2} \cdotp I_{3} \\
+    \overline{O_{14}} & = & I_{1} \cdotp \overline{I_{3}} + \\
+	& &  \overline{I_{1}} \cdotp I_{3} \\
+    \overline{O_{15}} & = & \overline{I_{5}} \cdotp \overline{I_{7}} \cdotp \overline{I_{8}} \cdotp \overline{I_{11}} \\
+    O_{16} & = & 0 \\
+    O_{16}.OE & = & I_{4} \cdotp I_{6} \\ \\
+    \overline{O_{17}} & = & I_{5} \cdotp \overline{I_{7}} \cdotp \overline{I_{8}} \cdotp \overline{I_{11}} \\
+    \overline{O_{18}} & = & \overline{I_{5}} \cdotp I_{7} \cdotp \overline{I_{8}} \cdotp \overline{I_{11}} \\
+    \overline{O_{19}} & = & \overline{I_{6}} \cdotp I_{9} + \\
+	& &  \overline{I_{4}} \cdotp I_{9} \\
+    O_{19}.OE & = & I_{9} \cdotp O_{16} \\ \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+
+17) Микросхема: \emph{PAL16L8/P5/km1556hl8-p5  (5bae8d8b.jed)}, альтернативных дампов: \emph{нет!}
+\nopagebreak\begin{eqnarray*}
+    \overline{O_{12}} & = & \overline{I_{1}} \cdotp \overline{I_{5}} \cdotp I_{6} \cdotp I_{8} \cdotp I_{9} \cdotp \overline{I_{11}} \\
+    \overline{O_{13}} & = & I_{3} \\
+    \overline{O_{14}} & = & I_{2} \\
+    \overline{O_{15}} & = & I_{7} \\
+    \overline{O_{16}} & = & \overline{I_{1}} \cdotp I_{8} \cdotp I_{9} \cdotp \overline{I_{11}} \\
+    \overline{O_{17}} & = & I_{4} \\
+    \overline{O_{18}} & = & \overline{I_{1}} \cdotp \overline{I_{5}} \cdotp \overline{I_{8}} \cdotp I_{9} \cdotp I_{11} \\
+    \overline{O_{19}} & = & \overline{I_{1}} \cdotp I_{5} \cdotp \overline{I_{8}} \cdotp I_{9} \cdotp I_{11} \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+
+18) Микросхема: \emph{PAL16L8/P10/km1556hl8-p10.2  (2ca7bbc6.jed)}, альтернативных дампов: 2
+\nopagebreak\begin{eqnarray*}
+    \overline{O_{12}} & = & \overline{I_{7}} \cdotp I_{9} + \\
+	& &  \overline{I_{4}} \cdotp \overline{I_{7}} + \\
+	& &  \overline{I_{5}} \cdotp \overline{I_{7}} + \\
+	& &  I_{3} + \\
+	& &  O_{15} \\
+    \overline{O_{13}} & = & \overline{I_{2}} \cdotp \overline{I_{6}} \cdotp \overline{I_{7}} \cdotp I_{8} \cdotp \overline{I_{11}} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{4}} \cdotp I_{5} \cdotp \overline{I_{6}} \cdotp I_{7} \cdotp I_{8} \cdotp \overline{I_{11}} + \\
+	& &  I_{2} \cdotp \overline{O_{16}} \cdotp \overline{O_{17}} \cdotp \overline{O_{18}} \\
+    O_{13}.OE & = & I_{1} \\ \\
+    \overline{O_{14}} & = & \overline{I_{2}} \cdotp \overline{I_{3}} \cdotp \overline{I_{7}} \cdotp I_{8} \cdotp \overline{I_{11}} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{3}} \cdotp \overline{I_{4}} \cdotp I_{5} \cdotp I_{7} \cdotp I_{8} \cdotp \overline{I_{11}} + \\
+	& &  I_{2} \cdotp O_{16} \cdotp \overline{O_{17}} \cdotp \overline{O_{18}} \\
+    O_{14}.OE & = & I_{1} \\ \\
+    \overline{O_{15}} & = & I_{1} \cdotp \overline{I_{2}} \cdotp \overline{I_{6}} \cdotp \overline{I_{7}} \cdotp I_{8} \cdotp \overline{I_{11}} + \\
+	& &  I_{1} \cdotp \overline{I_{2}} \cdotp \overline{I_{3}} \cdotp \overline{I_{7}} \cdotp I_{8} \cdotp \overline{I_{11}} + \\
+	& &  \overline{I_{3}} \cdotp I_{4} \cdotp I_{5} \cdotp I_{7} \cdotp I_{8} \cdotp I_{9} \cdotp \overline{I_{11}} \\
+    \overline{O_{16}} & = & I_{4} \cdotp I_{5} \cdotp \overline{I_{7}} \cdotp \overline{I_{9}} \cdotp \overline{O_{15}} + \\
+	& &  \overline{I_{9}} \cdotp \overline{O_{16}} + \\
+	& &  \overline{I_{4}} \cdotp \overline{O_{16}} + \\
+	& &  \overline{I_{5}} \cdotp \overline{O_{16}} + \\
+	& &  I_{7} \cdotp \overline{O_{16}} + \\
+	& &  O_{15} \cdotp \overline{O_{16}} + \\
+	& &  \overline{I_{1}} \cdotp \overline{O_{14}} \\
+    \overline{O_{17}} & = & I_{1} \cdotp \overline{I_{2}} \cdotp \overline{I_{3}} \cdotp \overline{I_{4}} \cdotp \overline{I_{5}} \cdotp \overline{I_{7}} \cdotp I_{8} \cdotp \overline{I_{9}} \cdotp \overline{O_{15}} \cdotp \overline{O_{16}} + \\
+	& &  I_{1} \cdotp \overline{I_{2}} \cdotp \overline{I_{4}} \cdotp \overline{I_{5}} \cdotp \overline{I_{6}} \cdotp \overline{I_{7}} \cdotp I_{8} \cdotp \overline{I_{9}} \cdotp \overline{O_{15}} \cdotp O_{16} + \\
+	& &  \overline{I_{1}} \cdotp \overline{O_{13}} + \\
+	& &  \overline{I_{1}} \cdotp \overline{O_{14}} + \\
+	& &  I_{2} \cdotp \overline{O_{18}} \\
+    \overline{O_{18}} & = & I_{2} + \\
+	& &  \overline{O_{17}} \cdotp \overline{O_{18}} \\
+    \overline{O_{19}} & = & I_{1} \cdotp \overline{I_{2}} \cdotp \overline{I_{4}} \cdotp I_{5} \cdotp \overline{I_{6}} \cdotp I_{7} \cdotp I_{8} \cdotp \overline{I_{11}} + \\
+	& &  I_{1} \cdotp \overline{I_{2}} \cdotp \overline{I_{3}} \cdotp \overline{I_{4}} \cdotp I_{5} \cdotp I_{7} \cdotp I_{8} \cdotp \overline{I_{11}} \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+
+19) Микросхема: \emph{PAL16R4/P11/km1556hp4-p11.3  (301cce3c.jed)}, альтернативных дампов: 2
+\nopagebreak\begin{eqnarray*}
+    \overline{O_{12}} & = & I_{6} \cdotp I_{8} \cdotp \overline{I_{9}} + \\
+	& &  I_{8} \cdotp \overline{O_{12}} + \\
+	& &  I_{9} \cdotp \overline{O_{12}} + \\
+	& &  \overline{I_{6}} \cdotp \overline{O_{12}} \\
+    \overline{O_{13}} & = & I_{5} \cdotp I_{6} \cdotp \overline{I_{9}} + \\
+	& &  I_{5} \cdotp \overline{O_{13}} + \\
+	& &  I_{9} \cdotp \overline{O_{13}} + \\
+	& &  \overline{I_{6}} \cdotp \overline{O_{13}} \\
+    \overline{RF_{14}} & := & I_{4} \cdotp RF_{14} \cdotp RF_{16} \cdotp RF_{17} + \\
+	& &  \overline{I_{6}} \cdotp \overline{RF_{14}} \cdotp \overline{RF_{16}} + \\
+	& &  \overline{I_{6}} \cdotp \overline{RF_{14}} \cdotp \overline{RF_{17}} + \\
+	& &  \overline{I_{9}} \cdotp \overline{RF_{14}} \cdotp \overline{RF_{16}} + \\
+	& &  \overline{I_{9}} \cdotp \overline{RF_{14}} \cdotp \overline{RF_{17}} + \\
+	& &  I_{5} \cdotp I_{6} \cdotp I_{9} + \\
+	& &  \overline{I_{4}} \cdotp \overline{RF_{14}} \\
+    \overline{RF_{15}} & := & \overline{I_{2}} \cdotp I_{6} \cdotp I_{9} + \\
+	& &  \overline{I_{2}} \cdotp \overline{RF_{15}} + \\
+	& &  \overline{I_{9}} \cdotp \overline{RF_{15}} + \\
+	& &  \overline{I_{6}} \cdotp \overline{RF_{15}} \\
+    \overline{RF_{16}} & := & I_{4} \cdotp RF_{16} \cdotp RF_{17} + \\
+	& &  \overline{I_{6}} \cdotp \overline{RF_{16}} \cdotp \overline{RF_{17}} + \\
+	& &  \overline{I_{9}} \cdotp \overline{RF_{16}} \cdotp \overline{RF_{17}} + \\
+	& &  I_{6} \cdotp \overline{I_{8}} \cdotp I_{9} + \\
+	& &  \overline{I_{4}} \cdotp \overline{RF_{16}} \\
+    \overline{RF_{17}} & := & \overline{I_{7}} \cdotp RF_{17} + \\
+	& &  I_{6} \\
+    \overline{O_{18}} & = & I_{2} \cdotp I_{6} \cdotp \overline{I_{9}} + \\
+	& &  I_{2} \cdotp \overline{O_{18}} + \\
+	& &  I_{9} \cdotp \overline{O_{18}} + \\
+	& &  \overline{I_{6}} \cdotp \overline{O_{18}} \\
+    \overline{O_{19}} & = & I_{3} + \\
+	& &  I_{7} \cdotp \overline{RF_{17}} \cdotp O_{19} + \\
+	& &  I_{7} \cdotp RF_{17} \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+
+20) Микросхема: \emph{PAL16L8/P12/km1556hl8-p12  (2f065c7a.jed)}, альтернативных дампов: 1
+\nopagebreak\begin{eqnarray*}
+    \overline{O_{12}} & = & I_{1} \cdotp \overline{I_{6}} \\
+    \overline{O_{13}} & = & I_{6} \cdotp I_{7} \cdotp \overline{I_{11}} + \\
+	& &  I_{7} \cdotp \overline{O_{13}} + \\
+	& &  \overline{I_{6}} \cdotp \overline{O_{13}} + \\
+	& &  I_{11} \cdotp \overline{O_{13}} \\
+    \overline{O_{14}} & = & O_{13} \cdotp O_{18} \\
+    \overline{O_{15}} & = & I_{8} \cdotp \overline{O_{18}} + \\
+	& &  I_{4} \cdotp I_{9} \cdotp O_{18} \\
+    \overline{O_{16}} & = & I_{2} \cdotp \overline{O_{18}} + \\
+	& &  I_{2} \cdotp \overline{I_{9}} \cdotp O_{18} \\
+    \overline{O_{17}} & = & I_{3} + \\
+	& &  \overline{I_{9}} \cdotp O_{18} \\
+    \overline{O_{18}} & = & I_{5} \cdotp I_{6} \cdotp \overline{I_{11}} + \\
+	& &  I_{5} \cdotp \overline{O_{18}} + \\
+	& &  \overline{I_{6}} \cdotp \overline{O_{18}} + \\
+	& &  I_{11} \cdotp \overline{O_{18}} \\
+    \overline{O_{19}} & = & \overline{O_{13}} \cdotp O_{18} \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+
+21) Микросхема: \emph{PAL16L8/P13/km1556hl8-p13  (29dab5f9.jed)}, альтернативных дампов: 1
+\nopagebreak\begin{eqnarray*}
+    \overline{O_{12}} & = & I_{3} \cdotp I_{6} + \\
+	& &  \overline{I_{3}} \cdotp I_{11} \\
+    \overline{O_{13}} & = & I_{2} \cdotp I_{3} \cdotp O_{17} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{3}} \cdotp O_{17} + \\
+	& &  I_{3} \cdotp \overline{I_{9}} \cdotp O_{15} \cdotp \overline{O_{17}} + \\
+	& &  I_{3} \cdotp \overline{I_{6}} \cdotp O_{15} \cdotp \overline{O_{17}} \\
+    \overline{O_{14}} & = & \overline{O_{13}} \cdotp O_{17} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{3}} \cdotp O_{17} + \\
+	& &  I_{2} \cdotp I_{3} \cdotp O_{17} + \\
+	& &  I_{3} \cdotp \overline{I_{5}} \cdotp O_{15} \cdotp \overline{O_{17}} + \\
+	& &  I_{3} \cdotp \overline{I_{6}} \cdotp O_{15} \cdotp \overline{O_{17}} \\
+    \overline{O_{15}} & = & I_{4} \\
+    O_{15}.OE & = & \overline{I_{3}} \\ \\
+    \overline{O_{16}} & = & \overline{O_{18}} \\
+    \overline{O_{17}} & = & I_{3} \cdotp I_{8} + \\
+	& &  \overline{I_{3}} \cdotp I_{7} \\
+    \overline{O_{18}} & = & I_{1} \\
+    \overline{O_{19}} & = & O_{14} \cdotp O_{17} + \\
+	& &  \overline{I_{2}} \cdotp \overline{I_{3}} \cdotp O_{17} + \\
+	& &  I_{2} \cdotp I_{3} \cdotp O_{17} + \\
+	& &  \overline{O_{17}} \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+
+22) Микросхема: \emph{PAL16R6/P14/km1556hp6-p14.3  (7a7dc71e.jed)}, альтернативных дампов: 5
+\nopagebreak\begin{eqnarray*}
+    \overline{O_{12}} & = & \overline{RF_{13}} \cdotp \overline{RF_{15}} \cdotp \overline{RF_{17}} + \\
+	& &  I_{3} \cdotp RF_{13} \cdotp RF_{15} \cdotp RF_{17} + \\
+	& &  I_{3} \cdotp \overline{I_{6}} \cdotp RF_{16} + \\
+	& &  \overline{I_{3}} \cdotp RF_{16} + \\
+	& &  \overline{I_{5}} + \\
+	& &  \overline{I_{2}} \\
+    \overline{RF_{13}} & := & I_{3} \cdotp RF_{15} \cdotp RF_{16} \cdotp RF_{17} + \\
+	& &  I_{3} \cdotp \overline{RF_{13}} + \\
+	& &  I_{3} \cdotp \overline{RF_{13}} \cdotp \overline{RF_{16}} + \\
+	& &  I_{3} \cdotp I_{4} \cdotp I_{7} \cdotp RF_{18} + \\
+	& &  I_{3} \cdotp I_{4} \cdotp I_{7} \cdotp \overline{RF_{13}} \cdotp RF_{15} \cdotp \overline{RF_{18}} + \\
+	& &  \overline{I_{3}} \cdotp I_{4} \cdotp \overline{I_{7}} \\
+    \overline{RF_{14}} & := & I_{3} \cdotp I_{4} \cdotp RF_{13} \cdotp RF_{14} \cdotp RF_{15} \cdotp \overline{RF_{16}} + \\
+	& &  I_{3} \cdotp I_{4} \cdotp \overline{RF_{14}} \cdotp RF_{16} + \\
+	& &  I_{3} \cdotp I_{4} \cdotp \overline{RF_{14}} \cdotp RF_{17} + \\
+	& &  I_{3} \cdotp I_{4} \cdotp \overline{RF_{14}} \cdotp \overline{RF_{15}} + \\
+	& &  I_{3} \cdotp I_{4} \cdotp \overline{RF_{13}} \cdotp \overline{RF_{14}} + \\
+	& &  \overline{I_{3}} \cdotp \overline{RF_{14}} \cdotp RF_{16} + \\
+	& &  \overline{I_{3}} \cdotp I_{4} \cdotp \overline{RF_{16}} \cdotp O_{19} + \\
+	& &  \overline{I_{3}} \cdotp \overline{I_{4}} \cdotp \overline{RF_{14}} \\
+    \overline{RF_{15}} & := & I_{3} \cdotp \overline{RF_{13}} \cdotp RF_{15} \cdotp RF_{16} \cdotp RF_{17} \cdotp \overline{RF_{18}} + \\
+	& &  I_{3} \cdotp \overline{RF_{13}} \cdotp \overline{RF_{15}} + \\
+	& &  I_{3} \cdotp \overline{RF_{15}} + \\
+	& &  I_{3} \cdotp \overline{RF_{15}} \cdotp \overline{RF_{16}} + \\
+	& &  I_{3} \cdotp I_{4} \cdotp I_{7} \cdotp RF_{18} + \\
+	& &  I_{3} \cdotp I_{4} \cdotp I_{7} \cdotp \overline{RF_{13}} \cdotp RF_{15} \cdotp \overline{RF_{18}} + \\
+	& &  \overline{I_{3}} \cdotp \overline{I_{4}} \cdotp I_{9} \\
+    \overline{RF_{16}} & := & RF_{16} + \\
+	& &  I_{3} \cdotp I_{4} \cdotp I_{7} \cdotp RF_{18} + \\
+	& &  I_{3} \cdotp I_{4} \cdotp I_{7} \cdotp \overline{RF_{13}} \cdotp RF_{15} \cdotp \overline{RF_{18}} \\
+    \overline{RF_{17}} & := & I_{3} \cdotp RF_{16} \cdotp RF_{17} + \\
+	& &  I_{3} \cdotp \overline{I_{6}} \cdotp \overline{RF_{16}} \cdotp \overline{RF_{17}} + \\
+	& &  I_{3} \cdotp I_{4} \cdotp I_{7} \cdotp RF_{18} + \\
+	& &  I_{3} \cdotp I_{4} \cdotp I_{7} \cdotp \overline{RF_{13}} \cdotp RF_{15} \cdotp \overline{RF_{18}} + \\
+	& &  \overline{I_{3}} \cdotp I_{4} \cdotp \overline{I_{7}} \cdotp \overline{RF_{13}} \\
+    \overline{RF_{18}} & := & I_{3} \cdotp \overline{RF_{13}} \cdotp RF_{15} \cdotp RF_{16} \cdotp RF_{17} \cdotp RF_{18} + \\
+	& &  I_{3} \cdotp \overline{RF_{16}} \cdotp \overline{RF_{18}} + \\
+	& &  I_{3} \cdotp \overline{RF_{17}} \cdotp \overline{RF_{18}} + \\
+	& &  I_{3} \cdotp \overline{RF_{15}} \cdotp \overline{RF_{18}} + \\
+	& &  I_{3} \cdotp I_{4} \cdotp I_{7} \cdotp RF_{18} + \\
+	& &  I_{3} \cdotp I_{4} \cdotp I_{7} \cdotp \overline{RF_{13}} \cdotp RF_{15} \cdotp \overline{RF_{18}} \\
+    \overline{O_{19}} & = & \overline{I_{3}} \cdotp \overline{RF_{15}} + \\
+	& &  I_{3} \cdotp \overline{I_{7}} \cdotp I_{8} \cdotp RF_{13} \cdotp \overline{RF_{15}} \cdotp RF_{17} \cdotp RF_{18} + \\
+	& &  I_{3} \cdotp \overline{I_{7}} \cdotp \overline{I_{8}} \cdotp RF_{13} \cdotp RF_{15} \cdotp \overline{RF_{17}} \cdotp RF_{18} + \\
+	& &  I_{3} \cdotp I_{7} \cdotp \overline{I_{8}} \cdotp RF_{13} \cdotp RF_{15} \cdotp RF_{17} \cdotp RF_{18} \\
+    O_{19}.OE & = & \overline{I_{4}} \\ \\
+ \end{eqnarray*}
+\pagebreak[1]
+
+\end{document}
+

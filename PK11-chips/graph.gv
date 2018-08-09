@@ -1,0 +1,2428 @@
+digraph pk11 {
+rankdir=LR;
+ranksep="4 equally";
+node [shape=record;fontsize=24];
+# <<< V1 >>>
+
+
+# Firmware: V1
+# Inputs:
+# I2
+# I4
+# I5
+# I6
+# I7
+# I8
+# I9
+# Outputs:
+# O12
+# O13
+# O18
+# O19
+# RF14
+# RF15
+# RF16
+# RF17
+V1 [label="{ { <CLK>CLK | <I2>I2 | <I4>I4 | <I5>I5 | <I6>I6 | <I7>I7 | <I8>I8 | <I9>I9} | { V1 \n PAL16R4 } | { <O12>O12 | <O13>O13 | <O18>O18 | <O19>O19 | <RF14>RF14 | <RF15>RF15 | <RF16>RF16 | <RF17>RF17 } }"];
+# Feedbacks:
+V1:O12:e->V1:O12:w [color=orange4];
+V1:O12:e->V1:O18:w [color=red];
+V1:O12:e->V1:O19:w [color=red];
+V1:O13:e->V1:O13:w [color=orange4];
+V1:O18:e->V1:O18:w [color=orange4];
+V1:O18:e->V1:O19:w [color=red];
+V1:O19:e->V1:O19:w [color=orange4];
+V1:RF14:e->V1:O12:w [color=red];
+V1:RF14:e->V1:O13:w [color=red];
+V1:RF14:e->V1:O18:w [color=red];
+V1:RF14:e->V1:O19:w [color=red];
+V1:RF14:e->V1:RF14:w [color=olivedrab4];
+V1:RF15:e->V1:O12:w [color=red];
+V1:RF15:e->V1:O13:w [color=red];
+V1:RF15:e->V1:O18:w [color=red];
+V1:RF15:e->V1:O19:w [color=red];
+V1:RF15:e->V1:RF14:w [color=green];
+V1:RF15:e->V1:RF15:w [color=olivedrab4];
+V1:RF16:e->V1:O12:w [color=red];
+V1:RF16:e->V1:O13:w [color=red];
+V1:RF16:e->V1:O18:w [color=red];
+V1:RF16:e->V1:O19:w [color=red];
+V1:RF16:e->V1:RF14:w [color=green];
+V1:RF16:e->V1:RF15:w [color=green];
+V1:RF16:e->V1:RF16:w [color=olivedrab4];
+V1:RF17:e->V1:O12:w [color=red];
+V1:RF17:e->V1:O13:w [color=red];
+V1:RF17:e->V1:O18:w [color=red];
+V1:RF17:e->V1:O19:w [color=red];
+V1:RF17:e->V1:RF14:w [color=green];
+V1:RF17:e->V1:RF15:w [color=green];
+V1:RF17:e->V1:RF16:w [color=green];
+V1:RF17:e->V1:RF17:w [color=olivedrab4];
+# --
+
+# <<< V2 >>>
+
+
+# Firmware: V2
+# Inputs:
+# I2
+# I3
+# I4
+# I5
+# I6
+# I7
+# I8
+# I9
+# Outputs:
+# O12
+# O13
+# O18
+# O19
+# RF14
+# RF15
+# RF16
+# RF17
+V2 [label="{ { <CLK>CLK | <I2>I2 | <I3>I3 | <I4>I4 | <I5>I5 | <I6>I6 | <I7>I7 | <I8>I8 | <I9>I9} | { V2 \n PAL16R4 } | { <O12>O12 | <O13>O13 | <O18>O18 | <O19>O19 | <RF14>RF14 | <RF15>RF15 | <RF16>RF16 | <RF17>RF17 } }"];
+# Feedbacks:
+V2:O18:e->V2:O18:w [color=orange4];
+V2:O19:e->V2:O18:w [color=red];
+V2:RF14:e->V2:O12:w [color=red];
+V2:RF15:e->V2:O12:w [color=red];
+V2:RF15:e->V2:O18:w [color=red];
+V2:RF16:e->V2:RF16:w [color=olivedrab4];
+V2:RF16:e->V2:RF17:w [color=green];
+V2:RF17:e->V2:RF17:w [color=olivedrab4];
+# --
+
+# <<< V3 >>>
+
+
+# Firmware: V3
+# Inputs:
+# I2
+# I3
+# I4
+# I5
+# I6
+# I7
+# I8
+# I9
+# Outputs:
+# O12
+# O19
+# RF13
+# RF14
+# RF15
+# RF16
+# RF17
+# RF18
+V3 [label="{ { <CLK>CLK | <I2>I2 | <I3>I3 | <I4>I4 | <I5>I5 | <I6>I6 | <I7>I7 | <I8>I8 | <I9>I9} | { V3 \n PAL16R6 } | { <O12>O12 | <O19>O19 | <RF13>RF13 | <RF14>RF14 | <RF15>RF15 | <RF16>RF16 | <RF17>RF17 | <RF18>RF18 } }"];
+# Feedbacks:
+V3:O12:e->V3:O12:w [color=orange4];
+V3:O19:e->V3:O19:w [color=orange4];
+V3:RF13:e->V3:O19:w [color=red];
+V3:RF13:e->V3:RF13:w [color=olivedrab4];
+V3:RF13:e->V3:RF14:w [color=green];
+V3:RF13:e->V3:RF15:w [color=green];
+V3:RF13:e->V3:RF16:w [color=green];
+V3:RF13:e->V3:RF17:w [color=green];
+V3:RF13:e->V3:RF18:w [color=green];
+V3:RF14:e->V3:O12:w [color=red];
+V3:RF14:e->V3:O19:w [color=red];
+V3:RF14:e->V3:RF14:w [color=olivedrab4];
+V3:RF14:e->V3:RF15:w [color=green];
+V3:RF14:e->V3:RF17:w [color=green];
+V3:RF14:e->V3:RF18:w [color=green];
+V3:RF15:e->V3:O12:w [color=red];
+V3:RF15:e->V3:O19:w [color=red];
+V3:RF15:e->V3:RF15:w [color=olivedrab4];
+V3:RF15:e->V3:RF17:w [color=green];
+V3:RF15:e->V3:RF18:w [color=green];
+V3:RF16:e->V3:O19:w [color=red];
+V3:RF16:e->V3:RF14:w [color=green];
+V3:RF16:e->V3:RF15:w [color=green];
+V3:RF16:e->V3:RF16:w [color=olivedrab4];
+V3:RF16:e->V3:RF17:w [color=green];
+V3:RF16:e->V3:RF18:w [color=green];
+V3:RF17:e->V3:RF17:w [color=olivedrab4];
+V3:RF18:e->V3:O12:w [color=red];
+V3:RF18:e->V3:O19:w [color=red];
+V3:RF18:e->V3:RF15:w [color=green];
+V3:RF18:e->V3:RF17:w [color=green];
+V3:RF18:e->V3:RF18:w [color=olivedrab4];
+# --
+
+# <<< V4 >>>
+
+
+# Firmware: V4
+# Inputs:
+# I2
+# I3
+# I4
+# I5
+# I6
+# I7
+# I8
+# I9
+# Outputs:
+# O12
+# O13
+# O18
+# O19
+# RF14
+# RF15
+# RF16
+# RF17
+V4 [label="{ { <CLK>CLK | <I2>I2 | <I3>I3 | <I4>I4 | <I5>I5 | <I6>I6 | <I7>I7 | <I8>I8 | <I9>I9} | { V4 \n PAL16R4 } | { <O12>O12 | <O13>O13 | <O18>O18 | <O19>O19 | <RF14>RF14 | <RF15>RF15 | <RF16>RF16 | <RF17>RF17 } }"];
+# Feedbacks:
+V4:RF14:e->V4:RF14:w [color=olivedrab4];
+V4:RF14:e->V4:RF15:w [color=green];
+V4:RF14:e->V4:RF16:w [color=green];
+V4:RF15:e->V4:RF15:w [color=olivedrab4];
+V4:RF15:e->V4:RF16:w [color=green];
+V4:RF16:e->V4:RF14:w [color=green];
+V4:RF16:e->V4:RF15:w [color=green];
+V4:RF16:e->V4:RF16:w [color=olivedrab4];
+V4:RF17:e->V4:RF14:w [color=green];
+V4:RF17:e->V4:RF15:w [color=green];
+V4:RF17:e->V4:RF16:w [color=green];
+V4:RF17:e->V4:RF17:w [color=olivedrab4];
+# --
+
+# <<< V5 >>>
+
+
+# Firmware: V5
+# Inputs:
+# I2
+# I3
+# I4
+# I5
+# I6
+# I7
+# I8
+# I9
+# I20
+# I21
+# I22
+# I23
+# I24
+# I25
+# I26
+# I27
+# Outputs:
+# O10
+# O11
+# O12
+# O13
+# O15
+# O16
+# O17
+# O18
+V5 [label="{ { <I2>I2 | <I3>I3 | <I4>I4 | <I5>I5 | <I6>I6 | <I7>I7 | <I8>I8 | <I9>I9 | <I20>I20 | <I21>I21 | <I22>I22 | <I23>I23 | <I24>I24 | <I25>I25 | <I26>I26 | <I27>I27} | { V5 \n PLS100 } | { <O10>O10 | <O11>O11 | <O12>O12 | <O13>O13 | <O15>O15 | <O16>O16 | <O17>O17 | <O18>O18 } }"];
+# Feedbacks:
+# --
+
+# <<< V6 >>>
+
+
+# Firmware: V6
+# Inputs:
+# I1
+# I2
+# I3
+# I4
+# I5
+# I7
+# I8
+# I9
+# I11
+# Outputs:
+# O12
+# O13
+# O14
+# O15
+# O16
+# O18
+# O19
+V6 [label="{ { <I1>I1 | <I2>I2 | <I3>I3 | <I4>I4 | <I5>I5 | <I7>I7 | <I8>I8 | <I9>I9 | <I11>I11} | { V6 \n PAL16L8 } | { <O12>O12 | <O13>O13 | <O14>O14 | <O15>O15 | <O16>O16 | <O18>O18 | <O19>O19 } }"];
+# Feedbacks:
+V6:O14:e->V6:O14:w [color=orange4];
+V6:O15:e->V6:O15:w [color=orange4];
+V6:O18:e->V6:O12:w [color=red];
+V6:O18:e->V6:O13:w [color=red];
+# --
+
+# <<< V7 >>>
+
+
+# Firmware: V7
+# Inputs:
+# I2
+# I3
+# I4
+# I5
+# I6
+# I7
+# I8
+# I9
+# I20
+# I21
+# I22
+# I23
+# I24
+# I25
+# I26
+# I27
+# Outputs:
+# O10
+# O11
+# O12
+# O13
+# O15
+# O16
+# O17
+# O18
+V7 [label="{ { <I2>I2 | <I3>I3 | <I4>I4 | <I5>I5 | <I6>I6 | <I7>I7 | <I8>I8 | <I9>I9 | <I20>I20 | <I21>I21 | <I22>I22 | <I23>I23 | <I24>I24 | <I25>I25 | <I26>I26 | <I27>I27} | { V7 \n PLS100 } | { <O10>O10 | <O11>O11 | <O12>O12 | <O13>O13 | <O15>O15 | <O16>O16 | <O17>O17 | <O18>O18 } }"];
+# Feedbacks:
+# --
+
+# <<< V8 >>>
+
+
+# Firmware: V8
+# Inputs:
+# I2
+# I3
+# I4
+# I5
+# I6
+# I7
+# I8
+# Outputs:
+# O12
+# O19
+# RF13
+# RF14
+# RF15
+# RF16
+# RF17
+# RF18
+V8 [label="{ { <CLK>CLK | <I2>I2 | <I3>I3 | <I4>I4 | <I5>I5 | <I6>I6 | <I7>I7 | <I8>I8} | { V8 \n PAL16R6 } | { <O12>O12 | <O19>O19 | <RF13>RF13 | <RF14>RF14 | <RF15>RF15 | <RF16>RF16 | <RF17>RF17 | <RF18>RF18 } }"];
+# Feedbacks:
+V8:O12:e->V8:O12:w [color=orange4];
+V8:RF13:e->V8:O19:w [color=red];
+V8:RF13:e->V8:RF13:w [color=olivedrab4];
+V8:RF14:e->V8:O12:w [color=red];
+V8:RF14:e->V8:RF13:w [color=green];
+V8:RF14:e->V8:RF14:w [color=olivedrab4];
+V8:RF15:e->V8:O12:w [color=red];
+V8:RF15:e->V8:RF13:w [color=green];
+V8:RF15:e->V8:RF14:w [color=green];
+V8:RF15:e->V8:RF15:w [color=olivedrab4];
+V8:RF16:e->V8:O12:w [color=red];
+V8:RF16:e->V8:RF13:w [color=green];
+V8:RF16:e->V8:RF14:w [color=green];
+V8:RF16:e->V8:RF15:w [color=green];
+V8:RF16:e->V8:RF16:w [color=olivedrab4];
+V8:RF17:e->V8:O12:w [color=red];
+V8:RF17:e->V8:RF13:w [color=green];
+V8:RF17:e->V8:RF14:w [color=green];
+V8:RF17:e->V8:RF15:w [color=green];
+V8:RF17:e->V8:RF16:w [color=green];
+V8:RF17:e->V8:RF17:w [color=olivedrab4];
+V8:RF18:e->V8:O12:w [color=red];
+V8:RF18:e->V8:RF13:w [color=green];
+V8:RF18:e->V8:RF14:w [color=green];
+V8:RF18:e->V8:RF15:w [color=green];
+V8:RF18:e->V8:RF16:w [color=green];
+V8:RF18:e->V8:RF17:w [color=green];
+V8:RF18:e->V8:RF18:w [color=olivedrab4];
+# --
+
+# <<< V9 >>>
+
+
+# Firmware: V9
+# Inputs:
+# I2
+# I3
+# I4
+# I5
+# I6
+# I7
+# I8
+# I9
+# Outputs:
+# O12
+# O13
+# O18
+# O19
+# RF14
+# RF15
+# RF16
+# RF17
+V9 [label="{ { <CLK>CLK | <I2>I2 | <I3>I3 | <I4>I4 | <I5>I5 | <I6>I6 | <I7>I7 | <I8>I8 | <I9>I9} | { V9 \n PAL16R4 } | { <O12>O12 | <O13>O13 | <O18>O18 | <O19>O19 | <RF14>RF14 | <RF15>RF15 | <RF16>RF16 | <RF17>RF17 } }"];
+# Feedbacks:
+V9:RF14:e->V9:O12:w [color=red];
+V9:RF14:e->V9:RF14:w [color=olivedrab4];
+V9:RF15:e->V9:O13:w [color=red];
+V9:RF15:e->V9:RF14:w [color=green];
+V9:RF15:e->V9:RF15:w [color=olivedrab4];
+V9:RF15:e->V9:RF16:w [color=green];
+V9:RF16:e->V9:O19:w [color=red];
+V9:RF16:e->V9:RF14:w [color=green];
+V9:RF16:e->V9:RF16:w [color=olivedrab4];
+V9:RF17:e->V9:O18:w [color=red];
+V9:RF17:e->V9:RF14:w [color=green];
+V9:RF17:e->V9:RF15:w [color=green];
+V9:RF17:e->V9:RF16:w [color=green];
+V9:RF17:e->V9:RF17:w [color=olivedrab4];
+# --
+
+# <<< VA >>>
+
+
+# Firmware: VA
+# Inputs:
+# I2
+# I3
+# I4
+# I5
+# I6
+# I7
+# I8
+# I9
+# I20
+# I21
+# I22
+# I23
+# I24
+# I25
+# I26
+# I27
+# Outputs:
+# O10
+# O11
+# O12
+# O13
+# O15
+# O16
+# O17
+# O18
+VA [label="{ { <I2>I2 | <I3>I3 | <I4>I4 | <I5>I5 | <I6>I6 | <I7>I7 | <I8>I8 | <I9>I9 | <I20>I20 | <I21>I21 | <I22>I22 | <I23>I23 | <I24>I24 | <I25>I25 | <I26>I26 | <I27>I27} | { VA \n PLS100 } | { <O10>O10 | <O11>O11 | <O12>O12 | <O13>O13 | <O15>O15 | <O16>O16 | <O17>O17 | <O18>O18 } }"];
+# Feedbacks:
+# --
+
+# <<< VB >>>
+
+
+# Firmware: VB
+# Inputs:
+# I2
+# I4
+# I5
+# I6
+# I7
+# I8
+# I9
+# I12
+# I13
+# I18
+# I19
+# Outputs:
+# RF14
+# RF15
+# RF16
+# RF17
+VB [label="{ { <CLK>CLK | <I2>I2 | <I4>I4 | <I5>I5 | <I6>I6 | <I7>I7 | <I8>I8 | <I9>I9 | <I12>I12 | <I13>I13 | <I18>I18 | <I19>I19 | <OE>OE} | { VB \n PAL16R4 } | { <RF14>RF14 | <RF15>RF15 | <RF16>RF16 | <RF17>RF17 } }"];
+# Feedbacks:
+VB:RF14:e->VB:RF14:w [color=olivedrab4];
+VB:RF14:e->VB:RF16:w [color=green];
+VB:RF15:e->VB:RF14:w [color=green];
+VB:RF15:e->VB:RF15:w [color=olivedrab4];
+VB:RF15:e->VB:RF17:w [color=green];
+VB:RF16:e->VB:RF16:w [color=olivedrab4];
+VB:RF17:e->VB:RF14:w [color=green];
+VB:RF17:e->VB:RF16:w [color=green];
+VB:RF17:e->VB:RF17:w [color=olivedrab4];
+# --
+
+# <<< VC >>>
+
+
+# Firmware: VC
+# Inputs:
+# I1
+# I2
+# I3
+# I4
+# I5
+# I6
+# I7
+# I8
+# I9
+# I11
+# I17
+# I18
+# Outputs:
+# O12
+# O13
+# O14
+# O15
+# O16
+# O19
+VC [label="{ { <I1>I1 | <I2>I2 | <I3>I3 | <I4>I4 | <I5>I5 | <I6>I6 | <I7>I7 | <I8>I8 | <I9>I9 | <I11>I11 | <I17>I17 | <I18>I18} | { VC \n PAL16L8 } | { <O12>O12 | <O13>O13 | <O14>O14 | <O15>O15 | <O16>O16 | <O19>O19 } }"];
+# Feedbacks:
+# --
+
+# <<< P1 >>>
+
+
+# Firmware: P1
+# Inputs:
+# I1
+# I2
+# I3
+# I4
+# I5
+# I6
+# I7
+# I8
+# I9
+# I11
+# Outputs:
+# O12
+# O13
+# O14
+# O15
+# O16
+# O17
+# O18
+# O19
+P1 [label="{ { <I1>I1 | <I2>I2 | <I3>I3 | <I4>I4 | <I5>I5 | <I6>I6 | <I7>I7 | <I8>I8 | <I9>I9 | <I11>I11} | { P1 \n PAL16L8 } | { <O12>O12 | <O13>O13 | <O14>O14 | <O15>O15 | <O16>O16 | <O17>O17 | <O18>O18 | <O19>O19 } }"];
+# Feedbacks:
+P1:O14:e->P1:O14:w [color=orange4];
+P1:O14:e->P1:O19:w [color=red];
+# --
+
+# <<< P2 >>>
+
+
+# Firmware: P2
+# Inputs:
+# I1
+# I2
+# I3
+# I4
+# I5
+# I6
+# I7
+# I8
+# I9
+# I11
+# Outputs:
+# O12
+# O13
+# O14
+# O15
+# O16
+# O17
+# O18
+# O19
+P2 [label="{ { <I1>I1 | <I2>I2 | <I3>I3 | <I4>I4 | <I5>I5 | <I6>I6 | <I7>I7 | <I8>I8 | <I9>I9 | <I11>I11} | { P2 \n PAL16L8 } | { <O12>O12 | <O13>O13 | <O14>O14 | <O15>O15 | <O16>O16 | <O17>O17 | <O18>O18 | <O19>O19 } }"];
+# Feedbacks:
+P2:O13:e->P2:O13:w [color=orange4];
+P2:O13:e->P2:O19:w [color=red];
+P2:O14:e->P2:O12:w [color=red];
+P2:O14:e->P2:O14:w [color=orange4];
+P2:O14:e->P2:O19:w [color=red];
+P2:O15:e->P2:O13:w [color=red];
+P2:O15:e->P2:O14:w [color=red];
+P2:O17:e->P2:O13:w [color=red];
+P2:O17:e->P2:O14:w [color=red];
+P2:O17:e->P2:O15:w [color=red];
+P2:O18:e->P2:O13:w [color=red];
+P2:O18:e->P2:O14:w [color=red];
+# --
+
+# <<< P3 >>>
+
+
+# Firmware: P3
+# Inputs:
+# I2
+# I3
+# I4
+# I5
+# I6
+# I7
+# I8
+# I9
+# I20
+# I21
+# I22
+# I23
+# I24
+# I25
+# I26
+# I27
+# Outputs:
+# O10
+# O11
+# O12
+# O13
+# O15
+# O16
+# O17
+# O18
+P3 [label="{ { <I2>I2 | <I3>I3 | <I4>I4 | <I5>I5 | <I6>I6 | <I7>I7 | <I8>I8 | <I9>I9 | <I20>I20 | <I21>I21 | <I22>I22 | <I23>I23 | <I24>I24 | <I25>I25 | <I26>I26 | <I27>I27} | { P3 \n PLS100 } | { <O10>O10 | <O11>O11 | <O12>O12 | <O13>O13 | <O15>O15 | <O16>O16 | <O17>O17 | <O18>O18 } }"];
+# Feedbacks:
+# --
+
+# <<< P4 >>>
+
+
+# Firmware: P4
+# Inputs:
+# I1
+# I2
+# I3
+# I4
+# I5
+# I6
+# I7
+# I8
+# I9
+# I11
+# Outputs:
+# O12
+# O13
+# O14
+# O15
+# O16
+# O17
+# O18
+# O19
+P4 [label="{ { <I1>I1 | <I2>I2 | <I3>I3 | <I4>I4 | <I5>I5 | <I6>I6 | <I7>I7 | <I8>I8 | <I9>I9 | <I11>I11} | { P4 \n PAL16L8 } | { <O12>O12 | <O13>O13 | <O14>O14 | <O15>O15 | <O16>O16 | <O17>O17 | <O18>O18 | <O19>O19 } }"];
+# Feedbacks:
+P4:O16:e->P4:O12:w [color=red];
+P4:O16:e->P4:O19:w [color=red];
+# --
+
+# <<< P5 >>>
+
+
+# Firmware: P5
+# Inputs:
+# I1
+# I2
+# I3
+# I4
+# I5
+# I6
+# I7
+# I8
+# I9
+# I11
+# Outputs:
+# O12
+# O13
+# O14
+# O15
+# O16
+# O17
+# O18
+# O19
+P5 [label="{ { <I1>I1 | <I2>I2 | <I3>I3 | <I4>I4 | <I5>I5 | <I6>I6 | <I7>I7 | <I8>I8 | <I9>I9 | <I11>I11} | { P5 \n PAL16L8 } | { <O12>O12 | <O13>O13 | <O14>O14 | <O15>O15 | <O16>O16 | <O17>O17 | <O18>O18 | <O19>O19 } }"];
+# Feedbacks:
+# --
+
+# <<< P10 >>>
+
+
+# Firmware: P10
+# Inputs:
+# I1
+# I2
+# I3
+# I4
+# I5
+# I6
+# I7
+# I8
+# I9
+# I11
+# Outputs:
+# O12
+# O13
+# O14
+# O15
+# O16
+# O17
+# O18
+# O19
+P10 [label="{ { <I1>I1 | <I2>I2 | <I3>I3 | <I4>I4 | <I5>I5 | <I6>I6 | <I7>I7 | <I8>I8 | <I9>I9 | <I11>I11} | { P10 \n PAL16L8 } | { <O12>O12 | <O13>O13 | <O14>O14 | <O15>O15 | <O16>O16 | <O17>O17 | <O18>O18 | <O19>O19 } }"];
+# Feedbacks:
+P10:O13:e->P10:O17:w [color=red];
+P10:O14:e->P10:O16:w [color=red];
+P10:O14:e->P10:O17:w [color=red];
+P10:O15:e->P10:O12:w [color=red];
+P10:O15:e->P10:O16:w [color=red];
+P10:O15:e->P10:O17:w [color=red];
+P10:O16:e->P10:O13:w [color=red];
+P10:O16:e->P10:O14:w [color=red];
+P10:O16:e->P10:O16:w [color=orange4];
+P10:O16:e->P10:O17:w [color=red];
+P10:O17:e->P10:O13:w [color=red];
+P10:O17:e->P10:O14:w [color=red];
+P10:O17:e->P10:O18:w [color=red];
+P10:O18:e->P10:O13:w [color=red];
+P10:O18:e->P10:O14:w [color=red];
+P10:O18:e->P10:O17:w [color=red];
+P10:O18:e->P10:O18:w [color=orange4];
+# --
+
+# <<< P11 >>>
+
+
+# Firmware: P11
+# Inputs:
+# I2
+# I3
+# I4
+# I5
+# I6
+# I7
+# I8
+# I9
+# Outputs:
+# O12
+# O13
+# O18
+# O19
+# RF14
+# RF15
+# RF16
+# RF17
+P11 [label="{ { <CLK>CLK | <I2>I2 | <I3>I3 | <I4>I4 | <I5>I5 | <I6>I6 | <I7>I7 | <I8>I8 | <I9>I9} | { P11 \n PAL16R4 } | { <O12>O12 | <O13>O13 | <O18>O18 | <O19>O19 | <RF14>RF14 | <RF15>RF15 | <RF16>RF16 | <RF17>RF17 } }"];
+# Feedbacks:
+P11:O12:e->P11:O12:w [color=orange4];
+P11:O13:e->P11:O13:w [color=orange4];
+P11:O18:e->P11:O18:w [color=orange4];
+P11:O19:e->P11:O19:w [color=orange4];
+P11:RF14:e->P11:RF14:w [color=olivedrab4];
+P11:RF15:e->P11:RF15:w [color=olivedrab4];
+P11:RF16:e->P11:RF14:w [color=green];
+P11:RF16:e->P11:RF16:w [color=olivedrab4];
+P11:RF17:e->P11:O19:w [color=red];
+P11:RF17:e->P11:RF14:w [color=green];
+P11:RF17:e->P11:RF16:w [color=green];
+P11:RF17:e->P11:RF17:w [color=olivedrab4];
+# --
+
+# <<< P12 >>>
+
+
+# Firmware: P12
+# Inputs:
+# I1
+# I2
+# I3
+# I4
+# I5
+# I6
+# I7
+# I8
+# I9
+# I11
+# Outputs:
+# O12
+# O13
+# O14
+# O15
+# O16
+# O17
+# O18
+# O19
+P12 [label="{ { <I1>I1 | <I2>I2 | <I3>I3 | <I4>I4 | <I5>I5 | <I6>I6 | <I7>I7 | <I8>I8 | <I9>I9 | <I11>I11} | { P12 \n PAL16L8 } | { <O12>O12 | <O13>O13 | <O14>O14 | <O15>O15 | <O16>O16 | <O17>O17 | <O18>O18 | <O19>O19 } }"];
+# Feedbacks:
+P12:O13:e->P12:O13:w [color=orange4];
+P12:O13:e->P12:O14:w [color=red];
+P12:O13:e->P12:O19:w [color=red];
+P12:O18:e->P12:O14:w [color=red];
+P12:O18:e->P12:O15:w [color=red];
+P12:O18:e->P12:O16:w [color=red];
+P12:O18:e->P12:O17:w [color=red];
+P12:O18:e->P12:O18:w [color=orange4];
+P12:O18:e->P12:O19:w [color=red];
+# --
+
+# <<< P13 >>>
+
+
+# Firmware: P13
+# Inputs:
+# I1
+# I2
+# I3
+# I4
+# I5
+# I6
+# I7
+# I8
+# I9
+# I11
+# Outputs:
+# O12
+# O13
+# O14
+# O15
+# O16
+# O17
+# O18
+# O19
+P13 [label="{ { <I1>I1 | <I2>I2 | <I3>I3 | <I4>I4 | <I5>I5 | <I6>I6 | <I7>I7 | <I8>I8 | <I9>I9 | <I11>I11} | { P13 \n PAL16L8 } | { <O12>O12 | <O13>O13 | <O14>O14 | <O15>O15 | <O16>O16 | <O17>O17 | <O18>O18 | <O19>O19 } }"];
+# Feedbacks:
+P13:O13:e->P13:O14:w [color=red];
+P13:O14:e->P13:O19:w [color=red];
+P13:O15:e->P13:O13:w [color=red];
+P13:O15:e->P13:O14:w [color=red];
+P13:O17:e->P13:O13:w [color=red];
+P13:O17:e->P13:O14:w [color=red];
+P13:O17:e->P13:O19:w [color=red];
+P13:O18:e->P13:O16:w [color=red];
+# --
+
+# <<< P14 >>>
+
+
+# Firmware: P14
+# Inputs:
+# I2
+# I3
+# I4
+# I5
+# I6
+# I7
+# I8
+# I9
+# Outputs:
+# O12
+# O19
+# RF13
+# RF14
+# RF15
+# RF16
+# RF17
+# RF18
+P14 [label="{ { <CLK>CLK | <I2>I2 | <I3>I3 | <I4>I4 | <I5>I5 | <I6>I6 | <I7>I7 | <I8>I8 | <I9>I9} | { P14 \n PAL16R6 } | { <O12>O12 | <O19>O19 | <RF13>RF13 | <RF14>RF14 | <RF15>RF15 | <RF16>RF16 | <RF17>RF17 | <RF18>RF18 } }"];
+# Feedbacks:
+P14:O19:e->P14:RF14:w [color=green];
+P14:RF13:e->P14:O12:w [color=red];
+P14:RF13:e->P14:O19:w [color=red];
+P14:RF13:e->P14:RF13:w [color=olivedrab4];
+P14:RF13:e->P14:RF14:w [color=green];
+P14:RF13:e->P14:RF15:w [color=green];
+P14:RF13:e->P14:RF16:w [color=green];
+P14:RF13:e->P14:RF17:w [color=green];
+P14:RF13:e->P14:RF18:w [color=green];
+P14:RF14:e->P14:RF14:w [color=olivedrab4];
+P14:RF15:e->P14:O12:w [color=red];
+P14:RF15:e->P14:O19:w [color=red];
+P14:RF15:e->P14:RF13:w [color=green];
+P14:RF15:e->P14:RF14:w [color=green];
+P14:RF15:e->P14:RF15:w [color=olivedrab4];
+P14:RF15:e->P14:RF16:w [color=green];
+P14:RF15:e->P14:RF17:w [color=green];
+P14:RF15:e->P14:RF18:w [color=green];
+P14:RF16:e->P14:O12:w [color=red];
+P14:RF16:e->P14:RF13:w [color=green];
+P14:RF16:e->P14:RF14:w [color=green];
+P14:RF16:e->P14:RF15:w [color=green];
+P14:RF16:e->P14:RF16:w [color=olivedrab4];
+P14:RF16:e->P14:RF17:w [color=green];
+P14:RF16:e->P14:RF18:w [color=green];
+P14:RF17:e->P14:O12:w [color=red];
+P14:RF17:e->P14:O19:w [color=red];
+P14:RF17:e->P14:RF13:w [color=green];
+P14:RF17:e->P14:RF14:w [color=green];
+P14:RF17:e->P14:RF15:w [color=green];
+P14:RF17:e->P14:RF17:w [color=olivedrab4];
+P14:RF17:e->P14:RF18:w [color=green];
+P14:RF18:e->P14:O19:w [color=red];
+P14:RF18:e->P14:RF13:w [color=green];
+P14:RF18:e->P14:RF15:w [color=green];
+P14:RF18:e->P14:RF16:w [color=green];
+P14:RF18:e->P14:RF17:w [color=green];
+P14:RF18:e->P14:RF18:w [color=olivedrab4];
+# --
+
+# -IND: XP3:34 XP6:8 P12:I1 R16:1
+# 0 -1 3
+_IND [label="{ -IND }"];
+_IND:e->P12:I1:w [color=darkgoldenrod4]
+# -MWD: XP3:20 XP6:22 P14:O19
+# -1 0 2
+_MWD [label="{ -MWD }"];
+P14:O19:e->_MWD:w [color=blue4]
+# A00: V5:I24 D4:2
+# 0 -1 1
+A00 [label="{ A00 }"];
+A00:e->V5:I24:w [color=darkgoldenrod4]
+# A01: D47:27 XS4:A14 XS5:A14 V2:I9 D4:6 R31:2 D25:21 D59:5 D26:9 P5:I6 D62:9 P10:I9 P12:I11 P11:I9 D24:19 D16:19 D17:12
+# 4 -1 16
+A01 [label="{ A01 }"];
+A01:e->V2:I9:w [color=darkgoldenrod4]
+A01:e->P5:I6:w [color=darkgoldenrod4]
+A01:e->P10:I9:w [color=darkgoldenrod4]
+A01:e->P12:I11:w [color=darkgoldenrod4]
+A01:e->P11:I9:w [color=darkgoldenrod4]
+# A02: XS5:B14 XS4:B14 D41:13 R30:1 D4:5 D26:8 P5:I5 D62:10 P10:I4 D24:20 D16:20
+# 1 -1 10
+A02 [label="{ A02 }"];
+A02:e->P5:I5:w [color=darkgoldenrod4]
+A02:e->P10:I4:w [color=darkgoldenrod4]
+# A03: XS4:A15 XS5:A15 D41:11 D4:9 R9:2 P5:I8 D62:11 P10:I5 P4:I5
+# 2 -1 8
+A03 [label="{ A03 }"];
+A03:e->P5:I8:w [color=darkgoldenrod4]
+A03:e->P10:I5:w [color=darkgoldenrod4]
+A03:e->P4:I5:w [color=darkgoldenrod4]
+# A04: XS5:B15 XS4:B15 D41:9 D5:19 R29:2 P5:I9 P10:I7 P4:I7
+# 2 -1 7
+A04 [label="{ A04 }"];
+A04:e->P5:I9:w [color=darkgoldenrod4]
+A04:e->P10:I7:w [color=darkgoldenrod4]
+A04:e->P4:I7:w [color=darkgoldenrod4]
+# A05: XS4:A16 XS5:A16 D41:7 D5:15 P5:I11 P10:I8 P4:I8
+# 2 -1 6
+A05 [label="{ A05 }"];
+A05:e->P5:I11:w [color=darkgoldenrod4]
+A05:e->P10:I8:w [color=darkgoldenrod4]
+A05:e->P4:I8:w [color=darkgoldenrod4]
+# A06: D43:13 P3:I2 D5:16
+# 0 -1 2
+A06 [label="{ A06 }"];
+A06:e->P3:I2:w [color=darkgoldenrod4]
+# A07: D43:11 P3:I3 D5:12
+# 0 -1 2
+A07 [label="{ A07 }"];
+A07:e->P3:I3:w [color=darkgoldenrod4]
+# A08: D43:9 P3:I26 D4:19
+# 0 -1 2
+A08 [label="{ A08 }"];
+A08:e->P3:I26:w [color=darkgoldenrod4]
+# A09: D43:7 P3:I4 D4:15
+# 0 -1 2
+A09 [label="{ A09 }"];
+A09:e->P3:I4:w [color=darkgoldenrod4]
+# A10: D40:13 P3:I25 D4:16
+# 0 -1 2
+A10 [label="{ A10 }"];
+A10:e->P3:I25:w [color=darkgoldenrod4]
+# A11: D40:11 P3:I5 P2:I8 D4:12
+# 1 -1 3
+A11 [label="{ A11 }"];
+A11:e->P3:I5:w [color=darkgoldenrod4]
+A11:e->P2:I8:w [color=darkgoldenrod4]
+# A12: P2:I9 P1:I9 D5:2
+# 1 -1 2
+A12 [label="{ A12 }"];
+A12:e->P2:I9:w [color=darkgoldenrod4]
+A12:e->P1:I9:w [color=darkgoldenrod4]
+# A12M_~A12PG7: D40:9 P1:O18
+# -1 0 1
+A12M__A12PG7 [label="{ A12M_~A12PG7 }"];
+P1:O18:e->A12M__A12PG7:w [color=blue4]
+# A13: D6:2 D8:2 D7:2 D9:2 P1:I8 D5:6
+# 0 -1 5
+A13 [label="{ A13 }"];
+A13:e->P1:I8:w [color=darkgoldenrod4]
+# A13M_~A12PG7: D40:7 P1:O17
+# -1 0 1
+A13M__A12PG7 [label="{ A13M_~A12PG7 }"];
+P1:O17:e->A13M__A12PG7:w [color=blue4]
+# A14: D6:4 D8:4 D7:4 D9:4 P1:I5 D5:5
+# 0 -1 5
+A14 [label="{ A14 }"];
+A14:e->P1:I5:w [color=darkgoldenrod4]
+# A15: D6:3 D8:3 D7:3 D9:3 P1:I6 D5:9
+# 0 -1 5
+A15 [label="{ A15 }"];
+A15:e->P1:I6:w [color=darkgoldenrod4]
+# AD00: D47:11 XS4:A17 D8:18 RAM4:33 D10:16 D2:14 D11:16 XS5:A17 RAM3:33 D28:2 D4:3 V4:I6 D25:12 D26:34 D27:18 D58:6 D24:8 D23:4 D16:8 D17:27
+# 0 -1 19
+AD00 [label="{ AD00 }"];
+AD00:e->V4:I6:w [color=darkgoldenrod4]
+# AD00OR01: V5:I21 V4:O19
+# 0 0 1
+V4:O19:e->V5:I21:w
+
+# AD01: XS5:B17 D47:10 D8:19 RAM4:34 D10:15 D2:15 D11:15 XS4:B17 RAM3:34 D28:6 D4:7 V4:I5 D25:13 D26:33 D27:3 D58:5 D24:7 D23:5 D16:7 D17:28
+# 0 -1 19
+AD01 [label="{ AD01 }"];
+AD01:e->V4:I5:w [color=darkgoldenrod4]
+# AD02: D47:9 XS4:A18 RAM1:33 D8:20 D10:14 D2:16 D11:14 XS5:A18 RAM2:33 D28:5 D4:4 V4:I4 D25:14 D26:32 D27:17 D58:4 D24:6 D23:6 D16:6 D17:1
+# 0 -1 19
+AD02 [label="{ AD02 }"];
+AD02:e->V4:I4:w [color=darkgoldenrod4]
+# AD02OR03: V5:I20 V4:O18
+# 0 0 1
+V4:O18:e->V5:I20:w
+
+# AD03: XS5:B18 D47:8 RAM1:34 D8:17 D10:13 D2:13 D11:13 XS4:B18 RAM2:34 D28:9 D4:8 V4:I3 D25:15 D26:31 D27:4 D58:3 D24:5 D23:7 D16:5 D17:2
+# 0 -1 19
+AD03 [label="{ AD03 }"];
+AD03:e->V4:I3:w [color=darkgoldenrod4]
+# AD04: D47:7 XS4:A19 RAM1:5 D10:4 D2:12 D11:4 XS5:A19 RAM2:5 D9:17 D29:19 D5:18 V4:I2 D25:16 D26:30 D27:14 D58:2 D24:4 D23:8 D16:4 D17:5
+# 0 -1 19
+AD04 [label="{ AD04 }"];
+AD04:e->V4:I2:w [color=darkgoldenrod4]
+# AD04OR05: V5:I6 V4:O12
+# 0 0 1
+V4:O12:e->V5:I6:w
+
+# AD05: XS5:B19 D47:6 RAM1:4 D10:5 D2:17 D11:5 XS4:B19 RAM2:4 D9:18 D29:15 D5:14 V4:I8 D25:17 D26:29 D27:7 D58:8 D24:3 D23:9 D16:3 D17:6
+# 0 -1 19
+AD05 [label="{ AD05 }"];
+AD05:e->V4:I8:w [color=darkgoldenrod4]
+# AD06: D47:5 XS4:A20 RAM4:5 D10:6 D2:18 D11:6 XS5:A20 D7:19 RAM3:5 D29:16 D5:17 V4:I9 D25:18 D26:28 D27:13 D58:9 D24:2 D23:10 D16:2 D17:7
+# 0 -1 19
+AD06 [label="{ AD06 }"];
+AD06:e->V4:I9:w [color=darkgoldenrod4]
+# AD06OR07: V5:I5 V4:O13
+# 0 0 1
+V4:O13:e->V5:I5:w
+
+# AD07: XS5:B20 D47:4 RAM4:4 D10:7 D2:19 D11:7 XS4:B20 D7:18 RAM3:4 D29:12 D5:13 V4:I7 D25:19 D26:27 D27:8 D58:7 D24:1 D23:11 D16:1 D17:8
+# 0 -1 19
+AD07 [label="{ AD07 }"];
+AD07:e->V4:I7:w [color=darkgoldenrod4]
+# AD08: XS4:A10 D6:19 RAM1:36 D10:8 D3:19 D11:8 XS5:A10 RAM2:36 V5:I25 D28:19 D4:18 RN1:2
+# 0 -1 11
+AD08 [label="{ AD08 }"];
+AD08:e->V5:I25:w [color=darkgoldenrod4]
+# AD09: XS5:B10 D6:20 RAM1:35 D10:9 D3:16 D11:9 XS4:B10 RAM2:35 V5:I26 D28:15 D4:14 RN1:5
+# 0 -1 11
+AD09 [label="{ AD09 }"];
+AD09:e->V5:I26:w [color=darkgoldenrod4]
+# AD10: XS4:A11 D6:17 RAM4:36 D10:10 D3:15 D11:10 XS5:A11 RAM3:36 V5:I2 D28:16 D4:17 RN1:6
+# 0 -1 11
+AD10 [label="{ AD10 }"];
+AD10:e->V5:I2:w [color=darkgoldenrod4]
+# AD11: XS5:B11 D6:18 RAM4:35 D10:11 D3:14 D11:11 XS4:B11 RAM3:35 V5:I27 D28:12 D4:13 RN1:7
+# 0 -1 11
+AD11 [label="{ AD11 }"];
+AD11:e->V5:I27:w [color=darkgoldenrod4]
+# AD12: XS4:A12 RAM4:2 D10:17 D3:13 D11:17 XS5:A12 D7:20 RAM3:2 D29:2 V5:I22 RN1:8 D5:3
+# 0 -1 11
+AD12 [label="{ AD12 }"];
+AD12:e->V5:I22:w [color=darkgoldenrod4]
+# AD13: XS5:B12 RAM4:3 D10:18 D3:12 D11:18 XS4:B12 D7:17 RAM3:3 D29:6 V5:I23 RN1:9 D5:7
+# 0 -1 11
+AD13 [label="{ AD13 }"];
+AD13:e->V5:I23:w [color=darkgoldenrod4]
+# AD14: XS4:A13 RAM1:2 D10:19 D3:17 D11:19 XS5:A13 RAM2:2 D9:19 D29:5 V5:I4 RN1:4 D5:4
+# 0 -1 11
+AD14 [label="{ AD14 }"];
+AD14:e->V5:I4:w [color=darkgoldenrod4]
+# AD15: XS5:B13 RAM1:3 D10:20 D3:18 D11:20 XS4:B13 RAM2:3 D9:20 D29:9 V5:I3 RN1:3 D5:8
+# 0 -1 11
+AD15 [label="{ AD15 }"];
+AD15:e->V5:I3:w [color=darkgoldenrod4]
+# CA0: VC:O19 D48:4 D49:4
+# -1 0 2
+CA0 [label="{ CA0 }"];
+VC:O19:e->CA0:w [color=blue4]
+# CA1: VC:O16 D48:3 D49:3
+# -1 0 2
+CA1 [label="{ CA1 }"];
+VC:O16:e->CA1:w [color=blue4]
+# CA2: VC:O15 D48:5 D49:5
+# -1 0 2
+CA2 [label="{ CA2 }"];
+VC:O15:e->CA2:w [color=blue4]
+# CA3: VC:O14 D48:6 D49:6
+# -1 0 2
+CA3 [label="{ CA3 }"];
+VC:O14:e->CA3:w [color=blue4]
+# CA4: V9:O18 D48:23 D49:23 R2:1
+# -1 0 3
+CA4 [label="{ CA4 }"];
+V9:O18:e->CA4:w [color=blue4]
+# CA5: V9:O13 D48:2 D49:2 R11:1
+# -1 0 3
+CA5 [label="{ CA5 }"];
+V9:O13:e->CA5:w [color=blue4]
+# CA6: V9:O19 D48:1 D49:1 R1:1
+# -1 0 3
+CA6 [label="{ CA6 }"];
+V9:O19:e->CA6:w [color=blue4]
+# CA7: V9:O12 D48:22 D49:22 R8:1
+# -1 0 3
+CA7 [label="{ CA7 }"];
+V9:O12:e->CA7:w [color=blue4]
+# CA8: VC:O13 D48:7 D49:7
+# -1 0 2
+CA8 [label="{ CA8 }"];
+VC:O13:e->CA8:w [color=blue4]
+# CA9: VC:O12 D48:8 D49:8
+# -1 0 2
+CA9 [label="{ CA9 }"];
+VC:O12:e->CA9:w [color=blue4]
+# DB0: D59:6 D62:19 D61:13 P11:I8 D58:14
+# 0 -1 4
+DB0 [label="{ DB0 }"];
+DB0:e->P11:I8:w [color=darkgoldenrod4]
+# DB1: D59:7 D62:18 D61:14 P11:I5 D58:15
+# 0 -1 4
+DB1 [label="{ DB1 }"];
+DB1:e->P11:I5:w [color=darkgoldenrod4]
+# DB2: D59:8 D62:17 D61:15 P12:I7 D58:16
+# 0 -1 4
+DB2 [label="{ DB2 }"];
+DB2:e->P12:I7:w [color=darkgoldenrod4]
+# DB3: D59:9 D62:16 D61:16 P12:I5 D58:17
+# 0 -1 4
+DB3 [label="{ DB3 }"];
+DB3:e->P12:I5:w [color=darkgoldenrod4]
+# DB4: D59:10 D62:15 D61:17 P11:I2 D58:18
+# 0 -1 4
+DB4 [label="{ DB4 }"];
+DB4:e->P11:I2:w [color=darkgoldenrod4]
+# DIR: XP3:24 XP6:18 P13:O12
+# -1 0 2
+DIR [label="{ DIR }"];
+P13:O12:e->DIR:w [color=blue4]
+# EF0: P2:O14 D26:18
+# -1 0 1
+EF0 [label="{ EF0 }"];
+P2:O14:e->EF0:w [color=blue4]
+# EF1: P2:O13 D26:19
+# -1 0 1
+EF1 [label="{ EF1 }"];
+P2:O13:e->EF1:w [color=blue4]
+# F0SEL: XP3:32 XP6:10 P12:O14
+# -1 0 2
+F0SEL [label="{ F0SEL }"];
+P12:O14:e->F0SEL:w [color=blue4]
+# F1SEL: XP3:30 XP6:12 P12:O19
+# -1 0 2
+F1SEL [label="{ F1SEL }"];
+P12:O19:e->F1SEL:w [color=blue4]
+# FL-DW: D59:22 D62:30 P14:RF14
+# -1 0 2
+FL_DW [label="{ FL-DW }"];
+P14:RF14:e->FL_DW:w [color=blue4]
+# FL-IDX: D59:17 D62:29 P12:O12
+# -1 0 2
+FL_IDX [label="{ FL-IDX }"];
+P12:O12:e->FL_IDX:w [color=blue4]
+# FL-PS0: D59:32 P13:I9
+# 0 -1 1
+FL_PS0 [label="{ FL-PS0 }"];
+FL_PS0:e->P13:I9:w [color=darkgoldenrod4]
+# FL-PS1: D59:31 P13:I5
+# 0 -1 1
+FL_PS1 [label="{ FL-PS1 }"];
+FL_PS1:e->P13:I5:w [color=darkgoldenrod4]
+# FL-RDD: D59:23 D62:37 P13:O19 C18:2
+# -1 0 3
+FL_RDD [label="{ FL-RDD }"];
+P13:O19:e->FL_RDD:w [color=blue4]
+# FL-WE: D59:25 P13:I8
+# 0 -1 1
+FL_WE [label="{ FL-WE }"];
+FL_WE:e->P13:I8:w [color=darkgoldenrod4]
+# FL-WRCLK: D59:21 P14:RF13
+# -1 0 1
+FL_WRCLK [label="{ FL-WRCLK }"];
+P14:RF13:e->FL_WRCLK:w [color=blue4]
+# FLT/TRK0: D59:33 D62:31 P12:O17
+# -1 0 2
+FLT_TRK0 [label="{ FLT/TRK0 }"];
+P12:O17:e->FLT_TRK0:w [color=blue4]
+# FR/STP: D59:37 P12:I4
+# 0 -1 1
+FR_STP [label="{ FR/STP }"];
+FR_STP:e->P12:I4:w [color=darkgoldenrod4]
+# HD-BDRQ: D62:36 D62:35 P11:I7
+# 0 -1 2
+HD_BDRQ [label="{ HD-BDRQ }"];
+HD_BDRQ:e->P11:I7:w [color=darkgoldenrod4]
+# HD-DIR: D62:26 P13:I11
+# 0 -1 1
+HD_DIR [label="{ HD-DIR }"];
+HD_DIR:e->P13:I11:w [color=darkgoldenrod4]
+# HD-DRDY: D62:28 R19:1 P13:O15
+# -1 0 2
+HD_DRDY [label="{ HD-DRDY }"];
+P13:O15:e->HD_DRDY:w [color=blue4]
+# HD-DRUN: D62:34 P14:RF15
+# -1 0 1
+HD_DRUN [label="{ HD-DRUN }"];
+P14:RF15:e->HD_DRUN:w [color=blue4]
+# HD-STEP: D62:27 P12:I8
+# 0 -1 1
+HD_STEP [label="{ HD-STEP }"];
+HD_STEP:e->P12:I8:w [color=darkgoldenrod4]
+# HD-WRCLK: D62:39 D62:25 P14:RF16
+# -1 0 2
+HD_WRCLK [label="{ HD-WRCLK }"];
+P14:RF16:e->HD_WRCLK:w [color=blue4]
+# HD-WRD: D62:21 R20:1 P14:I9
+# 0 -1 2
+HD_WRD [label="{ HD-WRD }"];
+HD_WRD:e->P14:I9:w [color=darkgoldenrod4]
+# HD-WRG: D62:24 P13:I7
+# 0 -1 1
+HD_WRG [label="{ HD-WRG }"];
+HD_WRG:e->P13:I7:w [color=darkgoldenrod4]
+# HDBUFA07: D61:8 P11:I3 D60:14 C15:1
+# 0 -1 3
+HDBUFA07 [label="{ HDBUFA07 }"];
+HDBUFA07:e->P11:I3:w [color=darkgoldenrod4]
+# HDBUFA08: D61:19 P11:RF17
+# -1 0 1
+HDBUFA08 [label="{ HDBUFA08 }"];
+P11:RF17:e->HDBUFA08:w [color=blue4]
+# HDBUFA09: D61:22 P11:RF16
+# -1 0 1
+HDBUFA09 [label="{ HDBUFA09 }"];
+P11:RF16:e->HDBUFA09:w [color=blue4]
+# HDBUFA10: D61:23 P11:RF14 C17:1
+# -1 0 2
+HDBUFA10 [label="{ HDBUFA10 }"];
+P11:RF14:e->HDBUFA10:w [color=blue4]
+# HN0: XP3:10 XP6:32 P11:O12
+# -1 0 2
+HN0 [label="{ HN0 }"];
+P11:O12:e->HN0:w [color=blue4]
+# HN1: XP3:40 XP6:2 P14:I6 P11:O13
+# 0 0 3
+HN1 [label="{ HN1 }"];
+HN1:e->P14:I6:w [color=darkgoldenrod4]
+P11:O13:e->HN1:w [color=blue4]
+# HN2: XP3:38 XP6:4 P12:O13
+# -1 0 2
+HN2 [label="{ HN2 }"];
+P12:O13:e->HN2:w [color=blue4]
+# IHLT: P2:I6 D26:21 D26:16
+# 0 -1 2
+IHLT [label="{ IHLT }"];
+IHLT:e->P2:I6:w [color=darkgoldenrod4]
+# IOINT: D47:17 P2:I1 D26:20
+# 0 -1 2
+IOINT [label="{ IOINT }"];
+IOINT:e->P2:I1:w [color=darkgoldenrod4]
+# LST/DIR: D59:38 P13:I6
+# 0 -1 1
+LST_DIR [label="{ LST/DIR }"];
+LST_DIR:e->P13:I6:w [color=darkgoldenrod4]
+# MA0: RAM1:18 RAM4:18 RAM2:18 RAM3:18 V2:O12
+# -1 0 4
+MA0 [label="{ MA0 }"];
+V2:O12:e->MA0:w [color=blue4]
+# MASK_M0: VA:O12 V5:I9
+# 0 0 1
+VA:O12:e->V5:I9:w
+
+# MASK_M1: VA:O13 V5:I8
+# 0 0 1
+VA:O13:e->V5:I8:w
+
+# MD10: RAM4:32 D40:3 RAM3:32 V8:I4 D28:17 D31:2
+# 0 -1 5
+MD10 [label="{ MD10 }"];
+MD10:e->V8:I4:w [color=darkgoldenrod4]
+# MD11: RAM4:31 D40:2 RAM3:31 V8:I3 D28:13 D31:15
+# 0 -1 5
+MD11 [label="{ MD11 }"];
+MD11:e->V8:I3:w [color=darkgoldenrod4]
+# MD12: RAM4:6 D44:5 RAM3:6 D29:3 V8:I7 D32:2
+# 0 -1 5
+MD12 [label="{ MD12 }"];
+MD12:e->V8:I7:w [color=darkgoldenrod4]
+# MD13: RAM4:7 D44:4 RAM3:7 D29:7 V8:I5 D32:1
+# 0 -1 5
+MD13 [label="{ MD13 }"];
+MD13:e->V8:I5:w [color=darkgoldenrod4]
+# MD14: RAM1:6 D44:3 RAM2:6 D29:4 V8:I6 D32:3
+# 0 -1 5
+MD14 [label="{ MD14 }"];
+MD14:e->V8:I6:w [color=darkgoldenrod4]
+# MMBA12: D9:8 P1:I1
+# 0 -1 1
+MMBA12 [label="{ MMBA12 }"];
+MMBA12:e->P1:I1:w [color=darkgoldenrod4]
+# MMBA13: D9:7 P1:I2
+# 0 -1 1
+MMBA13 [label="{ MMBA13 }"];
+MMBA13:e->P1:I2:w [color=darkgoldenrod4]
+# MMBA14: D7:6 P3:I7
+# 0 -1 1
+MMBA14 [label="{ MMBA14 }"];
+MMBA14:e->P3:I7:w [color=darkgoldenrod4]
+# MMBA15: D7:7 P3:I8
+# 0 -1 1
+MMBA15 [label="{ MMBA15 }"];
+MMBA15:e->P3:I8:w [color=darkgoldenrod4]
+# MMBA16: D6:6 P3:I22
+# 0 -1 1
+MMBA16 [label="{ MMBA16 }"];
+MMBA16:e->P3:I22:w [color=darkgoldenrod4]
+# MMBA17: D6:5 P3:I23
+# 0 -1 1
+MMBA17 [label="{ MMBA17 }"];
+MMBA17:e->P3:I23:w [color=darkgoldenrod4]
+# MMBA18: D6:8 P3:I20
+# 0 -1 1
+MMBA18 [label="{ MMBA18 }"];
+MMBA18:e->P3:I20:w [color=darkgoldenrod4]
+# MMBA19: D6:7 P3:I21
+# 0 -1 1
+MMBA19 [label="{ MMBA19 }"];
+MMBA19:e->P3:I21:w [color=darkgoldenrod4]
+# MMBA20: D7:5 P3:I6
+# 0 -1 1
+MMBA20 [label="{ MMBA20 }"];
+MMBA20:e->P3:I6:w [color=darkgoldenrod4]
+# MMBA21: D7:8 P3:I9
+# 0 -1 1
+MMBA21 [label="{ MMBA21 }"];
+MMBA21:e->P3:I9:w [color=darkgoldenrod4]
+# MMBANK: D6:1 D8:1 D10:23 D11:23 D7:1 D9:1 P2:I7 P1:O14
+# 0 0 7
+MMBANK [label="{ MMBANK }"];
+MMBANK:e->P2:I7:w [color=darkgoldenrod4]
+P1:O14:e->MMBANK:w [color=blue4]
+# MMPDIS: D8:8 V1:I9
+# 0 -1 1
+MMPDIS [label="{ MMPDIS }"];
+MMPDIS:e->V1:I9:w [color=darkgoldenrod4]
+# MMRA1: D6:14 D8:14 D7:14 D9:14 P2:O12 R31:1
+# -1 0 5
+MMRA1 [label="{ MMRA1 }"];
+P2:O12:e->MMRA1:w [color=blue4]
+# MMRA2: D6:16 D8:16 D7:16 D9:16 P2:O18 R30:2
+# -1 0 5
+MMRA2 [label="{ MMRA2 }"];
+P2:O18:e->MMRA2:w [color=blue4]
+# MMRA3: D6:15 D8:15 D7:15 D9:15 P1:O13 R9:1
+# -1 0 5
+MMRA3 [label="{ MMRA3 }"];
+P1:O13:e->MMRA3:w [color=blue4]
+# MMRA4: D6:13 D8:13 D7:13 D9:13 P2:O17 R29:1
+# -1 0 5
+MMRA4 [label="{ MMRA4 }"];
+P2:O17:e->MMRA4:w [color=blue4]
+# MMWM2B: D8:7 VA:I8
+# 0 -1 1
+MMWM2B [label="{ MMWM2B }"];
+MMWM2B:e->VA:I8:w [color=darkgoldenrod4]
+# MMWM4B: D8:6 VA:I7
+# 0 -1 1
+MMWM4B [label="{ MMWM4B }"];
+MMWM4B:e->VA:I7:w [color=darkgoldenrod4]
+# NET00001: P10:O12 P12:I6 P11:I6 D60:7 D60:15 C15:2
+# 1 0 5
+NET00001 [label="{ NET00001 }"];
+NET00001:e->P12:I6:w [color=darkgoldenrod4]
+NET00001:e->P11:I6:w [color=darkgoldenrod4]
+P10:O12:e->NET00001:w [color=blue4]
+# NET00002: P14:CLK P14:I2 P13:O18 R12:1
+# 1 0 3
+NET00002 [label="{ NET00002 }"];
+NET00002:e->P14:CLK:w [color=darkgoldenrod4]
+NET00002:e->P14:I2:w [color=darkgoldenrod4]
+P13:O18:e->NET00002:w [color=blue4]
+# NET00004: C12:2 P13:I1 C33:1 R72:2 C19:1 L1:2
+# 0 -1 5
+NET00004 [label="{ NET00004 }"];
+NET00004:e->P13:I1:w [color=darkgoldenrod4]
+# NET00005: P13:I2 VD14:C R13:2
+# 0 -1 2
+NET00005 [label="{ NET00005 }"];
+NET00005:e->P13:I2:w [color=darkgoldenrod4]
+# NET00006: P14:I5 P13:O16
+# 0 0 1
+P13:O16:e->P14:I5:w
+
+# NET00008: P14:I7 P13:O14 C20:2
+# 0 0 2
+NET00008 [label="{ NET00008 }"];
+NET00008:e->P14:I7:w [color=darkgoldenrod4]
+P13:O14:e->NET00008:w [color=blue4]
+# NET00009: C21:1 P14:I8 P13:O13
+# 0 0 2
+NET00009 [label="{ NET00009 }"];
+NET00009:e->P14:I8:w [color=darkgoldenrod4]
+P13:O13:e->NET00009:w [color=blue4]
+# NET00011: D59:19 P14:O12
+# -1 0 1
+NET00011 [label="{ NET00011 }"];
+P14:O12:e->NET00011:w [color=blue4]
+# NET00012: C16:1 P11:O19 P11:CLK
+# 0 0 2
+NET00012 [label="{ NET00012 }"];
+NET00012:e->P11:CLK:w [color=darkgoldenrod4]
+P11:O19:e->NET00012:w [color=blue4]
+# NET00013: D17:3 P4:O13
+# -1 0 1
+NET00013 [label="{ NET00013 }"];
+P4:O13:e->NET00013:w [color=blue4]
+# NET00016: D59:1 P11:RF15
+# -1 0 1
+NET00016 [label="{ NET00016 }"];
+P11:RF15:e->NET00016:w [color=blue4]
+# NET00017: P10:O16 D61:21
+# -1 0 1
+NET00017 [label="{ NET00017 }"];
+P10:O16:e->NET00017:w [color=blue4]
+# NET00019: P10:I2 R26:1 C25:1
+# 0 -1 2
+NET00019 [label="{ NET00019 }"];
+NET00019:e->P10:I2:w [color=darkgoldenrod4]
+# NET00027: D17:19 P4:I1
+# 0 -1 1
+NET00027 [label="{ NET00027 }"];
+NET00027:e->P4:I1:w [color=darkgoldenrod4]
+# NET00028: R33:2 P4:I2 VD9:C
+# 0 -1 2
+NET00028 [label="{ NET00028 }"];
+NET00028:e->P4:I2:w [color=darkgoldenrod4]
+# NET00031: P4:O16 R27:1 C3:1
+# -1 0 2
+NET00031 [label="{ NET00031 }"];
+P4:O16:e->NET00031:w [color=blue4]
+# NET00032: D19:3 D19:2 P4:O14
+# -1 0 2
+NET00032 [label="{ NET00032 }"];
+P4:O14:e->NET00032:w [color=blue4]
+# NET00035: D23:17 P4:O12 R22:2
+# -1 0 2
+NET00035 [label="{ NET00035 }"];
+P4:O12:e->NET00035:w [color=blue4]
+# NET00057: D27:1 P5:O12
+# -1 0 1
+NET00057 [label="{ NET00057 }"];
+P5:O12:e->NET00057:w [color=blue4]
+# NET00059: BQ2:2 V2:I2 V1:I2 R25:1
+# 1 -1 3
+NET00059 [label="{ NET00059 }"];
+NET00059:e->V2:I2:w [color=darkgoldenrod4]
+NET00059:e->V1:I2:w [color=darkgoldenrod4]
+# NET00060: V2:O19 V2:CLK V1:CLK R23:1
+# 1 0 3
+NET00060 [label="{ NET00060 }"];
+NET00060:e->V2:CLK:w [color=darkgoldenrod4]
+NET00060:e->V1:CLK:w [color=darkgoldenrod4]
+V2:O19:e->NET00060:w [color=blue4]
+# NET00061: V1:I4 R25:2
+# 0 -1 1
+NET00061 [label="{ NET00061 }"];
+NET00061:e->V1:I4:w [color=darkgoldenrod4]
+# NET00063: D69:3 VB:CLK V2:O13
+# 0 0 2
+NET00063 [label="{ NET00063 }"];
+NET00063:e->VB:CLK:w [color=darkgoldenrod4]
+V2:O13:e->NET00063:w [color=blue4]
+# NET00109: V8:O19 V9:I3
+# 0 0 1
+V8:O19:e->V9:I3:w
+
+# P2-15: D6:23 D8:23 D7:23 D9:23 P2:O15
+# -1 0 4
+P2_15 [label="{ P2-15 }"];
+P2:O15:e->P2_15:w [color=blue4]
+# PAFD: D26:1 P5:I2
+# 0 -1 1
+PAFD [label="{ PAFD }"];
+PAFD:e->P5:I2:w [color=darkgoldenrod4]
+# PF_PB: D15:12 VA:I25 V9:I4 VC:I18
+# 2 -1 3
+PF_PB [label="{ PF_PB }"];
+PF_PB:e->VA:I25:w [color=darkgoldenrod4]
+PF_PB:e->V9:I4:w [color=darkgoldenrod4]
+PF_PB:e->VC:I18:w [color=darkgoldenrod4]
+# PF_PN0: D15:15 V9:I2 VC:I4
+# 1 -1 2
+PF_PN0 [label="{ PF_PN0 }"];
+PF_PN0:e->V9:I2:w [color=darkgoldenrod4]
+PF_PN0:e->VC:I4:w [color=darkgoldenrod4]
+# PF_PN1: D15:5 V9:I6
+# 0 -1 1
+PF_PN1 [label="{ PF_PN1 }"];
+PF_PN1:e->V9:I6:w [color=darkgoldenrod4]
+# PF_VD0: V7:I27 D15:19 VA:I21
+# 1 -1 2
+PF_VD0 [label="{ PF_VD0 }"];
+PF_VD0:e->V7:I27:w [color=darkgoldenrod4]
+PF_VD0:e->VA:I21:w [color=darkgoldenrod4]
+# PF_VD1: V7:I23 D15:16 VA:I22
+# 1 -1 2
+PF_VD1 [label="{ PF_VD1 }"];
+PF_VD1:e->V7:I23:w [color=darkgoldenrod4]
+PF_VD1:e->VA:I22:w [color=darkgoldenrod4]
+# PF_VN0: D15:2 VB:I2 VA:I2 V9:I7 VC:I2
+# 3 -1 4
+PF_VN0 [label="{ PF_VN0 }"];
+PF_VN0:e->VB:I2:w [color=darkgoldenrod4]
+PF_VN0:e->VA:I2:w [color=darkgoldenrod4]
+PF_VN0:e->V9:I7:w [color=darkgoldenrod4]
+PF_VN0:e->VC:I2:w [color=darkgoldenrod4]
+# PF_VN1: D15:6 VA:I4 V9:I5 VC:I17
+# 2 -1 3
+PF_VN1 [label="{ PF_VN1 }"];
+PF_VN1:e->VA:I4:w [color=darkgoldenrod4]
+PF_VN1:e->V9:I5:w [color=darkgoldenrod4]
+PF_VN1:e->VC:I17:w [color=darkgoldenrod4]
+# PHA14/&O1612XX: D6:22 D8:22 D44:13 D7:22 D9:22 P3:O18 P2:I11
+# 0 0 6
+PHA14__O1612XX [label="{ PHA14/&O1612XX }"];
+PHA14__O1612XX:e->P2:I11:w [color=darkgoldenrod4]
+P3:O18:e->PHA14__O1612XX:w [color=blue4]
+# PHA15/&O1614XX: D44:11 P3:O17 R22:1
+# -1 0 2
+PHA15__O1614XX [label="{ PHA15/&O1614XX }"];
+P3:O17:e->PHA15__O1614XX:w [color=blue4]
+# PHA16/&O1611XX: XS5:B1 D44:9 XS4:B1 P3:O16
+# -1 0 3
+PHA16__O1611XX [label="{ PHA16/&O1611XX }"];
+P3:O16:e->PHA16__O1611XX:w [color=blue4]
+# PHA17/&O1610XX: D44:7 P3:O15 P5:I1 P10:I11 P4:I11
+# 2 0 4
+PHA17__O1610XX [label="{ PHA17/&O1610XX }"];
+PHA17__O1610XX:e->P5:I1:w [color=darkgoldenrod4]
+PHA17__O1610XX:e->P10:I11:w [color=darkgoldenrod4]
+PHA17__O1610XX:e->P4:I11:w [color=darkgoldenrod4]
+P3:O15:e->PHA17__O1610XX:w [color=blue4]
+# PHA18/&O1615XX: D42:11 XS5:B3 XS4:B3 P3:O13
+# -1 0 3
+PHA18__O1615XX [label="{ PHA18/&O1615XX }"];
+P3:O13:e->PHA18__O1615XX:w [color=blue4]
+# PHA19/&O1613XX: D42:13 XS5:B2 XS4:B2 P3:O12
+# -1 0 3
+PHA19__O1613XX [label="{ PHA19/&O1613XX }"];
+P3:O12:e->PHA19__O1613XX:w [color=blue4]
+# PHA20/&O161XXX: D42:9 P3:O11 P4:I9
+# 0 0 2
+PHA20__O161XXX [label="{ PHA20/&O161XXX }"];
+PHA20__O161XXX:e->P4:I9:w [color=darkgoldenrod4]
+P3:O11:e->PHA20__O161XXX:w [color=blue4]
+# PHA21_IOHWH: D42:7 P3:O10 P1:I11
+# 0 0 2
+PHA21_IOHWH [label="{ PHA21_IOHWH }"];
+PHA21_IOHWH:e->P1:I11:w [color=darkgoldenrod4]
+P3:O10:e->PHA21_IOHWH:w [color=blue4]
+# PRST: D26:4 P5:I7
+# 0 -1 1
+PRST [label="{ PRST }"];
+PRST:e->P5:I7:w [color=darkgoldenrod4]
+# PSEL: D26:2 P5:I3
+# 0 -1 1
+PSEL [label="{ PSEL }"];
+PSEL:e->P5:I3:w [color=darkgoldenrod4]
+# PSTB: D26:3 P5:I4
+# 0 -1 1
+PSTB [label="{ PSTB }"];
+PSTB:e->P5:I4:w [color=darkgoldenrod4]
+# RDY: XP3:8 XP6:34 P13:I4 R15:2
+# 0 -1 3
+RDY [label="{ RDY }"];
+RDY:e->P13:I4:w [color=darkgoldenrod4]
+# RUN: XP3:26 XP6:16 P11:O18
+# -1 0 2
+RUN [label="{ RUN }"];
+P11:O18:e->RUN:w [color=blue4]
+# RXD_INV: D26:15 P4:I3
+# 0 -1 1
+RXD_INV [label="{ RXD_INV }"];
+RXD_INV:e->P4:I3:w [color=darkgoldenrod4]
+# SHIFT_M0: VB:I4 VA:O15
+# 0 0 1
+VA:O15:e->VB:I4:w
+
+# SHIFT_M1: VB:I5 VA:O17
+# 0 0 1
+VA:O17:e->VB:I5:w
+
+# SQ_PUP_CI: D42:26 D43:26 D44:26 D40:26 D41:23 D41:26 V7:O12
+# -1 0 6
+SQ_PUP_CI [label="{ SQ_PUP_CI }"];
+V7:O12:e->SQ_PUP_CI:w [color=blue4]
+# SQ_S0: D42:16 D43:16 D44:16 D40:16 D41:16 V7:O16
+# -1 0 5
+SQ_S0 [label="{ SQ_S0 }"];
+V7:O16:e->SQ_S0:w [color=blue4]
+# SQ_S1: D42:17 D43:17 D44:17 D40:17 D41:17 V7:O17
+# -1 0 5
+SQ_S1 [label="{ SQ_S1 }"];
+V7:O17:e->SQ_S1:w [color=blue4]
+# STEP: XP3:22 XP6:20 P12:O15
+# -1 0 2
+STEP [label="{ STEP }"];
+P12:O15:e->STEP:w [color=blue4]
+# TR000: XP3:16 XP6:26 P12:I3 R18:1
+# 0 -1 3
+TR000 [label="{ TR000 }"];
+TR000:e->P12:I3:w [color=darkgoldenrod4]
+# USEL: XP3:28 XP6:14 P12:O18 P14:I3 P13:I3
+# 1 0 4
+USEL [label="{ USEL }"];
+USEL:e->P14:I3:w [color=darkgoldenrod4]
+USEL:e->P13:I3:w [color=darkgoldenrod4]
+P12:O18:e->USEL:w [color=blue4]
+# V6-19: V8:CLK V6:O19
+# 0 0 1
+V6:O19:e->V8:CLK:w
+
+# V8-12: V7:I24 V8:O12
+# 0 0 1
+V8:O12:e->V7:I24:w
+
+# V8-13: VA:I3 V8:RF13 VC:I11
+# 1 0 2
+V8:RF13:e->VA:I3:w
+
+V8:RF13:e->VC:I11:w
+
+# VA-F2: VA:O16 V9:I9
+# 0 0 1
+VA:O16:e->V9:I9:w
+
+# VA0: VB:RF16 VC:I5 R43:2
+# 0 0 2
+VA0 [label="{ VA0 }"];
+VA0:e->VC:I5:w [color=darkgoldenrod4]
+VB:RF16:e->VA0:w [color=blue4]
+# VA1: VB:RF14 VC:I8 R73:1
+# 0 0 2
+VA1 [label="{ VA1 }"];
+VA1:e->VC:I8:w [color=darkgoldenrod4]
+VB:RF14:e->VA1:w [color=blue4]
+# VA2: VB:RF17 VC:I3 R36:2
+# 0 0 2
+VA2 [label="{ VA2 }"];
+VA2:e->VC:I3:w [color=darkgoldenrod4]
+VB:RF17:e->VA2:w [color=blue4]
+# VA3: VB:RF15 VC:I6 R37:2
+# 0 0 2
+VA3 [label="{ VA3 }"];
+VA3:e->VC:I6:w [color=darkgoldenrod4]
+VB:RF15:e->VA3:w [color=blue4]
+# VD0: VB:I18 D51:6 D50:6 D30:9 D31:9
+# 0 -1 4
+VD0 [label="{ VD0 }"];
+VD0:e->VB:I18:w [color=darkgoldenrod4]
+# VD1: VB:I13 D51:2 D50:2 D30:6 D31:6
+# 0 -1 4
+VD1 [label="{ VD1 }"];
+VD1:e->VB:I13:w [color=darkgoldenrod4]
+# VD2: VB:I12 D51:4 D50:4 D30:7 D31:7
+# 0 -1 4
+VD2 [label="{ VD2 }"];
+VD2:e->VB:I12:w [color=darkgoldenrod4]
+# VD3: VB:I19 D51:8 D50:8 D30:10 D31:10
+# 0 -1 4
+VD3 [label="{ VD3 }"];
+VD3:e->VB:I19:w [color=darkgoldenrod4]
+# VD4: VB:I8 D52:15 D53:15 D33:7 D32:7 R2:2
+# 0 -1 5
+VD4 [label="{ VD4 }"];
+VD4:e->VB:I8:w [color=darkgoldenrod4]
+# VD5: VB:I9 D52:13 D53:13 D33:9 D32:9 R11:2
+# 0 -1 5
+VD5 [label="{ VD5 }"];
+VD5:e->VB:I9:w [color=darkgoldenrod4]
+# VD6: VB:I7 D52:17 D53:17 D33:6 D32:6 R1:2
+# 0 -1 5
+VD6 [label="{ VD6 }"];
+VD6:e->VB:I7:w [color=darkgoldenrod4]
+# VD7: VB:I6 D52:11 D53:11 D33:10 D32:10 R8:2
+# 0 -1 5
+VD7 [label="{ VD7 }"];
+VD7:e->VB:I6:w [color=darkgoldenrod4]
+# VSYNC: V7:I6 VB:OE VA:I27 V3:RF17 V9:I8 VC:I9 VD13:A
+# 4 0 6
+VSYNC [label="{ VSYNC }"];
+VSYNC:e->V7:I6:w [color=darkgoldenrod4]
+VSYNC:e->VB:OE:w [color=darkgoldenrod4]
+VSYNC:e->VA:I27:w [color=darkgoldenrod4]
+VSYNC:e->V9:I8:w [color=darkgoldenrod4]
+VSYNC:e->VC:I9:w [color=darkgoldenrod4]
+V3:RF17:e->VSYNC:w [color=blue4]
+# VU1-Y0: D42:18 V2:I8
+# 0 -1 1
+VU1_Y0 [label="{ VU1-Y0 }"];
+VU1_Y0:e->V2:I8:w [color=darkgoldenrod4]
+# VU1-Y1: D42:19 V1:I8
+# 0 -1 1
+VU1_Y1 [label="{ VU1-Y1 }"];
+VU1_Y1:e->V1:I8:w [color=darkgoldenrod4]
+# VU1-Y2: D42:20 V1:I7
+# 0 -1 1
+VU1_Y2 [label="{ VU1-Y2 }"];
+VU1_Y2:e->V1:I7:w [color=darkgoldenrod4]
+# VU1-Y3: D42:21 V6:I4
+# 0 -1 1
+VU1_Y3 [label="{ VU1-Y3 }"];
+VU1_Y3:e->V6:I4:w [color=darkgoldenrod4]
+# WG: XP3:18 XP6:24 P14:I4 P13:O17
+# 0 0 3
+WG [label="{ WG }"];
+WG:e->P14:I4:w [color=darkgoldenrod4]
+P13:O17:e->WG:w [color=blue4]
+# WP: XP3:14 XP6:28 P12:I2 R17:1
+# 0 -1 3
+WP [label="{ WP }"];
+WP:e->P12:I2:w [color=darkgoldenrod4]
+# WP/TS: D59:34 D62:32 P12:O16
+# -1 0 2
+WP_TS [label="{ WP/TS }"];
+P12:O16:e->WP_TS:w [color=blue4]
+# X0-8MHZ: D1:21 VA:I26 V6:I5 V2:I4 V1:RF17
+# 2 0 4
+X0_8MHZ [label="{ X0-8MHZ }"];
+X0_8MHZ:e->VA:I26:w [color=darkgoldenrod4]
+X0_8MHZ:e->V6:I5:w [color=darkgoldenrod4]
+X0_8MHZ:e->V2:I4:w [color=darkgoldenrod4]
+V1:RF17:e->X0_8MHZ:w [color=blue4]
+# Y0: V7:I3 V6:I8 V3:RF13
+# 1 0 2
+V3:RF13:e->V7:I3:w
+
+V3:RF13:e->V6:I8:w
+
+# ~CA14~_~A12PG7: P3:I24 P1:O12
+# 0 0 1
+P1:O12:e->P3:I24:w
+
+# ~CAS: D42:27 D43:27 RAM1:19 RAM4:19 D44:27 D40:27 D41:27 RAM2:19 RAM3:19 V6:I2 V2:O18
+# 0 0 10
+_CAS [label="{ ~CAS }"];
+_CAS:e->V6:I2:w [color=darkgoldenrod4]
+V2:O18:e->_CAS:w [color=blue4]
+# ~CS-FL: D59:4 P10:O19 R71:1
+# -1 0 2
+_CS_FL [label="{ ~CS-FL }"];
+P10:O19:e->_CS_FL:w [color=blue4]
+# ~CS-HD: D62:8 P10:O15 VD6:C
+# -1 0 2
+_CS_HD [label="{ ~CS-HD }"];
+P10:O15:e->_CS_HD:w [color=blue4]
+# ~CS-VI53D: D24:21 P4:O18
+# -1 0 1
+_CS_VI53D [label="{ ~CS-VI53D }"];
+P4:O18:e->_CS_VI53D:w [color=blue4]
+# ~CS-VI53L: D16:21 P4:O17
+# -1 0 1
+_CS_VI53L [label="{ ~CS-VI53L }"];
+P4:O17:e->_CS_VI53L:w [color=blue4]
+# ~CS-VN59: D47:1 P4:O15
+# -1 0 1
+_CS_VN59 [label="{ ~CS-VN59 }"];
+P4:O15:e->_CS_VN59:w [color=blue4]
+# ~CS-VV51: P5:O18 D17:11
+# -1 0 1
+_CS_VV51 [label="{ ~CS-VV51 }"];
+P5:O18:e->_CS_VV51:w [color=blue4]
+# ~CS-VV55: D26:6 P5:O16
+# -1 0 1
+_CS_VV55 [label="{ ~CS-VV55 }"];
+P5:O16:e->_CS_VV55:w [color=blue4]
+# ~CS-VV79: D25:22 P5:O19
+# -1 0 1
+_CS_VV79 [label="{ ~CS-VV79 }"];
+P5:O19:e->_CS_VV79:w [color=blue4]
+# ~CWR0: V6:O13 D49:21
+# -1 0 1
+_CWR0 [label="{ ~CWR0 }"];
+V6:O13:e->_CWR0:w [color=blue4]
+# ~CWR1: V6:O12 D48:21
+# -1 0 1
+_CWR1 [label="{ ~CWR1 }"];
+V6:O12:e->_CWR1:w [color=blue4]
+# ~DAC_EN: V7:I5 V3:O12 D52:1 D51:19 D50:19 D53:1
+# 0 0 5
+_DAC_EN [label="{ ~DAC_EN }"];
+_DAC_EN:e->V7:I5:w [color=darkgoldenrod4]
+V3:O12:e->_DAC_EN:w [color=blue4]
+# ~DIN: D10:1 D11:1 D1:33 P1:I4 V1:I5 R10:2
+# 1 -1 5
+_DIN [label="{ ~DIN }"];
+_DIN:e->P1:I4:w [color=darkgoldenrod4]
+_DIN:e->V1:I5:w [color=darkgoldenrod4]
+# ~DOUT: D1:28 P2:I4 VA:I9 V1:I6
+# 2 -1 3
+_DOUT [label="{ ~DOUT }"];
+_DOUT:e->P2:I4:w [color=darkgoldenrod4]
+_DOUT:e->VA:I9:w [color=darkgoldenrod4]
+_DOUT:e->V1:I6:w [color=darkgoldenrod4]
+# ~FL-DACK: D59:15 P10:O18
+# -1 0 1
+_FL_DACK [label="{ ~FL-DACK }"];
+P10:O18:e->_FL_DACK:w [color=blue4]
+# ~FL-RD: D59:2 D62:6 P10:O13 D58:1
+# -1 0 3
+_FL_RD [label="{ ~FL-RD }"];
+P10:O13:e->_FL_RD:w [color=blue4]
+# ~FL-WR: D59:3 D62:7 P10:O14
+# -1 0 2
+_FL_WR [label="{ ~FL-WR }"];
+P10:O14:e->_FL_WR:w [color=blue4]
+# ~HALT: D1:46 P2:O19
+# -1 0 1
+_HALT [label="{ ~HALT }"];
+P2:O19:e->_HALT:w [color=blue4]
+# ~HD-BCS: D62:1 P10:I1 P11:I4
+# 1 -1 2
+_HD_BCS [label="{ ~HD-BCS }"];
+_HD_BCS:e->P10:I1:w [color=darkgoldenrod4]
+_HD_BCS:e->P11:I4:w [color=darkgoldenrod4]
+# ~HDBUFCS: P10:O17 D61:18 D60:1
+# -1 0 2
+_HDBUFCS [label="{ ~HDBUFCS }"];
+P10:O17:e->_HDBUFCS:w [color=blue4]
+# ~IOR: D47:3 XS4:A7 D6:21 D8:21 XS5:A7 D7:21 D9:21 P1:O15 D25:10 D26:5 P10:I6 D24:22 D16:22 D17:13 P4:I6
+# 1 0 14
+_IOR [label="{ ~IOR }"];
+_IOR:e->P10:I6:w [color=darkgoldenrod4]
+_IOR:e->P4:I6:w [color=darkgoldenrod4]
+P1:O15:e->_IOR:w [color=blue4]
+# ~IOW: XS5:B7 D47:2 XS4:B7 P2:O16 D25:11 D26:36 D27:11 P10:I3 D24:23 D23:15 D16:23 D17:10 P4:I4
+# 1 0 12
+_IOW [label="{ ~IOW }"];
+_IOW:e->P10:I3:w [color=darkgoldenrod4]
+_IOW:e->P4:I4:w [color=darkgoldenrod4]
+P2:O16:e->_IOW:w [color=blue4]
+# ~LPT-PAFD: XP5:19 P5:O13
+# -1 0 1
+_LPT_PAFD [label="{ ~LPT-PAFD }"];
+P5:O13:e->_LPT_PAFD:w [color=blue4]
+# ~LPT-PRST: XP5:16 P5:O15
+# -1 0 1
+_LPT_PRST [label="{ ~LPT-PRST }"];
+P5:O15:e->_LPT_PRST:w [color=blue4]
+# ~LPT-PSEL: XP5:18 P5:O14
+# -1 0 1
+_LPT_PSEL [label="{ ~LPT-PSEL }"];
+P5:O14:e->_LPT_PSEL:w [color=blue4]
+# ~LPT-PSTB: XP5:1 P5:O17
+# -1 0 1
+_LPT_PSTB [label="{ ~LPT-PSTB }"];
+P5:O17:e->_LPT_PSTB:w [color=blue4]
+# ~MA_HI: D44:22 D40:22 V2:RF15
+# -1 0 2
+_MA_HI [label="{ ~MA_HI }"];
+V2:RF15:e->_MA_HI:w [color=blue4]
+# ~MA_LO: D43:22 D41:22 V2:RF14
+# -1 0 2
+_MA_LO [label="{ ~MA_LO }"];
+V2:RF14:e->_MA_LO:w [color=blue4]
+# ~PG7: P3:I27 P2:I5 P1:O16
+# 1 0 2
+P1:O16:e->P3:I27:w
+
+P1:O16:e->P2:I5:w
+
+# ~RAM-RD: D29:11 D29:1 D28:11 D28:1 V1:O19
+# -1 0 4
+_RAM_RD [label="{ ~RAM-RD }"];
+V1:O19:e->_RAM_RD:w [color=blue4]
+# ~RAM_SEL: P2:I2 P1:O19 V1:I2
+# 1 0 2
+P1:O19:e->P2:I2:w
+
+P1:O19:e->V1:I2:w
+
+# ~RAS0: RAM1:20 RAM4:20 RAM2:20 RAM3:20 V6:I11 V1:O12
+# 0 0 5
+_RAS0 [label="{ ~RAS0 }"];
+_RAS0:e->V6:I11:w [color=darkgoldenrod4]
+V1:O12:e->_RAS0:w [color=blue4]
+# ~RAS1: RAM1:21 RAM4:21 RAM2:21 RAM3:21 V6:O14
+# -1 0 4
+_RAS1 [label="{ ~RAS1 }"];
+V6:O14:e->_RAS1:w [color=blue4]
+# ~RAS2: RAM1:22 RAM4:22 RAM2:22 RAM3:22 V6:O15
+# -1 0 4
+_RAS2 [label="{ ~RAS2 }"];
+V6:O15:e->_RAS2:w [color=blue4]
+# ~RAS3: RAM1:23 RAM4:23 RAM2:23 RAM3:23 V1:O13
+# -1 0 4
+_RAS3 [label="{ ~RAS3 }"];
+V1:O13:e->_RAS3:w [color=blue4]
+# ~RPLY: XS5:B5 D10:2 D11:2 XS4:B5 D1:27 V1:O18 P4:O19 R21:1
+# -1 1 7
+_RPLY [label="{ ~RPLY }"];
+V1:O18:e->_RPLY:w [color=blue4]
+P4:O19:e->_RPLY:w [color=blue4]
+# ~RW~/SEEK: D59:39 P12:I9
+# 0 -1 1
+_RW__SEEK [label="{ ~RW~/SEEK }"];
+_RW__SEEK:e->P12:I9:w [color=darkgoldenrod4]
+# ~SEL: D1:49 P1:I7
+# 0 -1 1
+_SEL [label="{ ~SEL }"];
+_SEL:e->P1:I7:w [color=darkgoldenrod4]
+# ~SQ_FE: D42:25 D43:25 D44:25 D40:25 D41:25 V7:O13
+# -1 0 5
+_SQ_FE [label="{ ~SQ_FE }"];
+V7:O13:e->_SQ_FE:w [color=blue4]
+# ~SQ_ZA: D42:15 D43:15 D44:15 D40:15 D41:15 V7:O15
+# -1 0 5
+_SQ_ZA [label="{ ~SQ_ZA }"];
+V7:O15:e->_SQ_ZA:w [color=blue4]
+# ~SYNC: D69:2 D69:1 D1:34 D1:31 P2:I3 P1:I3 VD1:A D23:14
+# 1 -1 7
+_SYNC [label="{ ~SYNC }"];
+_SYNC:e->P2:I3:w [color=darkgoldenrod4]
+_SYNC:e->P1:I3:w [color=darkgoldenrod4]
+# ~VPTRHL: D42:1 V7:O11 D14:1 V8:I2
+# 0 0 3
+_VPTRHL [label="{ ~VPTRHL }"];
+_VPTRHL:e->V8:I2:w [color=darkgoldenrod4]
+V7:O11:e->_VPTRHL:w [color=blue4]
+# ~VPTRLL: D43:1 D44:1 D40:1 D41:1 V7:O10 V8:I8
+# 0 0 5
+_VPTRLL [label="{ ~VPTRLL }"];
+_VPTRLL:e->V8:I8:w [color=darkgoldenrod4]
+V7:O10:e->_VPTRLL:w [color=blue4]
+# ~VRF2CLUT_OE: V7:O18 V6:I9 D52:19 D51:1 D50:1 D53:19
+# 0 0 5
+_VRF2CLUT_OE [label="{ ~VRF2CLUT_OE }"];
+_VRF2CLUT_OE:e->V6:I9:w [color=darkgoldenrod4]
+V7:O18:e->_VRF2CLUT_OE:w [color=blue4]
+# ~VRF_A0: VA:O10 D30:4 D31:4 D33:4 D32:4
+# -1 0 4
+_VRF_A0 [label="{ ~VRF_A0 }"];
+VA:O10:e->_VRF_A0:w [color=blue4]
+# ~VRF_RD_HI: VA:O11 D31:11 D32:11
+# -1 0 2
+_VRF_RD_HI [label="{ ~VRF_RD_HI }"];
+VA:O11:e->_VRF_RD_HI:w [color=blue4]
+# ~VRF_RD_LO: VA:O18 D30:11 D33:11
+# -1 0 2
+_VRF_RD_LO [label="{ ~VRF_RD_LO }"];
+VA:O18:e->_VRF_RD_LO:w [color=blue4]
+# ~VRF_WR: V6:O16 D30:12 D31:12 D33:12 D32:12
+# -1 0 4
+_VRF_WR [label="{ ~VRF_WR }"];
+V6:O16:e->_VRF_WR:w [color=blue4]
+# ~WE_00_01: RAM4:13 RAM3:13 V5:O11
+# -1 0 2
+_WE_00_01 [label="{ ~WE_00_01 }"];
+V5:O11:e->_WE_00_01:w [color=blue4]
+# ~WE_02_03: RAM1:13 RAM2:13 V5:O10
+# -1 0 2
+_WE_02_03 [label="{ ~WE_02_03 }"];
+V5:O10:e->_WE_02_03:w [color=blue4]
+# ~WE_04_05: RAM1:12 RAM2:12 V5:O18
+# -1 0 2
+_WE_04_05 [label="{ ~WE_04_05 }"];
+V5:O18:e->_WE_04_05:w [color=blue4]
+# ~WE_06_07: RAM4:12 RAM3:12 V5:O12
+# -1 0 2
+_WE_06_07 [label="{ ~WE_06_07 }"];
+V5:O12:e->_WE_06_07:w [color=blue4]
+# ~WE_08_09: RAM1:11 RAM2:11 V5:O17
+# -1 0 2
+_WE_08_09 [label="{ ~WE_08_09 }"];
+V5:O17:e->_WE_08_09:w [color=blue4]
+# ~WE_10_11: RAM4:11 RAM3:11 V5:O13
+# -1 0 2
+_WE_10_11 [label="{ ~WE_10_11 }"];
+V5:O13:e->_WE_10_11:w [color=blue4]
+# ~WE_12_13: RAM4:10 RAM3:10 V5:O15
+# -1 0 2
+_WE_12_13 [label="{ ~WE_12_13 }"];
+V5:O15:e->_WE_12_13:w [color=blue4]
+# ~WE_14_15: RAM1:10 RAM2:10 V5:O16
+# -1 0 2
+_WE_14_15 [label="{ ~WE_14_15 }"];
+V5:O16:e->_WE_14_15:w [color=blue4]
+# ~WTBT: XS4:A6 XS5:A6 D1:29 V5:I7
+# 0 -1 3
+_WTBT [label="{ ~WTBT }"];
+_WTBT:e->V5:I7:w [color=darkgoldenrod4]
+# ~X1-4MHZ: V7:I21 VA:I20 V6:I7 V2:I5 V1:RF16 D30:13 D31:13 D33:13 D32:13
+# 3 0 8
+_X1_4MHZ [label="{ ~X1-4MHZ }"];
+_X1_4MHZ:e->V7:I21:w [color=darkgoldenrod4]
+_X1_4MHZ:e->VA:I20:w [color=darkgoldenrod4]
+_X1_4MHZ:e->V6:I7:w [color=darkgoldenrod4]
+_X1_4MHZ:e->V2:I5:w [color=darkgoldenrod4]
+V1:RF16:e->_X1_4MHZ:w [color=blue4]
+# ~X2-2MHZ: V7:I20 D15:11 VA:I24 V6:I3 V2:I6 V1:RF15 R43:1 D25:3 D24:15 D24:9 D24:18 D16:15 D16:9 D16:18 D17:20
+# 3 0 14
+_X2_2MHZ [label="{ ~X2-2MHZ }"];
+_X2_2MHZ:e->V7:I20:w [color=darkgoldenrod4]
+_X2_2MHZ:e->VA:I24:w [color=darkgoldenrod4]
+_X2_2MHZ:e->V6:I3:w [color=darkgoldenrod4]
+_X2_2MHZ:e->V2:I6:w [color=darkgoldenrod4]
+V1:RF15:e->_X2_2MHZ:w [color=blue4]
+# ~X3-1MHZ: V7:I22 D14:11 VA:I23 V6:I1 V2:I7 V1:RF14 R73:2 D30:14 D31:14 D33:14 D32:14
+# 3 0 10
+_X3_1MHZ [label="{ ~X3-1MHZ }"];
+_X3_1MHZ:e->V7:I22:w [color=darkgoldenrod4]
+_X3_1MHZ:e->VA:I23:w [color=darkgoldenrod4]
+_X3_1MHZ:e->V6:I1:w [color=darkgoldenrod4]
+_X3_1MHZ:e->V2:I7:w [color=darkgoldenrod4]
+V1:RF14:e->_X3_1MHZ:w [color=blue4]
+# ~X4-500KHZ: V7:I9 VA:I6 V3:I7 V2:RF16 R36:1
+# 2 0 4
+_X4_500KHZ [label="{ ~X4-500KHZ }"];
+_X4_500KHZ:e->V7:I9:w [color=darkgoldenrod4]
+_X4_500KHZ:e->VA:I6:w [color=darkgoldenrod4]
+_X4_500KHZ:e->V3:I7:w [color=darkgoldenrod4]
+V2:RF16:e->_X4_500KHZ:w [color=blue4]
+# ~X5-250KHZ: V7:I8 VA:I5 V3:I8 V2:RF17 V9:CLK R37:1
+# 3 0 5
+_X5_250KHZ [label="{ ~X5-250KHZ }"];
+_X5_250KHZ:e->V7:I8:w [color=darkgoldenrod4]
+_X5_250KHZ:e->VA:I5:w [color=darkgoldenrod4]
+_X5_250KHZ:e->V3:I8:w [color=darkgoldenrod4]
+_X5_250KHZ:e->V9:CLK:w [color=darkgoldenrod4]
+V2:RF17:e->_X5_250KHZ:w [color=blue4]
+# ~X6-125HZ: V7:I25 V3:I9 V9:RF17
+# 1 0 2
+V9:RF17:e->V7:I25:w
+
+V9:RF17:e->V3:I9:w
+
+# ~X7-62500HZ: V7:I4 V3:I5 V9:RF15
+# 1 0 2
+V9:RF15:e->V7:I4:w
+
+V9:RF15:e->V3:I5:w
+
+# ~X8-31250HZ: V3:I6 V9:RF16
+# 0 0 1
+V9:RF16:e->V3:I6:w
+
+# ~X9-15625HZ: V3:CLK V3:I2 V9:RF14
+# 1 0 2
+V9:RF14:e->V3:CLK:w
+
+V9:RF14:e->V3:I2:w
+
+# ~Y1: V7:I26 V3:RF16 VC:I7
+# 1 0 2
+V3:RF16:e->V7:I26:w
+
+V3:RF16:e->VC:I7:w
+
+# ~Y2: V7:I2 V3:RF14 VC:I1
+# 1 0 2
+V3:RF14:e->V7:I2:w
+
+V3:RF14:e->VC:I1:w
+
+# ~Y3: V7:I7 V3:RF15
+# 0 0 1
+V3:RF15:e->V7:I7:w
+
+# ~Y4: V3:RF18 V4:CLK
+# 0 0 1
+V3:RF18:e->V4:CLK:w
+
+# ~Y5: V3:I3 V4:RF17
+# 0 0 1
+V4:RF17:e->V3:I3:w
+
+# ~Y8: V3:I4 V4:RF16
+# 0 0 1
+V4:RF16:e->V3:I4:w
+
+_DOUT
+subgraph cluster_3 {rank="min";rankdir=TB;color=blue;label=""
+subgraph cluster_18 {rank="min";rankdir=TB;color=blue;label=""
+PF_VN0
+PF_VN1
+PF_PB
+}
+subgraph cluster_23 {rank="min";rankdir=TB;color=blue;label=""
+  VU1_Y1
+  VU1_Y2
+V1
+V2
+_MA_LO
+_MA_HI
+  VU1_Y3
+V6
+_VRF_WR
+X0_8MHZ
+_X1_4MHZ
+_X2_2MHZ
+_X3_1MHZ
+_X4_500KHZ
+_X5_250KHZ
+_RAS1
+_RAS2
+_CWR0
+_CWR1
+_RAS0
+_RAS3
+MA0
+_CAS
+_RAM_RD
+MMPDIS
+_RPLY
+NET00060
+NET00059
+NET00061
+OR1 [label="{ { <R>R | <A>A } | { OR\nR24/VD13 } | { <Q>Q } }"];
+V3:RF18:e->OR1:A:w
+V3:O19:e->OR1:R:w
+OR1:Q:e->V2:I3:w
+VSYNC
+V3
+
+
+
+
+
+}
+_X2_2MHZ:e->R43:w;  R43:e->VA0;
+_X3_1MHZ:e->R73:w;  R73:e->VA1;
+_X4_500KHZ:e->R36:w;R36:e->VA2;
+_X5_250KHZ:e->R37:w;R37:e->VA3;
+subgraph cluster_7 {rank="min";rankdir=TB;color=blue;fontsize=24;label="Color LUT address generator"
+ subgraph cluster_25{rank="min";rankdir=TB;color=blue;fontsize=24;label=MUX3
+ VA0
+ VA1
+ VA2
+ VA3
+ }
+subgraph cluster_2 {rank="min";rankdir=TB;color=blue;fontsize=24;label=MUX3
+R43 [label="{ R43 }" height=0.25];
+R73 [label="{ R73 }" height=0.25];
+R36 [label="{ R36 }" height=0.25];
+R37 [label="{ R37 }" height=0.25];
+}
+subgraph cluster_17 {rank="min";rankdir=TB;color=blue;label=""
+PF_PN0
+PF_PN1
+}
+V9
+VB
+subgraph cluster_11 {rank="min";rankdir=TB;color=blue;label=""
+CA0
+CA1
+CA2
+CA3
+CA8
+CA9
+CA4
+CA5
+CA6
+CA7
+}
+VC
+NET00063
+subgraph cluster_12 {rank="min";rankdir=TB;color=blue;label=""
+VD0
+VD1
+VD2
+VD3
+VD4
+VD5
+VD6
+VD7
+}
+subgraph cluster_1 {rank="min";rankdir=TB;color=blue;fontsize=24;label=MUX2
+R2  [label="{ R2  }" height=0.25];
+R11 [label="{ R11 }" height=0.25];
+R1  [label="{ R1  }" height=0.25];
+R8  [label="{ R8  }" height=0.25];
+}
+VD4:e->R2:w;   R2:e->CA4:w;
+VD5:e->R11:w; R11:e->CA5:w;
+VD6:e->R1:w;   R1:e->CA6:w;
+VD7:e->R8:w;   R8:e->CA7:w;
+  }
+  subgraph cluster_15 {rank="min";rankdir=TB;color=blue;fontsize=24;label="Video lines counter"
+  V8
+  MD10
+  MD11
+  MD12
+  MD13
+  MD14
+  MD15
+  }
+  subgraph cluster_8 {rank="min";rankdir=TB;color=blue;fontsize=24;label="Microcode Memory"
+_DAC_EN
+  V7
+  _VRF2CLUT_OE
+  SQ_S1
+  SQ_S0
+  _SQ_ZA
+  _SQ_FE
+  SQ_PUP_CI
+  _VPTRLL
+  _VPTRHL
+  }
+}
+subgraph cluster_6 {rank="min";rankdir=TB;color=blue;fontsize=24;label="DRAM write enables generator"
+V4
+V5
+_WE_00_01
+_WE_02_03
+_WE_04_05
+_WE_06_07
+_WE_08_09
+_WE_10_11
+_WE_12_13
+_WE_14_15
+subgraph cluster_4 {rank="min";rankdir=TB;color=blue;label=""
+AD00
+AD01
+AD02
+AD03
+AD04
+AD05
+AD06
+AD07
+}
+subgraph cluster_35 {rank="min";rankdir=TB;color=blue;label=""
+A00
+_WTBT
+}
+subgraph cluster_5 {rank="min";rankdir=TB;color=blue;label=""
+AD08
+AD09
+AD10
+AD11
+AD12
+AD13
+AD14
+AD15
+}
+}
+subgraph cluster_9 {rank="min";rankdir=TB;color=blue;label=""
+NET00002
+NET00004
+NET00005
+NET00008
+NET00009
+NET00011
+_MWD
+DIR
+HD_DRUN
+HD_WRCLK
+HD_DRDY
+HD_DIR
+HD_WRG
+HD_WRD
+FL_DW
+FL_WRCLK
+FL_RDD
+FL_PS0
+FL_PS1
+FL_WE
+WG
+RDY
+LST_DIR
+USEL
+P13
+P14
+P12
+F1SEL
+HN2
+FL_IDX
+F0SEL
+STEP
+WP_TS
+FLT_TRK0
+HN0
+HN1
+WP
+_IND
+TR000
+FR_STP
+HD_STEP
+_RW__SEEK
+P11
+NET00012
+NET00001
+NET00016
+HDBUFA07
+HDBUFA08
+HDBUFA09
+HDBUFA10
+HD_BDRQ
+RUN
+P10
+NET00017
+NET00019
+_FL_RD
+_FL_WR
+_CS_HD
+_HDBUFCS
+_FL_DACK
+_CS_FL
+_HD_BCS
+
+
+
+
+
+subgraph cluster_10 {rank="min";rankdir=TB;color=blue;label=""
+DB0
+DB1
+DB2
+DB3
+DB4
+}
+}
+subgraph cluster_16 {rank="min";rankdir=TB;color=blue;label=""
+MMWM2B
+MMWM4B
+ subgraph cluster_19 {rank="min";rankdir=TB;color=blue;label=""
+ PF_VD0
+ PF_VD1
+ }
+VA
+_VRF_RD_LO
+_VRF_RD_HI
+_VRF_A0
+}
+subgraph cluster_20 {rank="min";rankdir=TB;color=blue;label=""
+_RAS0
+_RAS3
+}
+subgraph cluster_21 {rank="min";rankdir=TB;color=blue;label=""
+_RAS1
+_RAS2
+}
+subgraph cluster_22 {rank="min";rankdir=TB;color=blue;label=""
+A01
+A02
+A03
+A04
+A05
+}
+subgraph cluster_40 {rank="min";rankdir=TB;color=blue;label=""
+_DIN
+ _SYNC
+ _SEL
+ P1
+ MMBANK
+ A12M__A12PG7
+ A13M__A12PG7
+ subgraph cluster_41 {rank="min";rankdir=TB;color=blue;label=""
+ A12
+ A13
+ A14
+ A15
+ }
+ P3
+ subgraph cluster_42 {rank="min";rankdir=TB;color=blue;label=""
+ A06
+ A07
+ A08
+ A09
+ A10
+ A11
+ }
+ subgraph cluster_43 {rank="min";rankdir=TB;color=blue;label=""
+ MMBA12
+ MMBA13
+ MMBA14
+ MMBA15
+ MMBA16
+ MMBA17
+ MMBA18
+ MMBA19
+ MMBA20
+ MMBA21
+ }
+ subgraph cluster_44 {rank="min";rankdir=TB;color=blue;label=""
+ PHA14__O1612XX
+ PHA15__O1614XX
+ PHA16__O1611XX
+ PHA17__O1610XX
+ PHA18__O1615XX
+ PHA19__O1613XX
+ PHA20__O161XXX
+ PHA21_IOHWH
+ }
+ P2
+ subgraph cluster_45 {rank="min";rankdir=TB;color=blue;label=""
+ IOINT
+ IHLT
+ }
+ subgraph cluster_46 {rank="min";rankdir=TB;color=blue;label=""
+ EF0
+ EF1
+ }
+ P2_15
+ _HALT
+ subgraph cluster_47 {rank="min";rankdir=TB;color=blue;label=""
+ _IOW
+ _IOR
+ }
+subgraph cluster_0 {rank="min";rankdir=TB;color=blue;fontsize=24;label=MUX1
+R31 [label="{ R31 }" height=0.25];
+R30 [label="{ R30 }" height=0.25];
+R9  [label="{ R9  }" height=0.25];
+R29 [label="{ R29 }" height=0.25];
+}
+A01:e->R31:w; R31:e->MMRA1:w;
+A02:e->R30:w; R30:e->MMRA2:w;
+A03:e->R9:w;   R9:e->MMRA3:w;
+A04:e->R29:w; R29:e->MMRA4:w;
+subgraph cluster_14 {rank="min";rankdir=TB;color=blue;label=""
+MMRA1
+MMRA2
+MMRA3
+MMRA4
+}
+ P5
+ subgraph cluster_48 {rank="min";rankdir=TB;color=blue;label=""
+ PAFD
+ PSEL
+ PRST
+ PSTB
+ }
+ subgraph cluster_49 {rank="min";rankdir=TB;color=blue;label=""
+ _LPT_PAFD
+ _LPT_PSEL
+ _LPT_PRST
+ _LPT_PSTB
+ NET00057
+ }
+ subgraph cluster_50 {rank="min";rankdir=TB;color=blue;label=""
+ _CS_VV51
+ _CS_VV55
+ _CS_VV79
+ }
+ P4
+ subgraph cluster_51 {rank="min";rankdir=TB;color=blue;label=""
+ _CS_VN59
+ _CS_VI53L
+ _CS_VI53D
+ }
+ subgraph cluster_52 {rank="min";rankdir=TB;color=blue;label=""
+ RXD_INV
+ NET00027
+ NET00028
+ }
+ subgraph cluster_53 {rank="min";rankdir=TB;color=blue;label=""
+ NET00032
+ NET00013
+ }
+ NET00035
+ NET00031
+ NET00032
+}
+
+
+labelloc=b;labeljust=l;label="Regs used: 42
+Z-buffers used: 16
+  Pads used: 239 (input only:110, output only:95)"
+fontsize=30;
+}
