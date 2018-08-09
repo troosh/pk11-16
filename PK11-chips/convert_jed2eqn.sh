@@ -5,7 +5,7 @@
 JEDUTIL=$PWD/jedutil
 
 # 104 variants
-for device in PLS100 PAL16L8 PAL16R4 PAL16R6
+for device in N82S100 PAL16L8 PAL16R4 PAL16R6
 do
   for f in $(find ./$device -iname *.jed -type f)
   do

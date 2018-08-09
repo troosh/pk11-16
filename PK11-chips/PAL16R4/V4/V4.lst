@@ -1,0 +1,20 @@
+661773d739bb7a86026647c1b1e2fbbf  km1556hp4-v4!.jed
+7921b20ab96c0d4b924e953f10d72ece  km1556hp4-v4.jed              ???
+ab1ff620dcbeba85b6215fdf80cb14e6  neon1556hp4_v4_add1read1.jed  ???
+6bd8ec2a7e8e7d4c29c5fb8937ba55c8  neon1556hp4_v4_add1read2.jed  ??
+c26f9718b305c99d5c260b74abe754bc  neon1556hp4_v4_add1read3.jed  ???
+c674eda05fcacd78d2e1031320ca17a8  neon1556hp4_v4_add1read4.jed  ??
+8f86e06fae24a6ac089b4f9753aef293  neon1556hp4_v4_add1read5.jed  ??
+6c5d16081dc79c97c8d7cf4911fb9b28  neon1556hp4_v4_add1read6.jed  ??
+fa0fed0fa6e760974bac0c8f46ee971d  neon1556hp4_v4_add1read7.jed  ??
+45160c5cb999543efd08982f8446d38f  neon1556hp4_v4_add1read8.jed  ???
+f7f5070ec7fadf6415ebd1305c8c9a4b  neon1556hp4_v4_add1read9.jed  ??
+379daf18a14753bd943be877070e7d0d  neon1556hp4_v4_add2.jed
+faef29acfaf3fdc84d5b026df481a591  neon1556hp4_v4_brd1.jed
+
+Реально есть три прошивки, которые сравниваем.
+В v4_add2 - дважды вылез rf17, а v4_brd1 - 1 раз...
+
+Пожалуй соглашусь km1556hp4-v4!.jed лучший вариант....
+
+Хотя нет - в neon1556hp4_v4_add2 считает дольше, там получается делитель на 10 (хотя 576/64 делится на 9 без остатка).

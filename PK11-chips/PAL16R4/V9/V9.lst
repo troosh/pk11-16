@@ -1,0 +1,50 @@
+562ab1a021e32ff662ca2438d8420178  km1556hp4-v9!.jed               /rf15 := rf15 + /rf15 & rf17
+c3cb81d2751c443da2165071f775ecc0  km1556hp4-v9.jed            ??? /rf15 := rf15 + /rf15 & rf17 + i4 & rf17 + i4 & rf17 + i4 & rf17 + i4 & rf17 + i4 & rf17 + i4 & rf17
+b9cf8da65b0b9583e2313a77b0d0cbf0  neon1556hp4_v9_add1.jed      ?? /rf15 := rf15 + /rf15 & rf17 +      rf17 +      rf17 +      rf17 +      rf17 +      rf17 +      rf17
+81406f44b288c3475d8d173c7f32fa18  neon1556hp4_v9_add2read1.jed    /rf15 := rf15 + /rf15 & rf17
+f6595ba8877bb9efc8f791edc11dc030  neon1556hp4_v9_add2read2.jed  ? /rf15 := rf15 + /rf15 & rf17 + rf17
+ee8f62173b4c41b111888a69cd156cce  neon1556hp4_v9_add2read4.jed    /rf15 := rf15 + /rf15 & rf17
+c15b939a17fd2809d67145ed450b07fe  neon1556hp4_v9_add2read5.jed ?? /rf15 := rf15 + /rf15 & rf17 + rf17 + rf17
+af406091ea9833cbbc3a51026b648ad2  neon1556hp4_v9_add2read6.jed  ? /rf15 := rf15 + /rf15 & rf17 + rf17
+d359dd99cf96f96a20fa403645da66d7  neon1556hp4_v9_add2read7.jed  ? /rf15 := rf15 + /rf15 & rf17 + rf17
+8ced001eb3c2ea347fc38ad6fe41b51f  neon1556hp4_v9_add2read8.jed  ? /rf15 := rf15 + /rf15 & rf17 + rf17
+505a8c733e01a6af8a40755fb8fa2141  neon1556hp4_v9_add2read9.jed  ? /rf15 := rf15 + /rf15 & rf17 + rf17
+3372afd3d8ba936cbbec42cc405a40f2  neon1556hp4_v9_add3read1.jed    /rf15 := /rf15 & rf17
+59f000eecca7246d90216ee96ee2f2eb  neon1556hp4_v9_add3read2.jed    /rf15 := /rf15 & rf17
+5d0bef97fe7ca549e702bd4d347c3017  neon1556hp4_v9_add3read3.jed    /rf15 := /rf15 & rf17
+f668126b08fb3c1104296f62d14c6fd8  neon1556hp4_v9_add3read4.jed    /rf15 := /rf15 & rf17
+18be7f0d5e5d54afedc45c26f7099a39  neon1556hp4_v9_add3read5!.jed   /rf15 := /rf15 & rf17
+0075c1efeb8744ddc4c5a3cc275b45b8  neon1556hp4_v9_add3read7.jed    /rf15 := /rf15 & rf17
+07713384151a925bd02c29f7efb906a5  neon1556hp4_v9_brd1.jed         /rf15 := rf15 & /rf17 + /rf15 & rf17   !!!!
+=>
+[[ Дубли после диассемблирования: ]]
+67c860fd1774dcdc77f2382c31d032ac  neon1556hp4_v9_add2read3.jed  ? /rf15 := rf15 + /rf15 & rf17 + rf17
+23238d53d1718d621dba0db5e19e3ed7  neon1556hp4_v9_add3read6.jed    /rf15 := /rf15 & rf17
+
+Вот по этой сортировке по  хешфункциям.
+
+020ca8b2f78c53c2318b5ae6766acb75  neon1556hp4_v9_add3read2.eqn
+
+069bc02f0cc0c9bfa4d55e77f8e7e2a4  neon1556hp4_v9_add2read3.eqn !!!
+069bc02f0cc0c9bfa4d55e77f8e7e2a4  neon1556hp4_v9_add2read8.eqn
+
+28aed5e65e7823687276a8c580034f31  km1556hp4-v9.eqn
+3c8f4467dfe716f191365b5e20572794  neon1556hp4_v9_add2read1.eqn
+65195d72f21a14599998ab744636cf61  neon1556hp4_v9_add2read5.eqn
+66bc0143ad3e6483737378a54e55d08a  neon1556hp4_v9_add2read2.eqn
+7371e3e652b53556e69ab58a79a8e84d  neon1556hp4_v9_add2read4.eqn
+893edbd4cf71902cf502a3437ef91a3e  neon1556hp4_v9_add3read4.eqn
+908f75cedf52c4dfc118bb176f22e296  neon1556hp4_v9_add3read6.eqn
+ac05cc289f0c707cdbb7b5bd7c52f564  neon1556hp4_v9_add3read1.eqn
+b5e6f8128fcf3c610593be6f6bc8d995  neon1556hp4_v9_add1.eqn
+c17a1bcfa5ad7dbaa8200ac2e73d9500  neon1556hp4_v9_add3read5!.eqn
+
+c73e61869bbb1e1f7dfda3a6d85165af  neon1556hp4_v9_add2read6.eqn !!!
+c73e61869bbb1e1f7dfda3a6d85165af  neon1556hp4_v9_add2read7.eqn
+
+d6b2c7c24883860d24de6f546c82cfec  neon1556hp4_v9_add3read3.eqn
+d855d1fd15fbbc1fe842aec634aa1824  neon1556hp4_v9_brd1.eqn
+da06cad8c5d5a4b29e8a4f43b28ab82b  neon1556hp4_v9_add3read7.eqn
+f0e3be37f40c4c264d79961f649e8e84  neon1556hp4_v9_add2read9.eqn
+f74b2de72de5efc4a3897bb3d463af2a  km1556hp4-v9!.eqn
+

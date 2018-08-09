@@ -1,0 +1,39 @@
+Inputs:
+
+2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15, 16, 17, 18, 19
+
+Outputs:
+
+14 (Registered, Output feedback registered, Active low)
+15 (Registered, Output feedback registered, Active low)
+16 (Registered, Output feedback registered, Active low)
+17 (Registered, Output feedback registered, Active low)
+
+Equations:
+
+/rf14 := i4 & i5 & /rf14 +
+         i4 & /i5 & /i13 +
+         i5 & /i9 +
+         i2 & /i5 & /rf15 +
+         /i2 & /i4 & /i5
+rf14.oe = OE
+
+/rf15 := 
+rf15.oe = OE
+
+/rf16 := i4 & i5 & /rf16 +
+         i4 & i5 & /rf16 +
+         /i4 & i5 & /i8 +
+         /i4 & i5 & /i8 +
+         /i2 & /i4 & /i5 & /rf14 +
+         /i2 & /i4 & /i5 & /rf14
+rf16.oe = OE
+
+/rf17 := i4 & i5 & /rf17 +
+         i4 & i5 & /rf17 +
+         /i4 & i5 & /i7 +
+         /i4 & i5 & /i7 +
+         /i2 & /i4 & /i5 & /rf15 +
+         /i2 & /i4 & /i5 & /rf15
+rf17.oe = OE
+

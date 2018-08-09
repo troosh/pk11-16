@@ -1,0 +1,63 @@
+Inputs:
+
+2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15, 16, 17, 18, 19
+
+Outputs:
+
+12 (Combinatorial, Output feedback output, Active low)
+13 (Combinatorial, Output feedback output, Active low)
+14 (Registered, Output feedback registered, Active low)
+15 (Registered, Output feedback registered, Active low)
+16 (Registered, Output feedback registered, Active low)
+17 (Registered, Output feedback registered, Active low)
+18 (Combinatorial, Output feedback output, Active low)
+19 (Combinatorial, Output feedback output, Active low)
+
+Equations:
+
+/o12 = /i2 & /i5 & /i9 & rf14 & rf15 & /rf16 & rf17 +
+       /i2 & /i6 & /i9 & rf14 & rf15 & /rf16 & rf17 +
+       /i4 & /rf14 & rf15 & /rf16 +
+       /o12 & rf15 +
+       /o12 & rf16 +
+       /o12 & /rf17 +
+       i4 & /o12
+o12.oe = vcc
+
+/o13 = /i7 & rf14 & rf15 & /rf16 +
+       /i7 & /rf14 & rf15 & rf16 & rf17 +
+       /i7 & /rf14 & rf15 & /rf16 & /rf17 +
+       /i8 & rf14 & /rf15 & rf16 +
+       /i8 & /rf14 & rf15 & /rf16 & rf17 +
+       /i8 & /rf14 & /rf15 +
+       i4 & /o13
+o13.oe = vcc
+
+/rf14 := rf14 & /rf15 & /rf16 & rf17 +
+         /rf14 & rf15 +
+         /rf14 & rf16 +
+         /rf14
+rf14.oe = OE
+
+/rf15 := rf15 & /rf16 & rf17 +
+         /rf15 & rf16 +
+         /rf15 & /rf17
+rf15.oe = OE
+
+/rf16 := rf16 & rf17 +
+         /rf16 & /rf17
+rf16.oe = OE
+
+/rf17 := rf17
+rf17.oe = OE
+
+/o18 = /i2 & /i4 & /i5 & /o12 & rf14 & /rf15 & /rf16 & /rf17 +
+       /i2 & /i6 & /o12 & rf14 & /rf15 & /rf16 & /rf17 +
+       /i2 & /i5 & /o18 +
+       /i2 & /i6 & /o18
+o18.oe = /i2 & /i9
+
+/o19 = /i2 & /i5 & /i9 & /o12 & rf14 & /rf15 & /rf16 & /rf17 & /o18 +
+       /i2 & /i5 & /i9 & /o19
+o19.oe = vcc
+

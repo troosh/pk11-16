@@ -1,0 +1,113 @@
+Inputs:
+
+9, 8, 7, 6, 5, 4, 3, 2, 27, 26, 25, 24, 23, 22, 21, 20
+
+Outputs:
+
+18 (Combinatorial, No output feedback, Active high)
+17 (Combinatorial, No output feedback, Active low)
+16 (Combinatorial, No output feedback, Active low)
+15 (Combinatorial, No output feedback, Active low)
+13 (Combinatorial, No output feedback, Active low)
+12 (Combinatorial, No output feedback, Active high)
+11 (Combinatorial, No output feedback, Active low)
+10 (Combinatorial, No output feedback, Active low)
+
+Equations:
+
+o18 = /i6 +
+      i7 & /i2 & /i26 +
+      /i21
+o18.oe = OE
+
+/o17 = /i8 & /i6 & i5 & i4 & /i25 & i22 & /i21 & /i20 +
+       i8 & /i6 & i5 & /i4 & i25 & i22 & /i21 & /i20 +
+       /i8 & /i6 & i5 & /i4 & /i25 & i22 & /i21 & /i20 +
+       i9 & i8 & i7 & i6 & /i4 & i3 & /i2 & /i26 & /i25 & i22 & /i21 & /i20 +
+       /i9 & i8 & i7 & i6 & /i4 & i3 & /i2 & /i26 & /i25 & i22 & /i21 & /i20 +
+       /i8 & i7 & i6 & /i4 & i3 & /i2 & /i26 & /i25 & i22 & /i21 & /i20 +
+       /i9 & /i6 & /i5 & /i24 & i22 & /i21 & /i20 +
+       /i6 & /i5 & i24 & i22 & /i21 & /i20 +
+       /i9 & /i8 & /i7 & i6 & /i4 & i3 & /i2 & i26 & /i25 & i22 & /i21 & /i20 +
+       /i7 & i6 & /i2 & /i26 & i22 & /i21 & /i20 +
+       i7 & i6 & i2 & i22 & /i21 & /i20 +
+       i7 & i6 & i26 & i22 & /i21 & /i20 +
+       /i22
+o17.oe = OE
+
+/o16 = /i9 & i8 & /i6 & i5 & i4 & /i25 & i22 & /i21 & /i20 +
+       /i8 & /i6 & i5 & i4 & /i25 & i22 & /i21 & /i20 +
+       i8 & /i6 & i5 & /i4 & i25 & i22 & /i21 & /i20 +
+       /i9 & i8 & /i6 & i5 & /i4 & /i25 & i22 & /i21 & /i20 +
+       i9 & i8 & i7 & i6 & /i4 & i3 & /i2 & /i26 & /i25 & i22 & /i21 & /i20 +
+       i9 & /i6 & /i5 & /i24 & i22 & /i21 & /i20 +
+       /i6 & /i5 & i24 & i22 & /i21 & /i20 +
+       /i7 & i6 & /i2 & /i26 & i22 & /i21 & /i20 +
+       i7 & i6 & i2 & i22 & /i21 & /i20 +
+       i7 & i6 & i26 & i22 & /i21 & /i20 +
+       /i22
+o16.oe = OE
+
+/o15 = /i9 & /i8 & i7 & i6 & /i4 & i3 & /i2 & /i26 & i25 & /i22 & /i21 & /i20 +
+       i9 & /i8 & /i7 & i6 & /i4 & i3 & /i2 & i26 & /i25 & i22 & /i21 & /i20
+o15.oe = OE
+
+/o13 = i9 & i8 & /i6 & i5 & i4 & /i25 +
+       /i9 & i8 & /i6 & i5 & i4 & /i25 & /i22 & i20 +
+       i9 & /i8 & /i6 & i5 & /i4 & i25 & i22 & /i21 & /i20 +
+       i9 & /i8 & /i6 & i5 & /i4 & i25 & /i22 & /i20 +
+       /i9 & i8 & /i6 & i5 & /i4 & /i25 & /i22 & i21 & /i20 +
+       /i9 & i8 & /i6 & i5 & /i4 & /i25 & /i22 & /i21 & /i20 +
+       i9 & /i8 & /i6 & i5 & /i4 & /i25 & /i22 & /i21 & /i20 +
+       /i9 & i8 & i7 & i6 & /i4 & i3 & /i2 & /i26 & /i25 & /i22 & /i21 & /i20 +
+       i9 & /i8 & i7 & i6 & /i4 & i3 & /i2 & /i26 & /i25 & /i22 & /i21 & /i20 +
+       i9 & /i6 & /i5 & /i24 & /i22 & i21 & /i20 +
+       i9 & /i6 & /i5 & /i24 & /i22 & /i21 & /i20
+o13.oe = OE
+
+o12 = /i9 & i8 & /i6 & i5 & i4 & /i25 & i22 & /i21 & /i20 +
+      /i8 & /i6 & i5 & i4 & /i25 & i22 & /i21 & /i20 +
+      i8 & /i6 & i5 & /i4 & i25 & i22 & /i21 & /i20 +
+      i9 & /i8 & /i6 & i5 & /i4 & i25 & i22 & /i21 & /i20 +
+      /i9 & i8 & /i6 & i5 & /i4 & /i25 & i22 & /i21 & /i20 +
+      /i9 & i8 & /i6 & i5 & /i4 & /i25 & /i22 & /i21 & /i20 +
+      i9 & /i8 & /i6 & i5 & /i4 & /i25 & /i22 & /i21 & /i20 +
+      /i9 & /i8 & i7 & i6 & /i4 & i3 & /i2 & /i26 & i25 & /i22 & /i21 & /i20 +
+      i9 & i8 & i7 & i6 & /i4 & i3 & /i2 & /i26 & /i25 & i22 & /i21 & /i20 +
+      /i9 & i8 & i7 & i6 & /i4 & i3 & /i2 & /i26 & /i25 & /i22 & /i21 & /i20 +
+      i9 & /i8 & i7 & i6 & /i4 & i3 & /i2 & /i26 & /i25 & /i22 & /i21 & /i20 +
+      i9 & /i6 & /i5 & /i24 & i22 & /i21 & /i20 +
+      i9 & /i6 & /i5 & /i24 & /i22 & /i21 & /i20 +
+      /i9 & i8 & /i6 & /i5 & /i27 & i24 & /i23 & i22 & /i21 & /i20 +
+      /i9 & /i8 & /i6 & /i5 & i27 & i24 & /i23 & i22 & /i21 & /i20 +
+      /i9 & /i6 & /i5 & /i27 & i24 & i23 & i22 & /i21 & /i20 +
+      /i6 & /i5 & i27 & i24 & i23 & i22 & /i21 & /i20 +
+      i9 & /i8 & /i7 & i6 & /i4 & i3 & /i2 & i26 & /i25 & i22 & /i21 & /i20 +
+      /i7 & i6 & /i2 & /i26 & i22 & /i21 & /i20 +
+      i7 & i6 & i2 & i22 & /i21 & /i20 +
+      i7 & i6 & i26 & i22 & /i21 & /i20
+o12.oe = OE
+
+/o11 = /i9 & i8 & /i6 & i5 & /i4 & /i25 & /i22 & /i21 & /i20 +
+       i9 & /i8 & /i6 & i5 & /i4 & /i25 & /i22 & /i21 & /i20 +
+       i9 & i8 & i7 & i6 & /i4 & i3 & /i2 & /i26 & /i25 & /i22 & /i21 & /i20 +
+       /i9 & i8 & i7 & i6 & /i4 & i3 & /i2 & /i26 & /i25 & /i22 & /i21 & /i20 +
+       i9 & /i8 & i7 & i6 & /i4 & i3 & /i2 & /i26 & /i25 & /i22 & /i21 & /i20 +
+       i9 & /i6 & /i5 & /i24 & /i22 & /i21 & /i20 +
+       i9 & /i8 & /i7 & i6 & /i4 & i3 & /i2 & i26 & /i25 & /i22 & /i21 & /i20 +
+       /i9 & /i6 & /i5 & /i22 & i21 & i20
+o11.oe = OE
+
+/o10 = /i9 & i8 & /i6 & i5 & /i4 & /i25 & /i22 & i21 & /i20 +
+       /i8 & /i6 & i5 & /i4 & /i25 & /i22 & i21 & /i20 +
+       i9 & i8 & i7 & i6 & /i4 & i3 & /i2 & /i26 & /i25 & /i22 & i21 & /i20 +
+       /i9 & i8 & i7 & i6 & /i4 & i3 & /i2 & /i26 & /i25 & /i22 & i21 & /i20 +
+       i9 & /i8 & i7 & i6 & /i4 & i3 & /i2 & /i26 & /i25 & /i22 & i21 & /i20 +
+       i9 & /i6 & /i5 & /i24 & /i22 & i21 & /i20 +
+       i9 & /i8 & /i7 & i6 & /i4 & i3 & /i2 & i26 & /i25 & /i22 & i21 & /i20 +
+       /i9 & /i8 & i7 & i6 & /i4 & i3 & /i2 & /i26 & /i25 & /i22 & /i21 & /i20 +
+       /i9 & /i8 & /i6 & i5 & /i4 & /i25 & /i22 & /i21 & /i20 +
+       /i9 & /i6 & /i5 & /i22 & /i21 & /i20 +
+       /i9 & /i6 & /i5 & /i22 & i21 & i20
+o10.oe = OE
+
