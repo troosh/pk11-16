@@ -1,0 +1,25 @@
+
+
+ Pin # | Name     | Pin Type
+-----------------------------
+   1   | Clock    | Clock
+   2   | I2       | Input
+   3   | NC       | Input
+   4   | I4       | Input
+   5   | I5       | Input
+   6   | I6       | Input
+   7   | I7       | Input
+   8   | I8       | Input
+   9   | I9       | Input
+  10   | GND      | GND
+  11   | OE       | /OE
+  12   | I12      | Input
+  13   | I13      | Input
+  14   | RF14     | Output
+  15   | RF15     | Output
+  16   | RF16     | Output
+  17   | RF17     | Output
+  18   | I18      | Input
+  19   | I19      | Input
+  20   | VCC      | VCC
+

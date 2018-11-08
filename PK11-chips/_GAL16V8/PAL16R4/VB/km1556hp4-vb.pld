@@ -1,0 +1,57 @@
+GAL16V8                 ; Target device, original is PAL16R4
+km1556hp4-vb.eqn        ; Original equations get from
+
+
+Clock    I2       NC       I4       I5       I6       I7       I8       I9       GND     
+OE       I12      I13      RF14     RF15     RF16     RF17     I18      I19      VCC     
+
+
+; Inputs:
+; 
+; 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15, 16, 17, 18, 19
+; 
+; Outputs:
+; 
+; 14 (Registered, Output feedback registered, Active low)
+; 15 (Registered, Output feedback registered, Active low)
+; 16 (Registered, Output feedback registered, Active low)
+; 17 (Registered, Output feedback registered, Active low)
+; 
+; Equations:
+
+/RF14.R = I4 & I5 & /RF14 +
+         I4 & /I5 & /I13 +
+         I5 & /I9 +
+         I2 & /I5 & /RF15 +
+         /I2 & /I5 +
+         I4 & RF17 +
+         I4 & RF17 +
+         I4 & RF17
+; RF14.E = OE
+
+/RF15.R = I4 & I5 & /RF15 +
+         I4 & /I5 & /I19 +
+         I5 & /I6 +
+         I4 & RF17 +
+         I4 & RF17 +
+         I4 & RF17 +
+         I4 & RF17 +
+         I4 & RF17
+; RF15.E = OE
+
+/RF16.R = I4 & I5 & /RF16 +
+         I4 & /I5 & /I18 +
+         /I4 & I5 & /I8 +
+         I2 & /I4 & /I5 & /RF17 +
+         /I2 & /I4 & /I5 & /RF14
+; RF16.E = OE
+
+/RF17.R = I4 & I5 & /RF17 +
+         I4 & /I5 & /I12 +
+         /I4 & I5 & /I7 +
+         /I2 & /I4 & /I5 & /RF15
+; RF17.E = OE
+
+DESCRIPTION
+
+TODO: signature: VB-fe1d

@@ -1,0 +1,40 @@
+GAL16V8                 ; Target device, original is PAL16L8
+neon1556hl8_p12_add2.eqn ; Original equations get from
+
+
+I1       NC       NC       I4       NC       I6       I7       I8       I9       GND     
+I11      O12      O13      O14      O15      NC       NC       I18      NC       VCC     
+
+
+; Inputs:
+; 
+; 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 13, 14, 15, 16, 17, 18
+; 
+; Outputs:
+; 
+; 12 (Combinatorial, Output feedback output, Active low)
+; 13 (Combinatorial, Output feedback output, Active low)
+; 14 (Combinatorial, Output feedback output, Active low)
+; 15 (Combinatorial, Output feedback output, Active low)
+; 
+; Equations:
+
+/O12.T = I1 & /I6
+O12.E = VCC
+
+/O13.T = I6 & I7 & /I11 +
+       I7 & /O13 +
+       /I6 & /O13 +
+       I11 & /O13
+O13.E = VCC
+
+/O14.T = O13 & I18
+O14.E = VCC
+
+/O15.T = I8 & /I18 +
+       I4 & I9 & I18
+O15.E = VCC
+
+DESCRIPTION
+
+TODO: signature: P12-0ed2

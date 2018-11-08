@@ -1,0 +1,58 @@
+GAL16V8                 ; Target device, original is PAL16L8
+km1556hl8-v6.eqn        ; Original equations get from
+
+
+I1       I2       I3       I4       I5       NC       I7       I8       I9       GND     
+I11      O12      O13      O14      O15      O16      NC       O18      O19      VCC     
+
+
+; Inputs:
+; 
+; 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 13, 14, 15, 16, 17, 18
+; 
+; Outputs:
+; 
+; 12 (Combinatorial, Output feedback output, Active low)
+; 13 (Combinatorial, Output feedback output, Active low)
+; 14 (Combinatorial, Output feedback output, Active low)
+; 15 (Combinatorial, Output feedback output, Active low)
+; 16 (Combinatorial, Output feedback output, Active low)
+; 18 (Combinatorial, Output feedback output, Active low)
+; 19 (Combinatorial, Output feedback output, Active low)
+; 
+; Equations:
+
+/O12.T = /I8 & /I9 & O18
+O12.E = VCC
+
+/O13.T = /I9 & O18
+O13.E = VCC
+
+/O14.T = I1 & I3 & /I4 & I5 & /I7 & /I11 +
+       /I1 & I3 & /I4 & /I5 & /I7 & /I11 +
+       /I1 & /I11 & /O14 +
+       I1 & /I3 & I7 & /O14 +
+       I1 & /I3 & /I5 & /O14 +
+       /I1 & /I2 & I3 & /I5 & /I7 & /I11
+O14.E = VCC
+
+/O15.T = I1 & I3 & I4 & I5 & /I7 & /I11 +
+       /I1 & I3 & I4 & /I5 & /I7 & /I11 +
+       /I1 & /I11 & /O15 +
+       I1 & /I3 & I7 & /O15 +
+       I1 & /I3 & /I5 & /O15 +
+       /I1 & /I2 & I3 & /I5 & /I7 & /I11
+O15.E = VCC
+
+/O16.T = /I1 & /I2 & /I3 & I5
+O16.E = VCC
+
+/O18.T = /I5
+O18.E = VCC
+
+/O19.T = /I1 & /I3 & /I5 & /I7
+O19.E = VCC
+
+DESCRIPTION
+
+TODO: signature: V6-50e7

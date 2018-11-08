@@ -1,0 +1,55 @@
+GAL16V8                 ; Target device, original is PAL16L8
+km1556hl8-p4.eqn        ; Original equations get from
+
+
+I1       I2       I3       I4       I5       I6       I7       I8       I9       GND     
+I11      O12      O13      O14      O15      O16      O17      O18      O19      VCC     
+
+
+; Inputs:
+; 
+; 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 13, 14, 15, 16, 17, 18
+; 
+; Outputs:
+; 
+; 12 (Combinatorial, Output feedback output, Active low)
+; 13 (Combinatorial, Output feedback output, Active low)
+; 14 (Combinatorial, Output feedback output, Active low)
+; 15 (Combinatorial, Output feedback output, Active low)
+; 16 (Combinatorial, Output feedback output, Active low)
+; 17 (Combinatorial, Output feedback output, Active low)
+; 18 (Combinatorial, Output feedback output, Active low)
+; 19 (Combinatorial, Output feedback output, Active low)
+; 
+; Equations:
+
+/O12.T = VCC
+O12.E = /O16
+
+/O13.T = /I2 & /I3 +
+       I2 & I3
+O13.E = VCC
+
+/O14.T = I1 & /I3 +
+       /I1 & I3
+O14.E = VCC
+
+/O15.T = /I5 & /I7 & /I8 & /I11
+O15.E = VCC
+
+/O16.T = VCC
+O16.E = I4 & I6
+
+/O17.T = I5 & /I7 & /I8 & /I11
+O17.E = VCC
+
+/O18.T = /I5 & I7 & /I8 & /I11
+O18.E = VCC
+
+/O19.T = /I6 & I9 +
+       /I4 & I9
+O19.E = I9 & O16
+
+DESCRIPTION
+
+TODO: signature: P4-abaf

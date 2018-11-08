@@ -1,0 +1,77 @@
+GAL16V8                 ; Target device, original is PAL16R4
+km1556hp4-p11.3.eqn     ; Original equations get from
+
+
+Clock    I2       I3       I4       I5       I6       I7       I8       I9       GND     
+OE       O12      O13      RF14     RF15     RF16     RF17     O18      O19      VCC     
+
+
+; Inputs:
+; 
+; 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15, 16, 17, 18, 19
+; 
+; Outputs:
+; 
+; 12 (Combinatorial, Output feedback output, Active low)
+; 13 (Combinatorial, Output feedback output, Active low)
+; 14 (Registered, Output feedback registered, Active low)
+; 15 (Registered, Output feedback registered, Active low)
+; 16 (Registered, Output feedback registered, Active low)
+; 17 (Registered, Output feedback registered, Active low)
+; 18 (Combinatorial, Output feedback output, Active low)
+; 19 (Combinatorial, Output feedback output, Active low)
+; 
+; Equations:
+
+/O12.T = I6 & I8 & /I9 +
+       I8 & /O12 +
+       I9 & /O12 +
+       /I6 & /O12
+O12.E = VCC
+
+/O13.T = I5 & I6 & /I9 +
+       I5 & /O13 +
+       I9 & /O13 +
+       /I6 & /O13
+O13.E = VCC
+
+/RF14.R = I4 & RF14 & RF16 & RF17 +
+         /I6 & /RF14 & /RF16 +
+         /I6 & /RF14 & /RF17 +
+         /I9 & /RF14 & /RF16 +
+         /I9 & /RF14 & /RF17 +
+         I5 & I6 & I9 +
+         /I4 & /RF14
+; RF14.E = OE
+
+/RF15.R = /I2 & I6 & I9 +
+         /I2 & /RF15 +
+         /I9 & /RF15 +
+         /I6 & /RF15
+; RF15.E = OE
+
+/RF16.R = I4 & RF16 & RF17 +
+         /I6 & /RF16 & /RF17 +
+         /I9 & /RF16 & /RF17 +
+         I6 & /I8 & I9 +
+         /I4 & /RF16
+; RF16.E = OE
+
+/RF17.R = /I7 & RF17 +
+         I6
+; RF17.E = OE
+
+/O18.T = I2 & I6 & /I9 +
+       I2 & /O18 +
+       I9 & /O18 +
+       /I6 & /O18
+O18.E = VCC
+
+/O19.T = I3 +
+       I7 & /RF17 & O19 +
+       I7 & RF17
+O19.E = VCC
+
+DESCRIPTION
+
+TODO: signature: P11-301c
