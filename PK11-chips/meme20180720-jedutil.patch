@@ -1,0 +1,39 @@
+diff --git a/mame-master/makefile b/mame-master/makefile
+index 7e7b02d..7ec4dcb 100644
+--- a/mame-master/makefile
++++ b/mame-master/makefile
+@@ -19,7 +19,7 @@
+ 
+ # TARGET = mame
+ # SUBTARGET = tiny
+-# TOOLS = 1
++TOOLS = 1
+ # TESTS = 1
+ # BENCHMARKS = 1
+ # OSD = sdl
+@@ -33,7 +33,7 @@
+ # NO_USE_MIDI = 1
+ # NO_USE_PORTAUDIO = 1
+ # DONT_USE_NETWORK = 1
+-# USE_QTDEBUG = 1
++USE_QTDEBUG = 0
+ # NO_X11 = 1
+ # NO_USE_XINPUT = 0
+ # FORCE_DRC_C_BACKEND = 1
+diff --git a/mame-master/src/lib/util/jedparse.cpp b/mame-master/src/lib/util/jedparse.cpp
+index c2c9a13..ee44376 100644
+--- a/mame-master/src/lib/util/jedparse.cpp
++++ b/mame-master/src/lib/util/jedparse.cpp
+@@ -218,9 +218,9 @@ int jed_parse(const void *data, size_t length, jed_data *result)
+ 	checksum += *scan;
+ 	if (scan + 4 < srcend && ishex(scan[1]) && ishex(scan[2]) && ishex(scan[3]) && ishex(scan[4]))
+ 	{
+-		uint16_t dessum = (hexval(scan[1]) << 12) | (hexval(scan[2]) << 8) | (hexval(scan[3]) << 4) | hexval(scan[4] << 0);
+-		if (dessum != 0 && dessum != checksum)
+-			return JEDERR_BAD_XMIT_SUM;
++//		uint16_t dessum = (hexval(scan[1]) << 12) | (hexval(scan[2]) << 8) | (hexval(scan[3]) << 4) | hexval(scan[4] << 0);
++//		if (dessum != 0 && dessum != checksum)
++//			return JEDERR_BAD_XMIT_SUM;
+ 	}
+ 
+ 	/* the ETX becomes the real srcend */
