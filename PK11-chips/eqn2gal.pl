@@ -46,7 +46,7 @@ while(<EQN>)
        s/^(\/?rf\d+) :=/$1.R =/;
     }
 
-    s/ =(\s+)$/ = VCC\n/;
+    s/ =(\s+)$/ = GND\n/;
  } while(0);
  push @B, uc($_);
 }
