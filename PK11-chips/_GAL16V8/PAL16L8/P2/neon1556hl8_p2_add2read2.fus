@@ -52,8 +52,8 @@ Pin 15 = O15          XOR = 0   AC1 = 1
 
 Pin 14 = NC           XOR = 0   AC1 = 0
  40  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx ---- ---- ----
- 41  -x-- ---- ---- x--- x--- ---- ---- ---- ---- ---- ----
- 42  ---- ---- xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+ 41  -x-- ---- ---- x--- x--- xxxx xxxx xxxx xxxx xxxx xxxx
+ 42  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  43  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  44  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  45  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx

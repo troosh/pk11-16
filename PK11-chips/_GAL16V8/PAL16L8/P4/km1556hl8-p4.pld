@@ -23,7 +23,7 @@ I11      O12      O13      O14      O15      O16      O17      O18      O19     
 ; 
 ; Equations:
 
-/O12.T = VCC
+/O12.T = GND
 O12.E = /O16
 
 /O13.T = /I2 & /I3 +
@@ -37,7 +37,7 @@ O14.E = VCC
 /O15.T = /I5 & /I7 & /I8 & /I11
 O15.E = VCC
 
-/O16.T = VCC
+/O16.T = GND
 O16.E = I4 & I6
 
 /O17.T = I5 & /I7 & /I8 & /I11

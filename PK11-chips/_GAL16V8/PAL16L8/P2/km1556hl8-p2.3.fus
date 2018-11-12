@@ -7,16 +7,16 @@ Pin 19 = O19          XOR = 0   AC1 = 1
   3  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
   4  -x-- ---- ---- ---- xxxx xxxx xxxx xxxx xxxx xxxx xxxx
   5  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx ---- ----
-  6  ---- -x-- ---- ---- x--- x--- ---- ---- ---- ---- ----
-  7  ---- ---- ---- xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+  6  ---- -x-- ---- ---- x--- x--- xxxx xxxx xxxx xxxx xxxx
+  7  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 
 Pin 18 = O18          XOR = 0   AC1 = 1
   8  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
   9  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  10  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  11  xxxx xxxx xxxx xxxx xxxx xxxx xxxx ---- ---- ---- -x--
- 12  ---- ---- x--- x--- ---- ---- ---- ---- ---- ---- ----
- 13  ---- xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+ 12  ---- ---- x--- x--- xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+ 13  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  14  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  15  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 

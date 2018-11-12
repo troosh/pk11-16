@@ -46,7 +46,7 @@ O13.E = VCC
          /I3 & I5 & I6 & /I7
 ; RF15.E = OE
 
-/RF16.R = VCC
+/RF16.R = GND
 ; RF16.E = OE
 
 /RF17.R = I4 & /I5 & /I6 & /I7 & /RF16 & RF17 +

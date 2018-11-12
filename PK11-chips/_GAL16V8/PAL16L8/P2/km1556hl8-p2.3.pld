@@ -50,10 +50,10 @@ O15.E = VCC
 /O16.T = I2 & /I3 & /I4 & /I5
 O16.E = VCC
 
-/O17.T = VCC
+/O17.T = GND
 O17.E = /I5 & I8 & I9
 
-/O18.T = VCC
+/O18.T = GND
 O18.E = /I5 & I8 & I9
 
 /O19.T = /I5 & I8 & I9 +

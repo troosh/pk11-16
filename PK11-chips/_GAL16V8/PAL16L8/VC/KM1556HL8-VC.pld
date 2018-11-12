@@ -17,10 +17,10 @@ NC       NC       NC       NC       NC       NC       O17      O18      NC      
 ; 
 ; Equations:
 
-/O17.T = VCC
+/O17.T = GND
 O17.E = VCC
 
-/O18.T = VCC
+/O18.T = GND
 O18.E = VCC
 
 DESCRIPTION

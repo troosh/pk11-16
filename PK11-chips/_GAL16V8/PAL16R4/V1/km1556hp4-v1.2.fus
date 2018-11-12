@@ -1,8 +1,8 @@
 
 
 Pin 19 = O19          XOR = 0   AC1 = 1
-  0  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
-  1  ---- ---- ---- ---- ---- xxxx xxxx xxxx xxxx xxxx xxxx
+  0  ---- ---- ---- ---- ---- ---- ---- ---- xxxx xxxx xxxx
+  1  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
   2  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
   3  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
   4  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -28,7 +28,7 @@ Pin 17 = RF17         XOR = 0   AC1 = 0
  20  ---- ---- ---- ---- ---- ---- --x- --x- ---- ---- ----
  21  ---- ---- ---- --x- --x- ---- ---- ---- ---- ---- ----
  22  --x- --x- ---- ---- ---- ---- ---- ---- --x- --x- ----
- 23  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
+ 23  ---- ---- ---- xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 
 Pin 16 = RF16         XOR = 0   AC1 = 0
  24  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -36,7 +36,7 @@ Pin 16 = RF16         XOR = 0   AC1 = 0
  26  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  27  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  28  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
- 29  xxxx ---- ---- ---- ---- ---- ---- ---- ---- xxxx xxxx
+ 29  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  30  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  31  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 

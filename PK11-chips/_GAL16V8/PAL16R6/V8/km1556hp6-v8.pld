@@ -27,7 +27,7 @@ OE       O12      RF13     RF14     RF15     RF16     RF17     RF18     O19     
        I8 & /O12
 O12.E = VCC
 
-/RF13.R = VCC
+/RF13.R = GND
 ; RF13.E = OE
 
 /RF14.R = I2 & /I8 & RF14 & RF15 & RF16 & RF17 & RF18 +

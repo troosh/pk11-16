@@ -29,7 +29,7 @@ I11      O12      O13      O14      O15      O16      O17      O18      O19     
        I5 & I6 & I8 & I9
 O12.E = VCC
 
-/O13.T = VCC
+/O13.T = GND
 O13.E = I5 & I6 & I8 & I9
 
 /O14.T = I3 & /I7 +

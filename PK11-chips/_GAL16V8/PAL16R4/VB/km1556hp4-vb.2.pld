@@ -26,7 +26,7 @@ OE       NC       I13      RF14     RF15     RF16     RF17     NC       NC      
          /I2 & /I4 & /I5
 ; RF14.E = OE
 
-/RF15.R = VCC
+/RF15.R = GND
 ; RF15.E = OE
 
 /RF16.R = I4 & I5 & /RF16 +

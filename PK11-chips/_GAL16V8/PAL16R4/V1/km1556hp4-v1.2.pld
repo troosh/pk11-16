@@ -21,10 +21,10 @@ OE       NC       NC       RF14     RF15     RF16     RF17     O18      O19     
 ; 
 ; Equations:
 
-/RF14.R = VCC
+/RF14.R = GND
 ; RF14.E = OE
 
-/RF15.R = VCC
+/RF15.R = GND
 ; RF15.E = OE
 
 /RF16.R = RF16 & RF17 +
@@ -56,7 +56,7 @@ OE       NC       NC       RF14     RF15     RF16     RF17     O18      O19     
        /I2 & /I9
 O18.E = /I2 & /I9
 
-/O19.T = VCC
+/O19.T = GND
 O19.E = VCC
 
 DESCRIPTION

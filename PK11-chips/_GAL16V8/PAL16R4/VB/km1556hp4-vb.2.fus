@@ -28,7 +28,7 @@ Pin 17 = RF17         XOR = 0   AC1 = 0
  20  ---- ---- -x-- ---- -x-- ---- -x-- -x-- ---- ---x ----
  21  ---- -x-- ---- -x-- -x-- ---- ---x ---- ---- xxxx xxxx
  22  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
- 23  xxxx xxxx xxxx ---- ---- ---- ---- ---- ---- ---- ----
+ 23  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 
 Pin 16 = RF16         XOR = 0   AC1 = 0
  24  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
