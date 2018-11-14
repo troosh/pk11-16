@@ -4,7 +4,7 @@
 # Patched and compiled tool from MAME project
 JEDUTIL=$PWD/jedutil
 
-# 105 variants
+# 106 variants
 for device in N82S100 PAL16L8 PAL16R4 PAL16R6
 do
   for f in $(find ./$device -iname *.jed -type f)
