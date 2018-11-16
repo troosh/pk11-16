@@ -1,14 +1,14 @@
-ACCEL_ASCII "D:\Text\Миша\Computer\Soyuz-Neon\pk11-16.net"
+ACCEL_ASCII "C:\Users\Mike_A\YandexDisk\pk11-16\pk11-16.net"
 
 (asciiHeader 
   (asciiVersion 3 0)
-  (timeStamp 2018 8 6 18 4 48)
+  (timeStamp 2018 10 31 16 28 2)
   (program "P-CAD 2006 Schematic" "19.02.9589")
   (copyright "Copyright © 1992-2006 Altium Limited")
   (fileAuthor "")
   (headerString "")
   (fileUnits mm)
-  (guidString "{B8CF5F98-0CC5-4FAE-A162-389AC471674A}")
+  (guidString "{0CB25AA3-A339-42E7-88C4-861A3C954DA2}")
 )
 
 (library "Library_1"
@@ -14491,14 +14491,12 @@ ACCEL_ASCII "D:\Text\Миша\Computer\Soyuz-Neon\pk11-16.net"
     (node "D1" "45")
     (node "D26" "17")
   )
-  (net "NET00061"
-    (node "D55" "4")
-    (node "R25" "2")
-  )
   (net "NET00060"
     (node "D54" "19")
     (node "D54" "1")
     (node "D55" "1")
+    (node "D55" "4")
+    (node "R25" "2")
     (node "R23" "1")
   )
   (net "VU1-Y3"
@@ -14522,10 +14520,10 @@ ACCEL_ASCII "D:\Text\Миша\Computer\Soyuz-Neon\pk11-16.net"
     (node "R24" "1")
   )
   (net "NET00059"
-    (node "BQ2" "2")
     (node "D54" "2")
     (node "D55" "3")
     (node "R25" "1")
+    (node "BQ2" "2")
   )
   (net "VU1-Y1"
     (node "D42" "19")
@@ -15051,8 +15049,8 @@ ACCEL_ASCII "D:\Text\Миша\Computer\Soyuz-Neon\pk11-16.net"
     (node "RN2" "10")
   )
   (net "NET00058"
-    (node "BQ2" "1")
     (node "R23" "2")
+    (node "BQ2" "1")
   )
   (net "HDBUFA00"
     (node "D61" "7")
