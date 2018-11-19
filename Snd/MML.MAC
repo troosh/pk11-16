@@ -1,0 +1,552 @@
+	.title	MML
+	.enabl	LC
+;****************************************
+; PROGRAM COMPILE MUSIC			*
+;****************************************
+	.MCALL	.EXIT, .CLOSE, .CSIGEN, .READW, .WRITW, .PRINT
+
+start::
+	CALL	INITF		; OPEN INPUT AND OUTPUT FILES
+	MOV	#4, R5
+3$:
+	MOV	#4, LENGTH(R5)
+	MOV	#120., TEMPO(R5)
+	DEC	R5
+	DEC	R5
+	BPL	3$
+4$:
+	MOV	#4, R5
+1$:
+	CALL	END.VOICE	;
+	CALL	GET.STRING	; GET ONE STRING FORM INPUT FILE
+	CALL	COMMAND		; PROCESS INPUT STRING
+	TST	EOFFLG		; IS IT END OF INPUT FILE
+	BNE	2$		; NO, ONCE MORE
+	DEC	R5
+	DEC	R5
+	BPL	1$
+	BR	4$
+2$:
+	CALL	END.VOICE
+	CALL	CLOFILE		; YES, CLOSE OUTPUT FILE
+	CALL	CLOLIST
+	.EXIT			; THAT'S ALL
+;****************************************
+GET.STRING::
+	MOV	#STRING,R1
+2$:
+	CALL	GETCH
+	TST	EOFFLG
+	BNE	1$
+	TST	R0
+	BEQ	2$
+	CMPB	R0,#15
+	BEQ	3$
+	MOVB	R0,(R1)+
+	CALL	LISTING
+	BR	2$
+3$:
+	CALL	LISTING
+	CALL	GETCH
+	CALL	LISTING
+1$:
+	CLRB	(R1)
+	RETURN
+;****************************************
+; PROCEURE RETURNS TNE NUMERIC ARGUMENT	*
+;  ENTER:				*
+;	R4 <- ADDRESS OF STRING		*
+;  EXIT:				*
+;	R1 <- POSITIVE NUMERIC VALUE IF O'K
+;	R4 <- ADDRESS OF THE NEXT SYMBOL*
+;****************************************
+ARGUMENT::
+	CLR	R1
+	CLR	R0
+2$:	MOVB	(R4)+,R2
+	CMP	R2,#60
+	BLT	1$
+	CMP	R2,#71
+	BGT	1$
+	INC	R0
+	SUB	#60,R2
+	MUL	#10.,R1
+	ADD	R2,R1
+	BR	2$
+1$:	
+	DEC	R4
+	TST	R0
+	BNE	3$
+	SEC	
+3$:
+   	RETURN
+;****************************************
+; PROCEDURE PERFORMS CONTROL OF PARAM	*
+;  ENTER:				*
+;	R0 <- LOW LIMIT OF PARAM	*
+;	R2 <- HIGH LIMIT OF PARAM	*
+;	R1 <- PARAM			*
+;  EXIT:				*
+;	BIT C=1 IF ERROR		*
+;****************************************
+CONTROL::
+	CMP	R0,R1
+	BGT	1$
+	CMP	R2,R1
+	BLT	1$
+	TST	(PC)+
+1$:
+	SEC
+	RETURN
+;****************************************
+; PROCEDURE PROCESS THE COMMAND		*
+;  ENTER:				*
+;	R3 <- NUMBER OF COMMAND (1-6)	*
+;****************************************
+PROCESS::
+	INC	R4
+	CALL	ARGUMENT
+	BCS	1$
+	DEC	R3
+	ASL	R3
+	ASL	R3
+	MOV	PARAM(R3),R0
+	MOV	PARAM+2(R3),R2
+	CALL	CONTROL
+	BCS	1$
+	ASR	R3
+	ASR	R3
+	CMP	R3, #4
+	BEQ	LENG
+	CMP	R3, #5
+	BEQ	TEMP
+	BIS	#200,R3
+	CALL	PUTCH
+	MOV	R1,R3
+	CALL	PUTCH
+	RETURN
+1$:
+	JMP	ERR1
+PARAM::
+	.WORD	1,8.,1,16.,1,7,1,255.,1,64.,32.,255.
+;*******************************************
+; PROCEDURE SETS NEW TEMPO OF PLAY
+;*****************************************
+TEMP::
+	MOV	#12000.,R3		;	      
+	CLR	R2			;
+	DIV	R1,R2			;
+	MOV	R1, -(SP)
+	MOV	R2, TEMPO(R5)
+	MOV	#1000., R1
+	CLR	R0
+	DIV	(SP)+, R0
+	MOV	R0,R1
+	MUL	R1,R3
+	MOV	R3,MTEMPO(R5)		;
+	RETURN				;
+;******************************************
+; PROCEDURE SETS NEW LENGTH OF NOTE
+;******************************************
+LENG::
+	MOV	R1,LENGTH(R5)		;
+	RETURN
+;****************************************
+; PROOCEDURE COMPUTE THE DOT LENGTH
+; PUT THE TIME OF NOTE TO THE OUTPUT FILE
+;  ENTER:
+;	R4 - ADDRESS IN INPUT STRING
+;	R0 - CURRENT TIME OF THE NOTE
+;	R1 - CURRENT LENGTH OF THE NOTE
+;	R5 - NUMBER OF CHANNEL
+;****************************************
+DOT::
+	MOV	TEMPO(R5),R3
+	CLR	R2		; 
+	ASL	R1
+	DIV	R1, R2
+	CMPB	#'.,(R4)	; IS THE CURRENT BYTE '.'
+	BNE	1$		;  NO
+	INC	R4		; CORRECT THE ADDRESS
+	ADD	R2,R0		;
+	MOV	R3, -(SP)
+	MOV	#1000., R3
+	CLR	R2
+	DIV	R1, R2
+	MOV	R2,R3
+	MUL	(SP)+, R3
+	ADD	R3,RMNDR(R5)
+	MOV	MTEMPO(R5), R3
+	CLR	R2
+	DIV	R1,R2
+	ADD	R2, RMNDR(R5)
+10$:
+	CMP	#1000.,RMNDR(R5)
+	BGT	DOT		; ONCE MORE
+	INC	R0
+	SUB	#1000.,RMNDR(R5)
+	BR	10$
+1$:
+	MOV	TMPNOTE, R3
+	BIT	#177400, R0
+	BEQ	2$
+	BIS	#20, R3
+2$:
+	CALL	PUTCH
+	MOV	R0, R3
+	CALL	PUTCH
+	SWAB	R3
+	TSTB	R3
+	BEQ	3$
+	CALL	PUTCH
+3$:
+	RETURN
+;*****************************************
+DIEZ::
+	CMPB	#12.,R3
+	BEQ	1$
+	INCB	R3
+	BR	2$
+1$:
+	MOV	#1,R3
+2$:
+	INC	R4
+	RETURN
+;****************************************
+BEMOL::
+	CMPB	#1,R3
+	BEQ	1$
+	DECB	R3
+	BR	2$
+1$:
+	MOV	#12.,R3
+2$:
+	INC	R4
+	RETURN
+;****************************************
+; PROOCEDURE COMPUTE TIME OF THE NOTE
+;  ENTER:
+;	R1 - LENGTH OF THE NOTE
+;	R5 - NUMBER OF CHANNEL
+;  EXIT:
+;	R0 - TIME OF THE NOTE
+;****************************************
+SET.L::
+	MOV	R1, -(SP)
+	MOV	TEMPO(R5), R3
+	CLR	R2
+	DIV	R1, R2
+	MOV	R2,R0
+	MOV	R3, R1
+	MOV	#1000., R3
+	CLR	R2
+	DIV	(SP), R2
+	MUL	R2, R1
+	ADD	R1, RMNDR(R5)
+	MOV	MTEMPO(R5),R3
+	CLR	R2
+	DIV	(SP)+, R2
+	ADD	R2,RMNDR(R5)
+1$:
+	CMP	#1000., RMNDR(R5)
+	BGT	2$
+	INC	R0
+	SUB	#1000., RMNDR(R5)
+	BR	1$
+2$:
+	RETURN
+;*****************************************
+NOTE::
+	MOV	#10,R2
+2$:
+	CMPB	(R4),NOTES-1(R2)
+	BEQ	1$
+	SOB	R2,2$
+1$:
+	MOVB	INDEX-1(R2),R3
+	INC	R4
+	CMP	#13.,R3
+	BEQ	11$
+	MOV	#NCOM,R1
+	MOV	#NPROC,R2
+	CALL	BR.COM
+11$:
+	MOV	R3, TMPNOTE
+	CALL	ARGUMENT
+	BCC	12$
+	MOV	LENGTH(R5), R1
+	BR	10$
+12$:
+	MOV	#1,R0
+	MOV	#64.,R2
+	CALL	CONTROL
+	BCS	6$
+10$:
+	MOV	R1,-(SP)
+	CALL	SET.L
+	MOV	(SP)+,R1
+	CALL	DOT
+	RETURN
+6$:
+	JMP	ERR1
+NCOM::
+	.BYTE	53,43,55,377
+NPROC::
+	.WORD	DIEZ,DIEZ,BEMOL
+;*****************************************
+	.ENABLE	LSB
+1$:
+	TST	(R2)+
+BR.COM::
+	MOVB	(R1)+,R0
+	BMI	2$
+	CMPB	(R4),R0
+	BNE	1$
+	MOV	@R2,PC
+2$:
+	RETURN
+	.DSABLE	LSB
+;******************************************
+END.VOICE::
+	CLR	R3
+	CALL	PUTCH
+	TST	EOFFLG
+	BNE	1$
+	ASR	R5
+	MOVB	VOICE(R5), R3
+	ASL	R5
+1$:
+	CALL	PUTCH
+	RETURN
+;******************************************
+; PROCEDURE PROCESS THE INPUT STRING
+;  ENTER:
+;	STRING - THE INPUT STRING
+;*****************************************
+COMMAND::
+	MOV	#STRING,R4		; R4 - ADDRESS IN THE STRING
+4$:
+	TSTB	(R4)			; IS IT END OF INPUT LINE ?
+	BEQ	1$			; YES
+	MOV	#6,R3			; 
+5$:
+	CMPB	(R4),MCOM-1(R3)		; IS IT COMMAND ?
+	BEQ	2$			; YES
+	SOB	R3,5$			;
+	CMPB	(R4),#101		; NO, IS IT NOTE ?
+	BLT	ERR2			;  NO, ERROR
+	CMPB	(R4),#107		; 
+	BLE	3$			;
+	CMPB	(R4),#122		;
+	BNE	ERR2			;
+3$:
+	CALL	NOTE			;
+	BR	4$			;
+2$:
+	CALL	PROCESS			; 
+	BR	4$			;
+1$:
+	RETURN
+;*********************************************
+	.ENABLE	LSB
+ERR1:
+	MOV	#MES1, R1
+	BR	12$
+ERR2:
+	MOV	#MES2, R1
+12$:
+	.PRINT	#ERRMES
+2$:
+	MOVB	(R1)+,R0
+	BEQ	1$
+	CALL	LISTING
+	BR	2$
+1$:
+;	MOVB	(R1)+,R0
+;	BEQ	3$
+;	CALL	LISTING
+;	BR	1$
+;3$:
+;	SUB	#STRING, R4
+;	INC	R4
+;	CLR	R1
+;5$:
+;	MOV	R4,R5
+;	CLR	R4
+;	DIV	#10., R4
+;	MOV	R5, -(SP)
+;	INC	R1
+;	TST	R4
+;	BEQ	4$
+;	BR	5$
+;4$:
+;	MOV	(SP)+,R0
+;	ADD	#60,R0
+;	CALL	LISTING
+;	SOB	R1,4$
+	CALL	CLOLIST
+	.EXIT
+	.DSABLE	LSB
+;*********************************************
+LENGTH::
+	.BLKW	3
+TEMPO::
+	.BLKW	3
+MTEMPO::
+	.BLKW	3
+RMNDR::
+	.BLKW	3
+MCOM::	.BYTE	117,126,123,115,114,124
+NOTES::
+	.BYTE	103,104,105,106,107,101,102,122
+INDEX::
+	.BYTE	1,3,5,6,8.,10.,12.,13.
+	.EVEN
+STRING::
+	.BLKB	512.
+ERRMESS::
+	.ASCIZ	/ERROR IN MUSIC STRING/
+	.ASCIZ	/ IN POSITION N /
+MES1::	.ASCIZ	/INVALID ARGUMENT IN MUSIC STRING/
+MES2::	.ASCIZ	/INVALID COMMAND IN MUSIC STRING/
+	.EVEN
+;*********************************************
+; PROOCEDURE OPENS THE INPUT AND OUTPUT FILES
+;*********************************************
+INITF::
+	MOV	SP,R1			; WE NEEDN`T OPTIONS
+	.CSIGEN	#DSPACE,#DEXT,#0	; OPEN INPUT AND OUTPUT FILES
+	MOV	R1,SP			;
+	MOV	R0,INBUF		; INBUF - ADDRESS FOR INPUT FILE
+	ADD	#512.,R0		;
+	MOV	R0,IBUFEND		;IBUFEND - ADDRESS FOR END OF INPUT F
+	TST	(R0)+
+	MOV	R0, OUBUF		; OUBUF - ADDRESS FOR OUTPUT FILE
+	ADD	#512., R0		;
+	MOV	R0, OBUFEND		;OBUFEND - ADDRESS FOR END OF OUTPUT F
+	TST	(R0)+
+	MOV	R0, LBUF		; LBUF -ADDRESS FOR THE LIST FILE
+	ADD	#512., R0		;
+	MOV	R0, LBUFEND		;LBUFEND - ADDRESS FOR END OF LIST F
+	CLR	INBLK			; NUMBER OF BLOCK FOR THE INPUT FILE
+	CLR	OUBLK			; NUMBER OF BLOCK FOR THE OUTPUT FILE
+	CLR	LBLK			; NUMBER OF BLOCK FOR THE LIST FILE
+	MOV	INBUF,INPTR		; INPTR - POINTER IN THE INPUT BUFFER
+	MOV	OUBUF,OUPTR		; OUPTR - POINTER IN THE OUTPUT BUFFER
+	MOV	LBUF,LPTR		; LPTR - POINTER IN THE LIST BUFFER
+	CLR	EOFFLG			; FLAG FOR THE END OF INPUT FILE
+;
+	.READW	#AREA,#3,INBUF,#256.,INBLK ; READ THE FIRST BLOCK
+	RETURN
+;
+;***********************************************
+; PROCEDURE GET ONE BYTE FROOM THE INPUT FILES
+;  EXIT:
+;	R0 - BYTE
+;	EOFFLG > 0 IF THERE IS END OF FILE
+;***********************************************
+GETCH::
+	CMP	INPTR,IBUFEND		; IS IT END OF BLOCK ?
+	BLO	2$			; NO
+	INC	INBLK			; YES, INBLK:=INBLK+1
+	.READW	#AREA,#3,INBUF,#256.,INBLK ; GET THE NEXT BLOCK
+	BCC	1$			; IS IT END OF FILE ?
+	INC	EOFFLG			; YES, EOFFLG:=EOFFLG+1
+	RETURN				;
+1$:
+	MOV	INBUF,INPTR		; IT ISN`T END OF FILE, INIT INPTR
+2$:
+	MOVB	@INPTR,R0		; R0 - THE INPUT BYTE
+	BIC	#177400,R0		;
+	INC	INPTR			; CORRECT THE INPTR
+	RETURN				;
+;***********************************************
+; PROOCEDURE PUT ONE CHAR TO THE LISTING FILE
+;  ENTER:
+;	R0 - CHAR
+;***********************************************
+LISTING::
+	CMP	LPTR,LBUFEND		; IS IT END OF BLOCK ?
+	BLO	1$			; NO
+	MOV	R0, -(SP)
+	.WRITW	#AREA,#1,LBUF,#256.,LBLK ; PUT THE CURRENT BLOCK
+	MOV	(SP)+, R0
+	INC	LBLK			; YES, OUBLK:=OUBLK+1
+	MOV	LBUF,LPTR		;  INIT OUPTR
+1$:
+	MOVB	R0,@LPTR		; MOVE THE BYTE TO THE BUFFER
+	INC	LPTR			; CORRECT THE OUPTR
+	RETURN				;
+;************************************************
+; PROCEDURE CLOSES THE LISTING FILE
+;***********************************************
+CLOLIST::
+;	MOV	#32, R0
+;	CALL	LISTING
+	CMP	LPTR,LBUFEND
+	BHI	1$
+	MOV	LPTR, R3
+2$:
+	CLRB	(R3)+
+	CMP	R3, LBUFEND
+	BNE	2$
+	.WRITW	#AREA,#1,LBUF,#256.,LBLK ; PUT THE LAST BLOCK
+1$:
+	.CLOSE	#1			; CLOSE LISTING FILE
+	RETURN				;
+;************************************************
+; PROOCEDURE PUT ONE BYTE TO THE OUTPUT FILE
+;  ENTER:
+;	R3 - BYTE
+;************************************************
+PUTCH::
+	CMP	OUPTR,OBUFEND		; IS IT END OF BLOCK ?
+	BLO	1$			; NO
+	MOV	R0, -(SP)
+	.WRITW	#AREA,#0,OUBUF,#256.,OUBLK ; PUT THE CURRENT BLOCK
+	MOV	(SP)+, R0
+	INC	OUBLK			; YES, OUBLK:=OUBLK+1
+	MOV	OUBUF,OUPTR		;  INIT OUPTR
+1$:
+	MOVB	R3,@OUPTR		; MOVE THE BYTE TO THE BUFFER
+	INC	OUPTR			; CORRECT THE OUPTR
+	CLC
+	RETURN				;
+;************************************************
+; PROCEDURE CLOSES THE OUTPUT FILE
+;***********************************************
+CLOFILE::
+	CMP	OUPTR,OBUFEND
+	BHI	1$
+	.WRITW	#AREA,#0,OUBUF,#256.,OUBLK ; PUT THE LAST BLOCK
+1$:
+	.CLOSE	#0			; CLOSE OUTPUT FILE
+	RETURN				;
+;***********************************************
+VOICE::	.BYTE	212, 211, 210
+	.EVEN
+TMPNOTE:
+	.WORD	0
+DEXT:	.RAD50	/MUS/
+	.RAD50	/SND/
+	.RAD50	/LST/
+	.WORD	0
+AREA::	.BLKW	5
+EOFFLG::	.WORD	0
+IBUFEND::
+	.WORD	0
+OBUFEND::
+	.WORD	0
+LBUFEND::
+	.WORD	0
+INBUF::	.WORD	0
+OUBUF::	.WORD	0
+LBUF::	.WORD	0
+INBLK::	.WORD	0
+OUBLK::	.WORD	0
+LBLK::	.WORD	0
+INPTR::	.WORD	0
+OUPTR::	.WORD	0
+LPTR::	.WORD	0
+DSPACE:
+	.END	START	     
