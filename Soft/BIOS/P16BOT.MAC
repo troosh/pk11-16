@@ -1,4 +1,4 @@
-.include /sy:wdc.mac/
+.include /wdc.mac/
 .list
 .asect
 .=4
