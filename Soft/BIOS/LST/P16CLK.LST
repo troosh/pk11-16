@@ -1,0 +1,27 @@
+.MAIN.	MACRO V05.06R Wednesday 28-Nov-18 10:57
+Table of contents
+
+    2- 462	common definitions for bios monitor
+.MAIN.	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 1
+
+
+      1					.enabl  lc
+      2					.enabl	ama
+      3					.enabl  gbl
+      4					.mcall	.push,.pop
+.MAIN.	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 4
+Common definitions for bios monitor
+
+Errors detected:  0
+
+*** Assembler statistics
+
+
+Work  file  reads: 0
+Work  file writes: 0
+Size of work file: 9468 Words  ( 37 Pages)
+Size of core pool: 16384 Words  ( 64 Pages)
+Operating  system: RT-11
+
+Elapsed time: 00:00:00.05
+DK:P16CLK,DK:P16CLK=DK:P16,DK:P16CLK

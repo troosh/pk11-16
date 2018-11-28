@@ -1,0 +1,3425 @@
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57
+Table of contents
+
+    2- 462	common definitions for bios monitor
+    4-   1	common definitions for WINDOW-monitor
+    6-   1	initialization of WINDOW-monitor
+   10-   1	request processing
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 1
+
+
+      1						.title	WINDOW	- monitor process
+      2		000000 			$ROM$	= 0	;rom
+      3					.enabl	ama
+      4					.nlist	sym
+      5	000000					.asect
+      6		000000 			.	= 0
+      7	000000	   120 	   103 		.ascii	"PC"
+      8	000002	000000 	000001 	000000 	.word	0,1, 0		; window#0	- program (HIGH-ram)
+      9								; window#1-2	- data    ..........
+     10								; windor#3-6	- TAS+PAL+TAO
+     11	000010	   127 	   151 	   156 	.asciz	"Window-system"
+	000013	   144 	   157 	   167
+	000016	   055 	   163 	   171
+	000021	   163 	   164 	   145
+	000024	   155 	   000
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 3
+Common definitions for bios monitor
+
+      2						.include	"wdc.mac"
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 4
+Common definitions for WINDOW-monitor
+
+      1						.sbttl	common definitions for WINDOW-monitor
+      2
+      3		177530 			wcsr	= 177530	;reg for WINDOW control
+      4		147530 			xwcsr	= <wcsr & 7777> + l.reg
+      5		177532 			wmaph	= wcsr+2	;reg for WINDOW mapping info (static+dynamic)
+      6		147532 			xwmaph	= <wmaph & 7777> + l.reg
+      7		177534 			wmapl	= wcsr+4	;reg for WINDOW mapping info (TAS+PAL+ELINE+TAO)
+      8		147534 			xwmapl	= <wmapl & 7777> + l.reg
+      9		140004 			palreg	= 140004	;PAL-reg
+     10		140010 			tasreg	= 140010	;TAS-reg
+     11		040000 			wpri	= 40000		;normal priority of this process
+     12		000454 			scrlins	= 300.		;num of scr lines
+     13		000640 			scrdots	= elen*8.	;num of scr dots (for cursor)
+     14		000004 			nvll	= 4		;num of v-lines in one log-line
+     15		000113 			loglins	= scrlins/nvll	;num of log-lines
+     16		000064 			elen	= 52.		;len of empty (eline0+eline1) in words
+     17		000036 			ptlen	= 8.+8.+8.+4+2	;tot num of pals
+     18		000032 			bmax	= 26.		;tot num of bands on screen
+     19		000100 			wtl	= 64.		;max num of known windows !!!!!!!!!!!!!!!
+     20								;window nums = 0, 2, 4, ... 176
+     21		000100 			atl	= 64.		;max num of known areas !!!!!!!!!!!!!!!!!
+     22								;area nums = 0, 2, 4, ... 176
+     23		001717 			lspat	= loglins*bmax/2;length of screen-pattern in words
+     24
+     25					; VDP defs
+     26
+     27		002000 			nb	= 2000		;mul-const for length of "otrezka"
+     28		001400 			vd208	= 1400		;video-density
+     29		001000 			vd104	= 1000		;
+     30		000400 			vd52	= 0400		;
+     31		000000 			vd52s	= 0000		;
+     32					;------------------------------------------------------------------------
+     33					;log TAS defs
+     34		000000 			vm1	= 0		;video-mode (bits per point)
+     35		000001 			vm2	= 1		;
+     36		000002 			vm40	= 2		;
+     37		000003 			vm41	= 3		;
+     38		000007 			vm8	= 7		;
+     39		000000 			pl0	=      0	;pal number
+     40		040000 			pl1	=  40000	;
+     41		100000 			pl2	= 100000	;
+     42		140000 			pl3	= 140000	;
+     43		000004 			plb	= 4		; pal bank#
+     44
+     45		007774 			..addr	= 7774		;ADDR bits in first TAS-word
+     46		037760 			..par	= 37760		;PAR bits in second TAS-word
+     47					;----------------------------------------------------------------------
+     48					; window	#0	- program
+     49					;		#1	- data
+     50					;		#2	- ....
+     51		000002 			hinum	= 2	;num of 8K-blocks for data
+     52					;		#3	- TAS
+     53					;		#4	-	+ PAL
+     54					;		#5	-		+ TAO
+     55					;		#6	-
+     56		000010 			lonum	= 8.	;num of 4K-blocks for ^
+     57
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 4-1
+Common definitions for WINDOW-monitor
+
+     58		020000 				win1	= 20000		;start of data
+     59		060000 				win3	= 60000		;start of TAS...
+     60
+     61					;==================================================
+     62	000026				dsect		;VIEW descriptor
+     63
+     64	000026				dw	VW.SUCC		;
+     65	000026				dw	VW.PRED		;
+     66					;--------------------------------------------------
+     67	000026				dw	VW.AREA		;addr of area-descriptor
+     68	000026				dw	VW.ARY		;# of 1st line on area
+     69	000026				dw	VW.ARX		;offset from start of line on area in bytes
+     70	000026				dw	VW.SY1		;# of 1st line on scr
+     71	000026				dw	VW.SY2		;# of last line on scr
+     72	000026				dw	VW.SX1		;# of first band on line for USER
+     73	000026				dw	VW.SX2		;# of last band
+     74	000026				dw	VW.DEN		;.BYTE HD,VD [0,1,2]
+     75					;--------------------------------------------------
+     76	000026				dw	VW.TAR		;pointer to real start of TAS
+     77	000026				dw	VW.HD		;.byte [0,1,2], .byte[vd52,vd104,vd108]
+     78	000026				dw	VW.XOF		; ( SX1 shl HD ) - ( ARX / 2 )
+     79	000026				db	VW.VD		;.byte [0,1,2]
+     80	000026				db	VW.NUM		;.byte [2,4,...126.]
+     81	000026				dw	VW.YOF		; ( SY1 shl VD ) - ARY
+     82	000026				dw	VW.DY1		;off to line 1
+     83	000026				dw	VW.DY2		;off to line 2
+     84	000026				dw	VW.DY3		;off to line 3
+     85		000044 			VWLEN	= $$		;len of descriptor
+     86
+     87					;===================================================
+     88	000026				dsect		;AREA descriptor
+     89
+     90	000026				dw	AR.SUCC		;
+     91	000026				dw	AR.LEN		;
+     92	000026				dw	AR.LINS		;# of lines
+     93	000026				dw	AR.SLEN		;len of line in bytes
+     94	000026				dw	AR.TAS		;start of TAS
+     95
+     96					;===================================================
+     97	000026				dsect		;FONT descriptor
+     98
+     99	000026				dw	FN.SUCC		;-pointer to next FONT
+    100								;-pointer to next FONT descr in list of FNFREE
+    101	000026				dw	FN.PAR		;PAR to map FONT
+    102		000004 			FNLEN	= $$		;len of descriptor
+    103
+    104					;---------------------------------------------------
+    105	000026				dsect		;FONT's file format
+    106	000026				dw	fn.tb, 256.	;addr's of shapes for [0..255] char codes
+    107	000026				dw	fn.hi		;hight of shape in v-lines {10.}
+    108	000026				dw	fn.wi		;width of shape in bits {8.}
+    109	000026				dw	fn.id		;.ascii "PC"	;identifier for checks
+    110	000026				dw	fn.nam, 7	;name of font:	.asciz	"string"
+    111	000026				dw	fn.beg, 0	;start of shape's zone
+    112
+    113					;================================================================
+    114	000026				dsect	win1		; WINDOW static table
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 4-2
+Common definitions for WINDOW-monitor
+
+    115	000026				dw	WHEAP     ;heap pointer
+    116
+    117	000026				dw	SCREEN    ;v-adr to head of view-list (-> VWSUCC)
+    118	000026				dw	VWSUCC,0  ;pointer to first view
+    119	000026				dw	BVIEW,vwlen/2 ;descriptor of BACK view
+    120	000026				dw	VWFREE    ;pointer to list of free views
+    121	000026				dw	ARFREE    ;pointer to list of free areas
+    122	000026				dw	FNSUCC	  ;pointer to list of FONTs
+    123	000026				dw	FNFREE	  ;pointer to list of free font descrs
+    124	000026				dw	PALTBL,ptlen ;tbl of PAL's usage
+    125	000026				dw	WDTBL,wtl ;window table of descr's addrs + VW.TAR
+    126	000026				dw	ARTBL,atl ;area table of descr's addrs
+    127	000026				dw	proadr    ;pointer to addr of descr of our CALLER
+    128	000026				dw	SPAT,lspat;screen pattern table
+    129	000026				dw	spatzz	  ;the last word (always = 177777)
+    130	000026				dw	TAS0D,4	  ;start of W0 area-descr
+    131	000026				dw	TAS0, 2   ;tas for area0				;*******
+    132	000026				dw	CTAS,     ;tas for cursor (1 line)
+    133	000026				dw	SXCUR	  ;save  pointer for cursor (=0 - no cursor)
+    134	000026				dw	STAS, 2	  ;save area for curs-tas (addr,tas)
+    135	000026				dw	XCUR	  ;
+    136	000026				dw	YCUR	  ;
+    137	000026				dw	PLPAR	  ;par for PAL
+    138
+    139		024450 			 WTOP	= $$	; end of WINDOW static table
+    140
+    141	000026				dsect	win3
+    142	000026				dw	wstack	  ; bottom of INIT-stack
+    143
+    144	000026				dsect	win3
+    145	000026				dw 	TAS,0		;tas area
+    146	000026				dsect	$$+<scrlins*2*2>
+    147	000026				dw	tas312,<13.*2>
+    148					;----------------------------------------
+    149	000026				db	xxxxxx,56.
+    150					;----------------------------------------
+    151
+    152		060000 				PAL	= 60000	;
+    153					;dw	PAL,0		;pal area
+    154	000026				dsect	$$+<16.*8.*2>
+    155
+    156	000026				dw	CTAO,2		;tao for cursor
+    157
+    158	000026				dw	TAO,0		;tao area
+    159	000026				dsect	$$+<scrlins*bmax*4>
+    160					.iif ne $$-160000	.error	$$	;illegal LO-mem area
+    161
+    162					;------------------------
+    163					.MACRO CM5...	SRC,cod
+    164					.if nb <src>
+    165					.if dif <src>, r0
+    166						mov	src, %0
+    167					.endc
+    168					.endc
+    169					.if nb <src>
+    170					.if nb <cod>
+    171						mov	#cod, (0)
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 4-3
+Common definitions for WINDOW-monitor
+
+    172					.endc
+    173					.endc
+    174					.ENDM
+    175
+    176					.MACRO CM2...	ARG,OFFSE,INS,BB
+    177					.IF NB <ARG>
+    178					  .IF IDN <ARG>,#0
+    179						CLR'BB	OFFSE(0)
+    180					  .IFF
+    181						MOV'BB	ARG,OFFSE(0)
+    182					  .ENDC
+    183					.ENDC
+    184					.IF NB <INS>
+    185						mov	r0, @#wcsr
+    186						NOP	;!!!
+    187					.ENDC
+    188					.ENDM
+    189					;------------------------
+    190		000000 			ARINST	= 0	;inform W-monitor to registrate area (install area) if anum = #0
+    191							;modify TAS of area	if anum<> #0
+    192					.macro	ARINST	area,anum,lins,slen
+    193						cm5...	area,arinst
+    194						cm2...	anum, ar.len
+    195						cm2...	lins,ar.lins
+    196						cm2...	slen,ar.slen,x
+    197					.endm
+    198					;------------------------
+    199		000002 			ARKILL	= 2	;kill area and associated views
+    200					.macro	ARKILL	area,anum
+    201						cm5...	area,arkill
+    202						cm2...	anum,ar.len,x
+    203					.endm
+    204					;------------------------
+    205		000004 			VWCRE	= 4	;create view if desc =  #0 or
+    206							;modify view if desc <> #0
+    207					.macro	VWCRE	area,wnum,anum,ary,arx,sy1,sy2,sx1,sx2,den
+    208						cm5...	area,vwcre
+    209						cm2...	wnum,2.
+    210						cm2...	anum,vw.area
+    211						cm2...	ary,vw.ary
+    212						cm2...	arx,vw.arx
+    213						cm2...	sy1,vw.sy1
+    214						cm2...	sy2,vw.sy2
+    215						cm2...	sx1,vw.sx1
+    216						cm2...	sx2,vw.sx2
+    217						cm2...	den,vw.den,x
+    218					.endm
+    219					;------------------------
+    220		000006 			VWKILL	= 6	;kill view
+    221					.macro	VWKILL	area,wnum
+    222						cm5...	area,vwkill
+    223						cm2...	wnum,2.,x
+    224					.endm
+    225					;-------------------------
+    226		000010 			VWTAKE	= ^O10	;take window's descr from system
+    227					.macro	VWTAKE	area,wnum
+    228						cm5...	area,vwtake
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 4-4
+Common definitions for WINDOW-monitor
+
+    229						cm2...	wnum,2.,x
+    230					.endm
+    231					;-------------------------
+    232		000012 			VWFORE	= ^O12	;make view foreground
+    233					.macro	VWFORE	area,wnum
+    234						cm5...	area,vwfore
+    235						cm2...	wnum,2.,x
+    236					.endm
+    237					;-------------------------
+    238		000014 			VWBACK	= ^O14	;make view background
+    239					.macro	VWBACK	area,wnum
+    240						cm5...	area,vwback
+    241						cm2...	wnum,2.,x
+    242					.endm
+    243					;-------------------------
+    244		000016 			PLCRE	= ^O16	;allocate pal
+    245					.macro	PLCRE	area,mod
+    246						cm5...	area,plcre
+    247						cm2...  mod,2.,x
+    248					.endm
+    249					;-------------------------
+    250		000020 			PLFRE	= ^O20	;make pal free
+    251					.macro	PLFRE	area,modnum
+    252						cm5...	area,plfre
+    253						cm2...	modnum,2.,x
+    254					.endm
+    255					;-------------------------
+    256		000022 			PLMOD	= ^O22	;modify pal
+    257					.macro	PLMOD	area,modnum
+    258						cm5...	area,plmod
+    259						cm2...	modnum,2.,x
+    260					.endm
+    261					;-------------------------
+    262		000024 			PLSAV	= ^O24	;save pal
+    263					.macro	PLSAV	area,modnum
+    264						cm5...	area,plsav
+    265						cm2...	modnum,2.,x
+    266					.endm
+    267					;-------------------------
+    268		000017 			PLCREx	= ^O17	;allocate pal
+    269					.macro	PLCREx	area,mod
+    270						cm5...	area,plcrex
+    271						cm2...  mod,2.,x
+    272					.endm
+    273					;-------------------------
+    274		000021 			PLFREx	= ^O21	;make pal free
+    275					.macro	PLFREx	area,modnum
+    276						cm5...	area,plfrex
+    277						cm2...	modnum,2.,x
+    278					.endm
+    279					;-------------------------
+    280		000023 			PLMODx	= ^O23	;modify pal
+    281					.macro	PLMODx	area,modnum
+    282						cm5...	area,plmodx
+    283						cm2...	modnum,2.,x
+    284					.endm
+    285					;-------------------------
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 4-5
+Common definitions for WINDOW-monitor
+
+    286		000025 			PLSAVx	= ^O25	;save pal
+    287					.macro	PLSAVx	area,modnum
+    288						cm5...	area,plsavx
+    289						cm2...	modnum,2.,x
+    290					.endm
+    291					;-------------------------
+    292		000026 			CRSET	= ^O26	;set cursor (or move cursor previously set)
+    293					.macro	CRSET	area,xcur,ycur
+    294						cm5...	area,crset
+    295						cm2...	xcur,2.
+    296						cm2...	ycur,4.,x
+    297					.endm
+    298					;-------------------------
+    299		000030 			CRERA	= ^O30	;erase cursor
+    300					.macro	CRERA	area
+    301						cm5...	area,crera
+    302						cm2...	,,x
+    303					.endm
+    304					;-------------------------
+    305		000032 			FNINST	= ^O32	;install font
+    306					.macro	FNINST	area,par
+    307						cm5...	area,fninst
+    308						cm2...	par,fn.par,x
+    309					.endm
+    310					;-------------------------
+    311		000034 			FNKILL	= ^O34	;kill font
+    312					.macro	FNKILL	area,par
+    313						cm5...	area,fnkill
+    314						cm2...	par,fn.par,x
+    315					.endm
+    316					;-------------------------
+    317		000036 			FNFIND	= ^O36	;find font due to it's name
+    318					.macro	FNFIND	area
+    319						cm5...	area,fnfind
+    320						cm2...	,,x
+    321					.endm
+    322					;-------------------------
+    323		000040 			FNLOOK	= ^O40	;looks for the 1st (xpar = #0) or next to xpar<>#0 font's name
+    324					.macro	FNLOOK	area,xpar
+    325						cm5...	area,fnlook
+    326						cm2...	xpar,fn.par,x
+    327					.endm
+    328					;-------------------------
+    329		000042 			VWLOOK	= ^O42	;looks for the 1st (wnum = #0)
+    330							; or next to wnum<>#0 view's descriptor
+    331					.macro	VWLOOK	area,wnum
+    332						cm5...	area,vwlook
+    333						cm2...	wnum,2.,x
+    334					.endm
+    335					;-------------------------
+    336		000044 			WPRINT	= ^O44	;prints text on area.num
+    337					.macro	WPRINT	area,anum,y0,x0,sadr
+    338						cm5...	area,wprint
+    339						cm2...	anum,2.
+    340						cm2...	y0,4.
+    341						cm2...	x0,6.
+    342						cm2...	sadr,8.,x
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 4-6
+Common definitions for WINDOW-monitor
+
+    343					.endm
+    344					;------------------------
+    345		000046 			ARCRE	= ^o46	;creates and registrates area (install area)
+    346							;adr - start of area
+    347					.macro	ARCRE	area,adr,lins,slen,mdpl
+    348						cm5...	area,arcre
+    349						cm2...	adr, ar.len
+    350						cm2...	lins,ar.lins
+    351						cm2...	slen,ar.slen
+    352						cm2...	mdpl,ar.slen+2,x
+    353					.endm
+    354					;============================================================
+    355					;
+    356					;	cmd format
+    357					;------------------------------------------
+    358		000200 			v.mask	=^o200	; mask
+    359		000100 			v.dx	=^O100	; dir. x = back
+    360		000040 			v.dy	=^O040	; dir. y = up
+    361		000030 			v.vp	=^O030	; vram to process ram
+    362		000020 			v.vv	=^O020	; vram to vram
+    363		000010 			v.pv	=^O010	; process ram to vram
+    364		000000 			v.cv	=^O000	; const to vram
+    365		000006 			v.bic	=^O006	; dst:=dst and not src
+    366		000004 			v.bis	=^O004	; dst:=dst or src
+    367		000002 			v.xor	=^O002	; dst:=dst xor src
+    368		000000 			v.mov	=^O000	; dst:=src
+    369		000001 			v.byte	=^O001	; move byte
+    370					;----------------------------------------
+    371					;	request format
+    372					;----------------------------------------
+    373					;	.byte	ar1num,	cmd	;
+    374					;	.word	ar1y		; dst
+    375					;	.word	ny		;
+    376					;	.word	ar1x		;
+    377					;	.word	nx		;
+    378					;	.word	ar2num	/ buf addr / const	; src
+    379					;	.word	ar2y	/ buf len		;
+    380					;	.word	ar2x	/ buf wid		;
+    381
+    382		000050 			HBMOVE	= ^O50	;high-speed video-block move
+    383					.macro	HBMOVE	area,ar1num,cmd,ar1y,ny,ar1x,nx,ar2num,ar2y,ar2x
+    384						cm5...	area,hbmove
+    385						cm2...	ar1num,2.
+    386						cm2...	cmd,3.,,b
+    387						cm2...	ar1y,4.
+    388						cm2...	ny,6.
+    389						cm2...	ar1x,8.
+    390						cm2...	nx,10.
+    391						cm2...	ar2num,12.
+    392						cm2...	ar2y,14.
+    393						cm2...	ar2x,16.,x
+    394					.endm
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 5
+Common definitions for WINDOW-monitor
+
+      1						.include	"wd0.mac"
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 6
+Initialization of WINDOW-monitor
+
+					.sbttl	initialization of WINDOW-monitor
+      2
+      3					.macro	bug	x
+      4					.if df bug$$
+      5					mov	x, val
+      6					DVAL	#val
+      7					.endc
+      8					.endm
+      9
+     10					.mcall	.exit
+     11	000026				.asect
+     12
+     13		001000 			.=1000
+     14					;------------------------------
+     15	001000				etao:	.blkw	2
+     16	001004				eline:
+     17	001004				eline0:	.blkb elen
+     18	001070				eline1:
+     19		000064 			.rept	elen
+     20						.byte	-1
+     21					.endr
+     22					;------------------------------
+     23
+     24	001154				color:
+     25		000000 			c0	= 0
+     26		000000 			c1	= 0
+     27		000252 			c2	= 252	;6*10+7*4+2
+     28	001154	   000 	   000 	   000 	.byte	c0,	0,	0,	0,	0,	0,	0,	c1
+	001157	   000 	   000 	   000
+	001162	   000 	   000
+     29	001164	   000 	   000 	   000 	.byte	0,	0,	0,	c1,	0,	c1,	c1,	c2
+	001167	   000 	   000 	   000
+	001172	   000 	   252
+     30
+     31		000000 			c0	= ^B00000000	;
+     32		000111 			c1	= ^B01001001	;
+     33		000372 			c2	= ^B11111010	;
+     34		000030 			c3	= ^B00011000	;
+     35		000376 			c4	= ^B11111110	;
+     36
+     37	001174	   000 	   000 	   000 	.byte	c0,	0,	0,	c1,	0,	0,	0,	c2
+	001177	   111 	   000 	   000
+	001202	   000 	   372
+     38	001204	   000 	   000 	   000 	.byte	0,	0,	0,	c3,	c1,	c2,	c3,	c4
+	001207	   030 	   111 	   372
+	001212	   030 	   376
+     39
+     40		000000 			c0	= ^B00000000	;	Black
+     41		000121 			c1	= ^B01010001	;Dark	Red
+     42		000034 			c2	= ^B00011100	;	Red
+     43		000234 			c3	= ^B10011100	;Ligh	Red
+     44		000211 			c4	= ^B10001001	;Dark	Green
+     45		000240 			c5	= ^B10100000	;	Green
+     46		000360 			c6	= ^B11110000	;Light	Green
+     47		000167 			c7	= ^B01110111	;Dark	Blue
+     48		000003 			c8	= ^B00000011	;	Blue
+     49		000243 			c9	= ^B10100011	;Light	Blue
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 6-1
+Initialization of WINDOW-monitor
+
+     50		000334 			c10	= ^B11011100	;       Yellow
+     51		000037 			c11	= ^B00011111	;	Violet
+     52		000136 			c12	= ^B01011110	;	Magenta
+     53		000363 			c13	= ^B11110011	;	Cyan
+     54		000222 			c14	= ^B10010010	;	Gray
+     55		000377 			c15	= ^B11111111	;	White
+     56
+     57	001214	   000 	   121 	   034 	.byte	c0,	c1,	c2,	c3,	c4,	c5,	c6,	c7
+	001217	   234 	   211 	   240
+	001222	   360 	   167
+     58	001224	   003 	   243 	   334 	.byte	c8,	c9,	c10,	c11,	c12,	c13,	c14,	c15
+	001227	   037 	   136 	   363
+	001232	   222 	   377
+     59
+     60		000000 			c0	= ^B00000000	;	Black
+     61		000121 			c1	= ^B01010001	;Dark	Red
+     62		000034 			c2	= ^B00011100	;	Red
+     63		000234 			c3	= ^B10011100	;Ligh	Red
+     64		000211 			c4	= ^B10001001	;Dark	Green
+     65		000240 			c5	= ^B10100000	;	Green
+     66		000360 			c6	= ^B11110000	;Light	Green
+     67		000167 			c7	= ^B01110111	;Dark	Blue
+     68		000003 			c8	= ^B00000011	;	Blue
+     69		000243 			c9	= ^B10100011	;Light	Blue
+     70		000334 			c10	= ^B11011100	;       Yellow
+     71		000037 			c11	= ^B00011111	;	Violet
+     72		000136 			c12	= ^B01011110	;	Magenta
+     73		000363 			c13	= ^B11110011	;	Cyan
+     74		000222 			c14	= ^B10010010	;	Gray
+     75		000377 			c15	= ^B11111111	;	White
+     76
+     77	001234	   000 	   121 	   034 	.byte	c0,	c1,	c2,	c3,	c4,	c5,	c6,	c7
+	001237	   234 	   211 	   240
+	001242	   360 	   167
+     78	001244	   003 	   243 	   334 	.byte	c8,	c9,	c10,	c11,	c12,	c13,	c14,	c15
+	001247	   037 	   136 	   363
+	001252	   222 	   377
+     79
+     80	001254				WIN0:
+     81	001254	020004 			..succ:	.word	vwsucc
+     82	001256	020004 			..pred:	.word	vwsucc
+     83	001260	000000 			..area:	.word	0
+     84	001262	000000 			..ary:	.word	0
+     85	001264	000000 			..arx:	.word	0
+     86	001266	000000 			..sy1:	.word	0
+     87	001270	000453 			..sy2:	.word	scrlins-1
+     88	001272	000000 			..sx1:	.word	0
+     89	001274	000031 			..sx2:	.word	bmax-1
+     90	001276	000001 			..den:	.word	1
+     91	001300	024426 			..tar:	.word	tas0
+     92	001302	000400 			..hd:	.word	400
+     93	001304	000000 			..xof:	.word	0
+     94	001306	000020 			..vd:	.word	20	;*200000
+     95	001310	000000 			..yof:	.word	0
+     96	001312	177774 			..dy1:	.word	-4
+     97	001314	177774 			..dy2:	.word	-4
+     98	001316	177774 			..dy3:	.word	-4
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 6-2
+Initialization of WINDOW-monitor
+
+     99
+    100	001320				promap:	.blkw	10	;storage for caller's mapping
+    101
+    102	001340	000000 			val:	.word	0
+    103	001342	   144 	   010 			.byte	6*16.+4, 8.
+    104	001344	177530 	000000 	000000 	twcsr:	.word	wcsr,	0,	0,	2000,	0,	-1
+	001352	002000 	000000 	177777
+    105	001360	177532 	177777 	000000 	twmaph:	.word	wmaph,	-1,	0,	0,	0,	-1
+	001366	000000 	000000 	177777
+    106	001374	177534 	177777 	000000 	twmapl:	.word	wmapl,	-1,	0,	0,	0,	-1
+	001402	000000 	000000 	177777
+    107
+    108
+    109	001410				start:
+    110	001410					.exit
+    111	001412	010706 			stk:	mov	pc, sp		;set stack
+    112					;STACK starts here ===========================
+    113	001414					GET4K	#hinum*2+lonum	;allocate hi-RAM for data
+    114	001424				10$:
+    115	001424	010037 	001364 			mov	r0, twmaph+4	;for r/o reg !!!!!!!!
+    116	001430	012702 	000040 			mov	#40, r2		;a const for map !!!
+    117	001434	012701 	161222 			mov	#ur1, r1	;map it to  w#1,2
+    118	001440	010021 				mov	r0, (r1)+	;1
+    119	001442	060200 				add	r2, r0		;
+    120	001444	010021 				mov	r0, (r1)+	;2
+    121	001446	060200 				add	r2, r0		;
+    122					;	GET4K	#lonum		;allocate lo-RAM for TAS,...
+    123					;	bcs	7$		;no memory
+    124	001450	010037 	001400 			mov	r0, twmapl+4	;for r/o reg !!!!!!!!
+    125	001454	010021 				mov	r0,	(r1)+	;map it to w#3
+    126	001456	010046 				mov	r0,	-(sp)	;save ur3
+    127	001460	010004 				mov	r0,	r4	;save it for later?????????????
+    128					.if ne $ROM$
+    129						UNPREG	#wmaph
+    130						UNPREG	#wmapl
+    131					.endc
+    132	001462					PROREG	#twmaph
+    133	001472					PROREG	#twmapl
+    134
+    135	001502	012700 	000003 			mov	#3,	r0
+    136	001506	011611 			20$:	mov	(sp),	(r1)	;
+    137	001510	060211 				add	r2,	(r1)	; map it to W#4,5,6
+    138	001512	012146 				mov	(r1)+, -(sp)	; save ur4,5,6
+    139	001514	077004 				sob	r0,	20$
+    140								;clear RAM
+    141	001516	012705 	020000 			mov	#wheap, r5	;start here ...
+    142	001522	010502 				mov	r5, r2		;
+    143	001524	012703 	030000 			mov	#hinum*2+lonum*4*<1024./4>, r3 ;counter
+    144	001530	010022 			22$:	mov	r0,	(r2)+	;
+    145	001532	010022 				mov	r0,	(r2)+	;
+    146	001534	077303 				sob	r3,	22$	;
+    147								;init static area
+    148	001536	012725 	024450 			mov	#wtop, (r5)+	;WHEAP
+    149	001542	012725 	020004 			mov	#vwsucc, (r5)+	;SCREEN
+    150	001546	012700 	001254 			mov	#win0, r0	;
+    151	001552	012702 	000022 			mov	#vwlen/2, r2	;
+    152	001556				23$:			;copy WIN0
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 6-3
+Initialization of WINDOW-monitor
+
+    153	001556	012025 				mov	(r0)+, (r5)+	;
+    154	001560	077202 				sob	r2, 23$		;
+    155	001562	022525 				cmp	(r5)+,	(r5)+	;VWFREE, ARFREE
+    156	001564	010515 				mov	r5,	(r5)	;FNSUCC
+    157	001566	022525 				cmp	(r5)+,	(r5)+	;FNFREE
+    158								;set r4 for base of v-pointer
+    159	001570	072427 	000006 			ash	#6, r4		;
+    160	001574	042704 	001777 			bic	#1777, r4	;
+    161					;--------------------------------
+    162	001600				SETPAL:				;setpal:  r5 -> paltbl
+    163	001600					GET4K	#1
+    164	001610	010037 	024446 			mov	r0,	PLPAR	;
+    165	001614	013746 	161226 			mov	ur3,	-(sp)	;
+    166	001620	010037 	161226 			mov	r0,	ur3	;
+    167	001624	012700 	000036 			mov	#ptlen,	r0
+    168	001630				10$:
+    169	001630	005025 				clr	(r5)+
+    170	001632	077002 				sob	r0,	10$
+    171	001634	010537 	020060 			mov	r5,	paltbl	;
+    172	001640	010537 	020100 			mov	r5,	paltbl+<8.*2>;
+    173	001644	010537 	020120 			mov	r5,	paltbl+<16.*2>;
+    174	001650	010537 	020140 			mov	r5,	paltbl+<24.*2>;
+    175	001654	010537 	020150 			mov	r5,	paltbl+<28.*2>;
+    176					;................................
+    177								;init PAL
+    178	001660	012702 	060000 			mov	#PAL,	r2	;
+    179	001664	012700 	000004 			mov	#4, r0		;
+    180	001670	012703 	001154 			mov	#color, r3	;
+    181	001674				20$:
+    182	001674	012701 	000010 			mov	#16./2, r1	;num of words in one pal
+    183	001700				30$:
+    184	001700	012322 				mov	(r3)+, (r2)+	;
+    185	001702	077102 				sob	r1, 30$		;
+    186	001704	062702 	000060 			add	#16.*3, r2	;
+    187	001710	077007 				sob	r0, 20$		;
+    188
+    189	001712	005000 				clr	r0
+    190	001714				40$:
+    191	001714	110060 	062000 			movb	r0,PAL+2000(r0)
+    192	001720	005200 				inc	r0
+    193	001722	020027 	000400 			cmp	r0,	#256.
+    194	001726	103772 				blo	40$
+    195
+    196	001730					.pop	ur3
+    197					;--------------------------------
+    198	001734	012725 	020030 			mov	#BVIEW+<vw.tar-vw.succ>, (r5)+			;*********
+    199									;store win0 descr in index table WDTBL
+    200	001740	005137 	024414 			com	spatzz		;
+    201					;--------------------------------
+    202	001744				SETTAS:				;settas:
+    203
+    204	001744	005000 				clr	r0
+    205	001746	013701 	161220 			mov	ur0,	r1
+    206	001752	073027 	000006 			ashc	#6,	r0
+    207	001756	012737 	000201 	001000 		mov	#<eline/4>&3777, etao ;
+    208	001764	060137 	001000 			add	r1,	etao
+    209	001770	010037 	001002 			mov	r0,	etao+2
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 6-4
+Initialization of WINDOW-monitor
+
+    210
+    211	001774	012705 	060000 			mov	#tas, r5	;
+    212	002000	012703 	000610 			mov	#<tao/4>&3777, r3 ;
+    213	002004	060403 				add	r4, r3		;
+    214
+    215	002006	012702 	000002 			mov	#2,	r2	;line 1..2
+    216	002012				7$:
+    217	002012	012715 	000200 			mov	#<etao/4>&3777, (r5) ;
+    218	002016	060125 				add	r1,	(r5)+	;
+    219	002020	010025 				mov	r0,	(r5)+	;
+    220	002022	077205 				sob	r2,	7$	;
+    221
+    222	002024	012702 	000454 			mov	#scrlins, r2	;set scr-lines
+    223	002030				10$:
+    224	002030	010325 				mov	r3, (r5)+	;
+    225	002032	005025 				clr	(r5)+		;
+    226	002034	062703 	000032 			add	#bmax, r3	;num of "otrezkow"
+    227	002040	077205 				sob	r2, 10$		;
+    228					;--------------------------------
+    229	002042	113702 	000013 			movb	11.,	r2	;line 303..313
+    230	002046				11$:
+    231	002046	012715 	000200 			mov	#<etao/4>&3777, (r5) ;
+    232	002052	060125 				add	r1,	(r5)+	;
+    233	002054	010025 				mov	r0,	(r5)+		;
+    234	002056	077205 				sob	r2,	11$	;
+    235					;--------------------------------
+    236					;--------------------------------
+    237								;init empty window - WIN0
+    238	002060	012705 	024416 			mov	#tas0d, r5	;
+    239	002064	010537 	020354 			mov	r5,	ARTBL	;;;;;
+    240	002070	012725 	024416 			mov	#tas0d,	(r5)+	;ar.succ ??
+    241	002074	005225 				inc	(r5)+		;ar.len
+    242	002076	005225 				inc	(r5)+		;ar.lins
+    243	002100	012725 	000064 			mov	#elen, (r5)+	;ar.slen
+    244	002104	012725 	001004 			mov	#eline & ..addr, (r5)+ ; log.tas, w1
+    245	002110	013725 	161220 			mov	@#ur0, (r5)+	;log.tas, w2
+    246								;set CTAO - for cursor	!!!!!!!!!!!!!!!!!!!!!!!
+    247	002114	012703 	063034 			mov	#ctao,	r3	;
+    248	002120	012713 	000216 			mov	#<eline1/4>&3777, (r3) ;
+    249	002124	060123 				add	r1,	(r3)+	;
+    250	002126	052700 	000400 			bis	#vd52,	r0
+    251	002132	010013 				mov	r0,	(r3)
+    252								;set CTAS - for cursor	!!!!!!!!!!!!!!!!!!!!!!!
+    253	002134	012715 	000607 			mov	#<ctao/4>&3777, (r5) ;
+    254	002140	060425 				add	r4,	(r5)+	;
+    255
+    256								;set palreg and tasreg
+    257	002142	012701 	161234 			mov	#ur6,	r1	;set mapping to regs
+    258	002146	005011 				clr	(r1)		; ur6
+    259	002150	013741 	161212 			mov	@#hr5,	-(r1)	; ur5
+    260	002154	013741 	161210 			mov	@#hr4,	-(r1)	; ur4
+    261	002160	012700 	140004 			mov	#palreg, r0	;
+    262	002164	013703 	024446 			mov	plpar,	r3
+    263	002170	072327 	000006 			ash	#6,	r3
+    264	002174	042703 	001777 			bic	#1777,	r3
+    265	002200	062703 	000000 			add	#<pal/4>&3777, r3 ;
+    266	002204	010320 				mov	r3, (r0)+	;@#palreg
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 6-5
+Initialization of WINDOW-monitor
+
+    267	002206	005020 				clr	(r0)+		;@#palreg+2
+    268	002210	012703 	000000 			mov	#<tas/4>&3777, r3 ;
+    269	002214	060403 				add	r4, r3		;
+    270	002216	010320 				mov	r3, (r0)+	;@#tasreg
+    271	002220	005010 				clr	(r0)		;@#tasreg+2
+    272	002222					UNPREG	#wcsr		;
+    273	002232					PROREG	#twcsr		;
+    274	002242					SETPRI	#wpri		;
+    275					;	mov	pc, t.rdflg	;set all scr to redraw
+    276	002252				contin:
+    277	002252	010600 				mov	sp,	r0	; rest TAO mapping
+    278	002254	012701 	161234 			mov	#ur6,	r1	; on stk - ur6,ur5,ur4,ur3
+    279	002260	012011 				mov	(r0)+,	(r1)	;
+    280	002262	012041 				mov	(r0)+,	-(r1)	;
+    281	002264	012041 				mov	(r0)+,	-(r1)	;
+    282	002266	012041 				mov	(r0)+,	-(r1)	;
+    283
+    284	002270	005737 	012640 			tst	t.rdflg		; redraw ?
+    285	002274	001472 				beq	cont		; no
+    286	002276	105737 	012641 			tstb	t.rdflg+1
+    287	002302	100416 				bmi	17$		;
+    288	002304	001003 				BNE	15$
+    289	002306	004737 	004012 			call	windo1		;
+    290	002312	000414 				br	20$
+    291	002314				15$:
+    292	002314	004737 	002622 			call	winpat		;
+    293	002320	005037 	012630 			clr	t.rdy1
+    294	002324	012737 	000112 	012632 		mov	#loglins-1,t.rdy2
+    295	002332	004737 	003126 			call	windo		;;;;; form new T A O  ! ! !
+    296	002336	000402 				br	20$
+    297	002340	004737 	004524 		17$:	call	windo2
+    298
+    299	002344	013703 	020004 		20$:	mov	vwsucc,	r3
+    300	002350	016301 	000012 			mov	vw.sy1(r3),r1
+    301	002354	005004 				clr	r4
+    302	002356				22$:
+    303	002356	070127 	000150 			mul	#bmax*4,r1
+    304	002362	062701 	063040 			add	#tao,	r1
+    305	002366	016302 	000016 			mov	vw.sx1(r3),r2
+    306	002372	010205 				mov	r2,	r5
+    307	002374	001413 				beq	27$
+    308	002376				24$:
+    309	002376	005721 				tst	(r1)+
+    310	002400	012100 				mov	(r1)+,	r0
+    311	002402	000300 				swab	r0
+    312	002404	052700 	000200 			bis	#200,	r0
+    313	002410	106200 				asrb	r0
+    314	002412	106200 				asrb	r0
+    315	002414	060002 				add	r0,	r2
+    316	002416	105702 				tstb	r2
+    317	002420	100420 				bmi	cont
+    318	002422	001365 				bne	24$
+    319	002424				27$:
+    320	002424	013711 	063034 			mov	ctao,	(r1)
+    321	002430	006205 				asr	r5
+    322	002432	060521 				add	r5,	(r1)+
+    323	002434	042711 	101777 			bic	#101777,(r1)
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 6-6
+Initialization of WINDOW-monitor
+
+    324	002440	052711 	000400 			bis	#400,	(r1)
+    325	002444	113711 	063036 			movb	ctao+2,	(r1)
+    326	002450	005104 				com	r4
+    327	002452	001403 				beq	cont
+    328	002454	016301 	000014 			mov	vw.sy2(r3), r1
+    329	002460	000736 				br	22$
+    330	002462				cont:
+    331	002462					WAITINT	#0		;
+    332	002472	012703 	161234 			mov	#ur6, r3	;
+    333	002476	005013 				clr	(r3)		;
+    334	002500	013743 	161212 			mov	@#hr5,	-(r3)	;
+    335	002504	013743 	161210 			mov	@#hr4,	-(r3)	;
+    336	002510	013701 	147530 			mov	@#xwcsr, r1	;get user addr pointer
+    337	002514	005000 				clr	r0		;
+    338	002516					GETPAR	#promap
+    339	002526	073027 	000003 			ashc	#3, r0		;
+    340	002532	006300 				asl	r0		;
+    341	002534	006001 				ror	r1		;
+    342	002536	006001 				ror	r1		;
+    343	002540	000261 				sec			;this is for w#4
+    344	002542	006001 				ror	r1		;
+    345					;	mov	@proadr, r2	;save it for processing
+    346					;	add	r2, r0		;
+    347					;	mov	p.ur0+2(r0), r4	;
+    348					;	mov	p.ur0(r0), (r3)+;ur4
+    349					;	mov	r4, (r3)	;ur5
+    350	002544	016023 	001320 			mov	promap  (r0), (r3)+ ;ur4
+    351	002550	016013 	001322 			mov	promap+2(r0), (r3)  ;ur5
+    352
+    353					;start processing here:
+    354					; r1 - user's pointer
+    355					; r2 - user's descriptor
+    356	002554	012100 				mov	(r1)+, r0	;
+    357	002556	020027 	000052 			cmp	r0, #cmdmax	; ?
+    358	002562	103403 				blo	10$		;
+    359	002564	012741 	177777 			mov	#-1, -(r1)	;
+    360	002570	000734 				br	cont		;
+    361	002572				10$:
+    362	002572	012705 	012630 			mov	#t.rdy1,r5	;
+    363	002576	005025 				clr	(r5)+		;t.rdy1
+    364	002600	012725 	000112 			mov	#loglins-1,(r5)+;t.rdy2
+    365	002604	005025 				clr	(r5)+		;t.rdx1
+    366	002606	012725 	000031 			mov	#bmax-1,(r5)+	;t.rdx2
+    367	002612	005015 				clr	(r5)		;init redraw flag
+    368	002614	004770 	005240 			call	@cmdtbl(r0)	;do CMD processing !!!!!!!!!!!!!!!!!!!!
+    369	002620	000614 				br	contin
+    370
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 7
+Initialization of WINDOW-monitor
+
+      1						.include	"wd1.mac"
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 8
+Initialization of WINDOW-monitor
+
+					;================================
+      2					; set whole screen's pattern
+      3	002622				WINPAT::
+      4	002622	013703 	020002 			mov	screen, r3	;
+      5	002626				10$:
+      6	002626	116300 	000033 			movb	vw.num(r3), r0	;
+      7	002632	010005 				mov	r0,	r5
+      8	002634	000300 				swab	r0
+      9	002636	150500 				bisb	r5,	r0
+     10	002640	010346 				mov	r3, -(sp)	;
+     11	002642	062703 	000020 			add	#vw.sx2, r3
+     12	002646	012705 	012636 			mov	#t.rdx2, r5
+     13
+     14	002652	011302 				mov	(r3),	r2	;vw.sx2
+     15	002654	021502 				cmp	(r5),	r2
+     16	002656	103001 				bcc	11$
+     17	002660	011502 				mov	(r5),	r2	;t.rdx2
+     18	002662				11$:
+     19	002662	014301 				mov	-(r3),	r1	;vw.sx1
+     20	002664	024501 				cmp	-(r5),	r1
+     21	002666	103401 				bcs	13$
+     22	002670	011501 				mov	(r5),	r1	;t.rdx1
+     23	002672				13$:
+     24	002672	014304 				mov	-(r3),	r4	;vw.sy2
+     25	002674	006204 				asr	r4
+     26	002676	006204 				asr	r4
+     27	002700	024504 				cmp	-(r5),	r4
+     28	002702	103001 				bcc	15$
+     29	002704	011504 				mov	(r5),	r4	;t.rdy2
+     30	002706				15$:
+     31	002706	014303 				mov	-(r3),	r3	;vw.sy1
+     32	002710	006203 				asr	r3
+     33	002712	006203 				asr	r3
+     34	002714	024503 				cmp	-(r5),	r3
+     35	002716	103401 				bcs	17$
+     36	002720	011503 				mov	(r5),	r3	;t.rdy1
+     37	002722				17$:
+     38	002722	020201 				cmp	r2,	r1
+     39	002724	103404 				bcs	33$
+     40	002726	020403 				cmp	r4,	r3
+     41	002730	103402 				bcs	33$
+     42	002732	004737 	002760 			call	WINP		;
+     43	002736				33$:
+     44	002736	012603 				mov	(sp)+, r3	;
+     45	002740	016303 	000002 			mov	vw.pred(r3), r3	;take next view
+     46	002744	023703 	020002 			cmp	screen, r3	;any more ?
+     47	002750	001326 				bne	10$		;yes
+     48
+     49	002752				99$:
+     50	002752	004737 	003672 			call	com0		;
+     51	002756	000207 				return			;
+     52					;================================
+     53					; draws window on scr-pattern
+     54					;
+     55					; r0	- .byte Wn,Wn	;window number
+     56					; r1	- X0 on screen [0..25]
+     57					; r2	- X1 number of last band on scr [0..25]
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 8-1
+Initialization of WINDOW-monitor
+
+     58					; r3	- Y0 [0..74] num of 1st l-line
+     59					; r4	- Y1 [0..74]num of last l-line
+     60					; r5	- destroyed !!!!
+     61
+     62	002760				WINP:
+     63
+     64	002760	160304 				SUB	R3,	R4	; LY-1
+     65	002762	012705 	000032 			MOV	#BMAX,	R5
+     66	002766	070305 				MUL	R5,	R3	;
+     67	002770	060103 				ADD	R1,	R3
+     68	002772	062703 	020556 			ADD	#SPAT,	R3	; MA
+     69
+     70	002776	160201 				SUB	R2,	R1	; -(LX-1)
+     71	003000	060501 				ADD	R5,	R1	; BMAX-(LX-1)
+     72	003002	105037 	003114 			CLRB	S.BR3		;
+     73	003006	032703 	000001 			BIT	#1,	R3	; ???
+     74	003012	001407 				BEQ	10$		; .even
+     75	003014	005201 				INC	R1		; BMAX-(LX-1-1)
+     76	003016	105037 	003054 			CLRB	S.BR1		;
+     77	003022	006201 				ASR	R1		;form BR  (C-.even/.odd)
+     78	003024	110137 	003060 			MOVB	R1,	S.BR2	;
+     79	003030	000405 				BR	15$		;
+     80	003032				10$:			;.even
+     81	003032	062701 	000004 			ADD	#4,	R1	;skip 2 instr (br, movb)
+     82	003036	006201 				ASR	R1		;
+     83	003040	110137 	003054 			MOVB	R1,	S.BR1	;
+     84	003044				15$:
+     85	003044	005537 	003114 			ADC	S.BR3		;
+     86
+     87	003050	010301 			S10:	MOV	R3,	R1
+     88	003052	060503 				ADD	R5,	R3
+     89
+     90	003054	000777 			S.BR1:	BR	.
+     91	003056	110021 				MOVB	R0,	(R1)+
+     92	003060	000777 			S.BR2:	BR	.
+     93		000015 			.REPT	bmax/2
+     94						MOV	R0,	(R1)+
+     95					.ENDR
+     96	003114	000777 			S.BR3:	BR	.
+     97
+     98	003116	110021 				MOVB	R0,	(R1)+
+     99	003120	005304 				DEC	R4		;all lines filled ?
+    100	003122	100352 				BPL	S10		;no
+    101	003124	000207 				RETURN
+    102
+    103					;================================
+    104					;form TAO due to screen pattern
+    105					; T.RDY1	- Y0	[0..74]
+    106					; T.RDY2	- Y1	[0..74]
+    107	003126				WINDO::
+    108					.enabl	lsb
+    109
+    110	003126	010637 	003666 			MOV	SP,	T.SP
+    111	003132	013701 	012630 			mov	t.rdy1,	r1	;
+    112	003136	010137 	003306 			mov	r1,	LI
+    113	003142	010103 				MOV	R1,	R3
+    114	003144	070127 	000032 			MUL	#BMAX,	R1
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 8-2
+Initialization of WINDOW-monitor
+
+    115	003150	062701 	020556 			ADD	#SPAT,	R1	;^SPAT
+    116	003154	070327 	000640 			MUL	#BMAX*4*NVLL,	R3
+    117	003160	062703 	063040 			ADD	#TAO,	R3	;^TAO
+    118	003164	010337 	003204 			MOV	R3,	TI	;
+    119	003170	010105 				MOV	R1,	R5	;CI	(r5 - start of cur otrez)
+    120	003172	112100 				MOVB	(R1)+,	R0
+    121	003174				T6:			;start on new line
+    122	003174	005100 				COM	R0		;
+    123	003176	010137 	003246 			MOV	R1,	.C0	;store addr of str-pattern
+    124	003202	012703 				MOV	(PC)+,	R3	;TAO pointer
+    125	003204				TI:	.BLKW	1
+    126	003206				T7:			;start of new otrez
+    127	003206	122100 			10$:	CMPB	(R1)+,R0	;
+    128	003210	001776 				BEQ	10$		;
+    129	003212	016004 	020154 			MOV	WDTBL(R0),R4	;^WD
+    130	003216	012406 				MOV	(R4)+,	sp	;^W.TAS
+    131	003220	010537 	003270 			mov	r5,	14$	;
+    132	003224	105741 				TSTB	-(R1)		;is it last band ?
+    133	003226	100405 				BMI	13$		;yes
+    134	003230	010500 				MOV	R5,	R0	;calc length of otrez in r0
+    135	003232	160100 				SUB	R1,	R0	;
+    136	003234	006300 				ASL	R0		;
+    137	003236	006300 				ASL	R0		;
+    138	003240	000300 				SWAB	R0		;
+    139	003242				13$:			;ar.x = ar.x0+(sc.x-sc.x0)*k	;k=1,2,4
+    140								;ar.x = sc.x*k-w.x		;ar.x... - in words
+    141								; w.x = sc.x0*k-ar.x0
+    142	003242	051400 				bis	(r4), r0	;HorD (VD52, VD104, VD208)
+    143	003244	162705 				SUB	(PC)+,	R5	;sc.x
+    144	003246				.C0:	.BLKW	1
+    145	003250	005205 				inc	r5		;;;;;
+    146	003252	072524 				ash	(r4)+, r5	;sc.x*k		(shift= 0,1,2 !!!)
+    147	003254	162405 				sub	(r4)+, r5	;sc.x*k-w.x
+    148	003256	006205 				asr	r5		;convert to V-words
+    149	003260	032700 	001000 			bit	#vd104, r0	;
+    150	003264	001007 				bne	15$		;
+    151	003266	005527 				adc	(pc)+		;
+    152	003270	000000 			14$:	.word	0		;
+    153	003272	006037 	003270 			ror	14$		;
+    154	003276	103002 				bcc	15$		;
+    155	003300				.print
+    156	003300	042700 	000400 			bic	#400, r0	;
+    157	003304				15$:
+    158
+    159	003304	012702 				MOV	(PC)+,	r2	;sc.y
+    160	003306				LI:	.blkw	1		;
+    161	003310	072224 				ASH	(R4)+,	r2	;sc.y*k
+    162	003312	162402 				sub	(r4)+,	r2	;sc.y*k-w.y
+    163	003314	006302 				ASL	r2		;
+    164	003316	006302 				ASL	r2		;convert to V-lines
+    165	003320	060206 				ADD	r2,	sp	;
+    166	003322	010127 				mov	r1,	(pc)+	;save r1
+    167	003324				44$:	.blkw	1
+    168
+    169	003326	012602 				mov	(sp)+,	r2	;addr
+    170	003330	012601 				mov	(sp)+,	r1	;par & vmode
+    171	003332	000301 				swab	r1
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 8-3
+Initialization of WINDOW-monitor
+
+    172	003334	006001 				ror	r1
+    173	003336	006002 				ror	r2
+    174	003340	006201 				asr	r1
+    175	003342	006002 				ror	r2
+    176
+    177	003344	006300 				asl	r0
+    178	003346	000301 				swab	r1
+    179	003350	006201 				asr	r1
+    180	003352	006000 				ror	r0
+    181	003354	006301 				asl	r1
+    182	003356	000301 				swab	r1
+    183
+    184	003360	105000 				clrb	r0
+    185	003362	150100 				bisb	r1,	r0
+    186	003364	105001 				clrb	r1
+    187	003366	050102 				bis	r1,	r2
+    188	003370	060502 				ADD	R5,	r2
+    189	003372	005500 				adc	r0
+    190	003374	010223 				MOV	r2,	(R3)+	;TAO-lo
+    191	003376	010023 				MOV	R0,	(R3)+	;TAO-hi
+    192	003400	062406 				ADD	(R4)+,	sp
+    193
+    194	003402	012602 				mov	(sp)+,	r2	;addr
+    195	003404	012601 				mov	(sp)+,	r1	;par & vmode
+    196	003406	000301 				swab	r1
+    197	003410	006001 				ror	r1
+    198	003412	006002 				ror	r2
+    199	003414	006201 				asr	r1
+    200	003416	006002 				ror	r2
+    201
+    202	003420	006300 				asl	r0
+    203	003422	000301 				swab	r1
+    204	003424	006201 				asr	r1
+    205	003426	006000 				ror	r0
+    206	003430	006301 				asl	r1
+    207	003432	000301 				swab	r1
+    208
+    209	003434	105000 				clrb	r0
+    210	003436	150100 				bisb	r1,	r0
+    211	003440	105001 				clrb	r1
+    212	003442	050102 				bis	r1,	r2
+    213
+    214	003444	060502 				add	r5,	r2
+    215	003446	005500 				adc	r0
+    216	003450	010263 	000144 			MOV	r2,	BMAX*4-4(R3)
+    217	003454	010063 	000146 			MOV	R0,	BMAX*4-2(R3)
+    218	003460	062406 				ADD	(R4)+,	sp
+    219
+    220	003462	012602 				mov	(sp)+,	r2	;addr
+    221	003464	012601 				mov	(sp)+,	r1	;par & vmode
+    222	003466	000301 				swab	r1
+    223	003470	006001 				ror	r1
+    224	003472	006002 				ror	r2
+    225	003474	006201 				asr	r1
+    226	003476	006002 				ror	r2
+    227
+    228	003500	006300 				asl	r0
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 8-4
+Initialization of WINDOW-monitor
+
+    229	003502	000301 				swab	r1
+    230	003504	006201 				asr	r1
+    231	003506	006000 				ror	r0
+    232	003510	006301 				asl	r1
+    233	003512	000301 				swab	r1
+    234
+    235	003514	105000 				clrb	r0
+    236	003516	150100 				bisb	r1,	r0
+    237	003520	105001 				clrb	r1
+    238	003522	050102 				bis	r1,	r2
+    239	003524	060502 				ADD	R5,	r2
+    240	003526	005500 				adc	r0
+    241	003530	010263 	000314 			MOV	r2,	2*BMAX*4-4(R3)
+    242	003534	010063 	000316 			MOV	R0,	2*BMAX*4-2(R3)
+    243	003540	062406 				ADD	(R4)+,	sp
+    244
+    245	003542	012602 				mov	(sp)+,	r2	;addr
+    246	003544	012601 				mov	(sp)+,	r1	;par & vmode
+    247	003546	000301 				swab	r1
+    248	003550	006001 				ror	r1
+    249	003552	006002 				ror	r2
+    250	003554	006201 				asr	r1
+    251	003556	006002 				ror	r2
+    252
+    253	003560	006300 				asl	r0
+    254	003562	000301 				swab	r1
+    255	003564	006201 				asr	r1
+    256	003566	006000 				ror	r0
+    257	003570	006301 				asl	r1
+    258	003572	000301 				swab	r1
+    259
+    260	003574	105000 				clrb	r0
+    261	003576	150100 				bisb	r1,	r0
+    262	003600	105001 				clrb	r1
+    263	003602	050102 				bis	r1,	r2
+    264	003604	060502 				ADD	R5,	r2
+    265	003606	005500 				adc	r0
+    266	003610	010263 	000464 			MOV	r2,	3*BMAX*4-4(R3)
+    267	003614	010063 	000466 			MOV	R0,	3*BMAX*4-2(R3)
+    268
+    269	003620	013701 	003324 			mov	44$,	r1
+    270	003624	010105 				MOV	R1,	R5	;CI
+    271	003626	112100 				MOVB	(R1)+,	R0	;end of line ?
+    272	003630	100402 				Bmi	321$
+    273	003632	000137 	003206 			jmp	T7		;no
+    274	003636				321$:
+    275	003636	062737 	000640 	003204 		ADD	#BMAX*NVLL*4,TI	;correct TAO pointer
+    276	003644	005237 	003306 			INC	LI		;correct cur L-line num
+    277	003650	023737 	012632 	003306 		CMP	t.rdy2,	LI	;is it the last ?
+    278
+    279	003656	103402 				BCs	322$
+    280	003660	000137 	003174 			jmp	T6		;no
+    281	003664				322$:
+    282	003664	012706 				MOV	(PC)+,	SP
+    283	003666				T.SP:	.BLKW	1
+    284	003670	000207 				RETURN
+    285					.dsabl	lsb
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 8-5
+Initialization of WINDOW-monitor
+
+    286					;===============================
+    287					;set flags in first cols
+    288
+    289	003672				COM0:
+    290	003672	012705 	000113 			MOV	#LOGLINS,R5
+    291	003676	012700 	020556 			MOV	#SPAT,	R0
+    292	003702	105110 			30$:	COMB	(R0)
+    293	003704	100376 				BPL	30$
+    294	003706	062700 	000032 		40$:	ADD	#BMAX,	R0
+    295	003712	077505 				SOB	R5,	30$
+    296	003714	000207 				RETURN
+    297
+    298					;--------------------------------
+    299					; VWREM		- removes el-P from its queue
+    300					; P	- r3	- pointer to el-P
+    301					; destroyed	- r0
+    302
+    303	003716				VWREM::
+    304	003716	012300 				mov	(r3)+, r0	;
+    305	003720	010033 				mov	r0, @(r3)+	; p^.pred^.succ:=p^.succ
+    306	003722	014360 	000002 			mov	-(r3), 2(r0)	; p^.succ^.pred:=p^.pred
+    307	003726	005043 				clr	-(r3)		; p^.succ :=0
+    308	003730	000207 				return
+    309
+    310					;--------------------------------
+    311					; VWPUT		- inserts el-P before Q in its queue
+    312					; P	- r3	- pointer to el-P
+    313					; Q	- r1	- pointer to el-Q
+    314					; destroyed	- none
+    315
+    316	003732				VWPUT::
+    317	003732	010113 				mov	r1, (r3)	; p^.succ:=q
+    318	003734	016163 	000002 	000002 		mov	2(r1), 2(r3)	; p^.pred:=q^.pred
+    319	003742	010371 	000002 			mov	r3, @2(r1)	; p^.pred^.succ:=p
+    320	003746	010361 	000002 			mov	r3, 2(r1)	; q^.pred:=p
+    321	003752	000207 				return
+    322					;--------------------------------
+    323	003754				redraw::
+    324	003754	012705 	012630 			mov	#t.rdy1,r5
+    325	003760	010300 				mov	r3,	r0
+    326	003762	062700 	000012 			add	#vw.sy1,r0
+    327	003766	012015 				mov	(r0)+,	(r5)	; vw.sy1(r3) --> t.rdy1
+    328	003770	006215 				asr	(r5)		;
+    329	003772	006225 				asr	(r5)+		; loglins
+    330	003774	012015 				mov	(r0)+,	(r5)	; vw.sy2(r3) --> t.rdy2
+    331	003776	006215 				asr	(r5)		;
+    332	004000	006225 				asr	(r5)+		; t.rdy2
+    333	004002	012025 				mov	(r0)+,	(r5)+	; vw.sx1(r3) --> t.rdx1
+    334	004004	012025 				mov	(r0)+,	(r5)+	; vw.sx2(r3) --> t.rdx2
+    335	004006	010725 				mov	pc,	(r5)+	; t.rdflg > +400
+    336	004010	000207 				return			;
+    337					;--------------------------------
+    338
+    339					;================================
+    340					;form TAO due to screen pattern
+    341					; T.RDY1	- Y0	[0..74]
+    342					; T.RDY2	- Y1	[0..74]
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 8-6
+Initialization of WINDOW-monitor
+
+    343					; T.NUM		- W.NUM
+    344	004012				WINDO1::
+    345					.enabl	lsb
+    346
+    347	004012	010637 	004520 			MOV	SP,	T1.SP
+    348	004016	013701 	012630 			mov	t.rdy1,	r1	;
+    349	004022	010137 	004140 			mov	r1,	LI1
+    350	004026	010103 				MOV	R1,	R3
+    351	004030	070127 	000032 			MUL	#BMAX,	R1
+    352	004034	062701 	020556 			ADD	#SPAT,	R1	;^SPAT
+    353	004040	070327 	000640 			MUL	#BMAX*4*NVLL,	R3
+    354	004044	062703 	063040 			ADD	#TAO,	R3	;^TAO
+    355	004050	010337 	004070 			MOV	R3,	TI1	;
+    356	004054	010105 				MOV	R1,	R5	;CI	(r5 - start of cur otrez)
+    357	004056	112100 				MOVB	(R1)+,	R0
+    358	004060				T61:			;start on new line
+    359	004060	005100 				COM	R0		;
+    360	004062	010137 	004124 			MOV	R1,	.C01	;store addr of str-pattern
+    361	004066	012703 				MOV	(PC)+,	R3	;TAO pointer
+    362	004070				TI1:	.BLKW	1
+    363	004072				T71:			;start of new otrez
+    364	004072	122100 			10$:	CMPB	(R1)+,R0	;
+    365	004074	001776 				BEQ	10$		;
+    366	004076	005301 				dec	r1
+    367	004100	120037 	012642 			cmpb	r0,	t.num
+    368	004104	001403 				beq	11$
+    369	004106	062703 	000004 			add	#4,	r3
+    370	004112	000563 				br	39$
+    371	004114				11$:
+    372	004114	016004 	020154 			MOV	WDTBL(R0),R4	;^WD
+    373	004120	012406 				MOV	(R4)+,	sp	;^W.TAS
+    374	004122	162705 				SUB	(PC)+,	R5	;sc.x
+    375	004124				.C01:	.BLKW	1
+    376	004126	005205 				inc	r5		;;;;;
+    377	004130	072524 				ash	(r4)+, r5	;sc.x*k		(shift= 0,1,2 !!!)
+    378	004132	162405 				sub	(r4)+, r5	;sc.x*k-w.x
+    379	004134	006205 				asr	r5		;convert to V-words
+    380
+    381	004136	012702 				MOV	(PC)+,	r2	;sc.y
+    382	004140				LI1:	.blkw	1		;
+    383	004142	072224 				ASH	(R4)+,	r2	;sc.y*k
+    384	004144	162402 				sub	(r4)+,	r2	;sc.y*k-w.y
+    385	004146	006302 				ASL	r2		;
+    386	004150	006302 				ASL	r2		;convert to V-words
+    387	004152	060206 				ADD	r2,	sp	;
+    388
+    389	004154	012602 				mov	(sp)+,	r2	;addr
+    390	004156	012600 				mov	(sp)+,	r0	;par & vmode
+    391	004160	000300 				swab	r0
+    392	004162	006000 				ror	r0
+    393	004164	006002 				ror	r2
+    394	004166	006200 				asr	r0
+    395	004170	006002 				ror	r2
+    396	004172	110063 	000002 			movb	r0,	2(r3)	;TAO-hi
+    397
+    398	004176	142763 	000200 	000003 		bicb	#200,	3(r3)
+    399	004204	105000 				clrb	r0
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 8-7
+Initialization of WINDOW-monitor
+
+    400	004206	006200 				asr	r0
+    401	004210	150063 	000003 			bisb	r0,	3(r3)
+    402	004214	105000 				clrb	r0
+    403	004216	006300 				asl	r0
+    404
+    405	004220	050002 				bis	r0,	r2
+    406	004222	060502 				ADD	R5,	r2
+    407	004224	005563 	000002 			adc	2(r3)		;TAO-hi
+    408	004230	010223 				MOV	r2,	(R3)+	;TAO-lo
+    409	004232	005723 				tst	(r3)+
+    410	004234	062406 				ADD	(R4)+,	sp
+    411
+    412	004236	012602 				mov	(sp)+,	r2	;addr
+    413	004240	012600 				mov	(sp)+,	r0	;par & vmode
+    414	004242	000300 				swab	r0
+    415	004244	006000 				ror	r0
+    416	004246	006002 				ror	r2
+    417	004250	006200 				asr	r0
+    418	004252	006002 				ror	r2
+    419	004254	110063 	000146 			movb	r0,	bmax*4-2(r3)	;TAO-hi
+    420
+    421	004260	142763 	000200 	000147 		bicb	#200,	bmax*4-1(r3)
+    422	004266	105000 				clrb	r0
+    423	004270	006200 				asr	r0
+    424	004272	150063 	000147 			bisb	r0,	bmax*4-1(r3)
+    425	004276	105000 				clrb	r0
+    426	004300	006300 				asl	r0
+    427
+    428	004302	050002 				bis	r0,	r2
+    429	004304	060502 				ADD	R5,	r2
+    430	004306	005563 	000146 			adc	bmax*4-2(r3)	;TAO-hi
+    431
+    432	004312	010263 	000144 			MOV	r2,	BMAX*4-4(R3)
+    433	004316	062406 				ADD	(R4)+,	sp
+    434
+    435	004320	012602 				mov	(sp)+,	r2	;addr
+    436	004322	012600 				mov	(sp)+,	r0	;par & vmode
+    437	004324	000300 				swab	r0
+    438	004326	006000 				ror	r0
+    439	004330	006002 				ror	r2
+    440	004332	006200 				asr	r0
+    441	004334	006002 				ror	r2
+    442	004336	110063 	000316 			movb	r0,	2*bmax*4-2(r3)	;TAO-hi
+    443
+    444	004342	142763 	000200 	000317 		bicb	#200,	2*bmax*4-1(r3)
+    445	004350	105000 				clrb	r0
+    446	004352	006200 				asr	r0
+    447	004354	150063 	000317 			bisb	r0,	2*bmax*4-1(r3)
+    448	004360	105000 				clrb	r0
+    449	004362	006300 				asl	r0
+    450
+    451	004364	050002 				bis	r0,	r2
+    452	004366	060502 				ADD	R5,	r2
+    453	004370	005563 	000316 			adc	2*bmax*4-2(r3)	;TAO-hi
+    454	004374	010263 	000314 			MOV	r2,	2*BMAX*4-4(R3)
+    455	004400	062406 				ADD	(R4)+,	sp
+    456
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 8-8
+Initialization of WINDOW-monitor
+
+    457	004402	012602 				mov	(sp)+,	r2	;addr
+    458	004404	012600 				mov	(sp)+,	r0	;par & vmode
+    459	004406	000300 				swab	r0
+    460	004410	006000 				ror	r0
+    461	004412	006002 				ror	r2
+    462	004414	006200 				asr	r0
+    463	004416	006002 				ror	r2
+    464	004420	110063 	000466 			movb	r0,	3*bmax*4-2(r3)	;TAO-hi
+    465
+    466	004424	142763 	000200 	000467 		bicb	#200,	3*bmax*4-1(r3)
+    467	004432	105000 				clrb	r0
+    468	004434	006200 				asr	r0
+    469	004436	150063 	000467 			bisb	r0,	3*bmax*4-1(r3)
+    470	004442	105000 				clrb	r0
+    471	004444	006300 				asl	r0
+    472
+    473	004446	050002 				bis	r0,	r2
+    474	004450	060502 				ADD	R5,	r2
+    475	004452	005563 	000466 			adc	3*bmax*4-2(r3)	;TAO-hi
+    476	004456	010263 	000464 			MOV	r2,	3*BMAX*4-4(R3)
+    477
+    478	004462				39$:
+    479	004462	010105 				MOV	R1,	R5	;CI
+    480	004464	112100 				MOVB	(R1)+,	R0	;end of line ?
+    481	004466	100201 				BPL	T71		;no
+    482	004470	062737 	000640 	004070 		ADD	#BMAX*NVLL*4,TI1;correct TAO pointer
+    483	004476	005237 	004140 			INC	LI1		;correct cur L-line num
+    484	004502	023737 	012632 	004140 		CMP	t.rdy2,	LI1	;is it the last ?
+    485	004510	103402 				bcs	391$
+    486	004512	000137 	004060 			jmp	T61		;no
+    487	004516	012706 			391$:	MOV	(PC)+,	SP
+    488	004520				T1.SP:	.BLKW	1
+    489	004522	000207 				RETURN
+    490					.dsabl	lsb
+    491
+    492					;================================
+    493					;form TAO due to screen pattern
+    494					; T.RDY1	- Y0	[0..74]
+    495					; T.RDY2	- Y1	[0..74]
+    496					; T.TAR		- W.TAR
+    497	004524				WINDO2::
+    498					.enabl	lsb
+    499
+    500	004524	010637 	005234 			MOV	SP,	T2.SP
+    501	004530	013701 	012630 			mov	t.rdy1,	r1	;
+    502	004534	010137 	004652 			mov	r1,	LI2
+    503	004540	010103 				MOV	R1,	R3
+    504	004542	070127 	000032 			MUL	#BMAX,	R1
+    505	004546	062701 	020556 			ADD	#SPAT,	R1	;^SPAT
+    506	004552	070327 	000640 			MUL	#BMAX*4*NVLL,	R3
+    507	004556	062703 	063040 			ADD	#TAO,	R3	;^TAO
+    508	004562	010337 	004602 			MOV	R3,	TI2	;
+    509	004566	010105 				MOV	R1,	R5	;CI	(r5 - start of cur otrez)
+    510	004570	112100 				MOVB	(R1)+,	R0
+    511	004572				T62:			;start on new line
+    512	004572	005100 				COM	R0		;
+    513	004574	010137 	004636 			MOV	R1,	.C02	;store addr of str-pattern
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 8-9
+Initialization of WINDOW-monitor
+
+    514	004600	012703 				MOV	(PC)+,	R3	;TAO pointer
+    515	004602				TI2:	.BLKW	1
+    516	004604				T72:			;start of new otrez
+    517	004604	122100 			10$:	CMPB	(R1)+,R0	;
+    518	004606	001776 				BEQ	10$		;
+    519	004610	005301 				dec	r1
+    520	004612	016004 	020154 			MOV	WDTBL(R0),R4	;^WD
+    521	004616	012406 				MOV	(R4)+,	sp	;^W.TAS
+    522	004620	020627 				cmp	sp,	(PC)+
+    523	004622				T.TAR:	.BLKW	1
+    524	004624	001403 				beq	11$
+    525	004626	062703 	000004 			add	#4,	r3
+    526	004632	000561 				br	39$
+    527	004634				11$:
+    528	004634	162705 				SUB	(PC)+,	R5	;sc.x
+    529	004636				.C02:	.BLKW	1
+    530	004640	005205 				inc	r5		;;;;;
+    531	004642	072524 				ash	(r4)+, r5	;sc.x*k		(shift= 0,1,2 !!!)
+    532	004644	162405 				sub	(r4)+, r5	;sc.x*k-w.x
+    533	004646	006205 				asr	r5		;convert to V-words
+    534
+    535	004650	012702 				MOV	(PC)+,	r2	;sc.y
+    536	004652				LI2:	.blkw	1		;
+    537	004654	072224 				ASH	(R4)+,	r2	;sc.y*k
+    538	004656	162402 				sub	(r4)+,	r2	;sc.y*k-w.y
+    539	004660	006302 				ASL	r2		;
+    540	004662	006302 				ASL	r2		;convert to V-words
+    541	004664	060206 				ADD	r2,	sp	;
+    542
+    543	004666	012602 				mov	(sp)+,	r2	;addr
+    544	004670	012600 				mov	(sp)+,	r0	;par & vmode
+    545	004672	000300 				swab	r0
+    546	004674	006000 				ror	r0
+    547	004676	006002 				ror	r2
+    548	004700	006200 				asr	r0
+    549	004702	006002 				ror	r2
+    550	004704	110063 	000002 			movb	r0,	2(r3)	;TAO-hi
+    551	004710	142763 	000200 	000003 		bicb	#200,	3(r3)
+    552	004716	105000 				clrb	r0
+    553	004720	006200 				asr	r0
+    554	004722	150063 	000003 			bisb	r0,	3(r3)
+    555	004726	105000 				clrb	r0
+    556	004730	006300 				asl	r0
+    557	004732	050002 				bis	r0,	r2
+    558	004734	060502 				ADD	R5,	r2
+    559	004736	005563 	000002 			adc	2(r3)	;TAO-hi
+    560	004742	010223 				MOV	r2,	(R3)+	;TAO-lo
+    561	004744	005723 				tst	(r3)+
+    562	004746	062406 				ADD	(R4)+,	sp
+    563
+    564	004750	012602 				mov	(sp)+,	r2	;addr
+    565	004752	012600 				mov	(sp)+,	r0	;par & vmode
+    566	004754	000300 				swab	r0
+    567	004756	006000 				ror	r0
+    568	004760	006002 				ror	r2
+    569	004762	006200 				asr	r0
+    570	004764	006002 				ror	r2
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 8-10
+Initialization of WINDOW-monitor
+
+    571	004766	110063 	000146 			movb	r0,	bmax*4-2(r3)	;TAO-hi
+    572	004772	142763 	000200 	000147 		bicb	#200,	bmax*4-1(r3)
+    573	005000	105000 				clrb	r0
+    574	005002	006200 				asr	r0
+    575	005004	150063 	000147 			bisb	r0,	bmax*4-1(r3)
+    576	005010	105000 				clrb	r0
+    577	005012	006300 				asl	r0
+    578	005014	050002 				bis	r0,	r2
+    579	005016	060502 				ADD	R5,	r2
+    580	005020	005563 	000146 			adc	bmax*4-2(r3)	;TAO-hi
+    581	005024	010263 	000144 			MOV	r2,	BMAX*4-4(R3)
+    582	005030	062406 				ADD	(R4)+,	sp
+    583	005032	000240 			nop
+    584	005034	012602 				mov	(sp)+,	r2	;addr
+    585	005036	012600 				mov	(sp)+,	r0	;par & vmode
+    586	005040	000300 				swab	r0
+    587	005042	006000 				ror	r0
+    588	005044	006002 				ror	r2
+    589	005046	006200 				asr	r0
+    590	005050	006002 				ror	r2
+    591	005052	110063 	000316 			movb	r0,	2*bmax*4-2(r3)	;TAO-hi
+    592	005056	142763 	000200 	000317 		bicb	#200,	2*bmax*4-1(r3)
+    593	005064	105000 				clrb	r0
+    594	005066	006200 				asr	r0
+    595	005070	150063 	000317 			bisb	r0,	2*bmax*4-1(r3)
+    596	005074	105000 				clrb	r0
+    597	005076	006300 				asl	r0
+    598	005100	050002 				bis	r0,	r2
+    599	005102	060502 				ADD	R5,	r2
+    600	005104	005563 	000316 			adc	2*bmax*4-2(r3)	;TAO-hi
+    601	005110	010263 	000314 			MOV	r2,	2*BMAX*4-4(R3)
+    602	005114	062406 				ADD	(R4)+,	sp
+    603
+    604	005116	012602 				mov	(sp)+,	r2	;addr
+    605	005120	012600 				mov	(sp)+,	r0	;par & vmode
+    606	005122	000300 				swab	r0
+    607	005124	006000 				ror	r0
+    608	005126	006002 				ror	r2
+    609	005130	006200 				asr	r0
+    610	005132	006002 				ror	r2
+    611	005134	110063 	000466 			movb	r0,	3*bmax*4-2(r3)	;TAO-hi
+    612	005140	142763 	000200 	000467 		bicb	#200,	3*bmax*4-1(r3)
+    613	005146	105000 				clrb	r0
+    614	005150	006200 				asr	r0
+    615	005152	150063 	000467 			bisb	r0,	3*bmax*4-1(r3)
+    616	005156	105000 				clrb	r0
+    617	005160	006300 				asl	r0
+    618	005162	050002 				bis	r0,	r2
+    619	005164	060502 				ADD	R5,	r2
+    620	005166	005563 	000466 			adc	3*bmax*4-2(r3)	;TAO-hi
+    621	005172	010263 	000464 			MOV	r2,	3*BMAX*4-4(R3)
+    622
+    623	005176				39$:
+    624	005176	010105 				MOV	R1,	R5	;CI
+    625	005200	112100 				MOVB	(R1)+,	R0	;end of line ?
+    626	005202	100200 				BPL	T72		;no
+    627	005204	062737 	000640 	004602 		ADD	#BMAX*NVLL*4,TI2;correct TAO pointer
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 8-11
+Initialization of WINDOW-monitor
+
+    628	005212	005237 	004652 			INC	LI2		;correct cur L-line num
+    629	005216	023737 	012632 	004652 		CMP	t.rdy2,	LI2	;is it the last ?
+    630	005224	103402 				bcs	392$
+    631	005226	000137 	004572 			jmp	T62		;no
+    632	005232	012706 			392$:	MOV	(PC)+,	SP
+    633	005234				T2.SP:	.BLKW	1
+    634	005236	000207 				RETURN
+    635					.dsabl	lsb
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 9
+Initialization of WINDOW-monitor
+
+      1						.include	"wd2.mac"
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 10
+Request processing
+
+					.sbttl	request processing
+      2
+      3	005240				cmdtbl:
+      4	005240	005456 	005750 	006136 		.word	w$arin,	w$arki, w$vwcr,	w$vwki
+	005246	006316
+      5	005250	006352 	006374 	006402 		.word	w$vwta,	w$vwfo,	w$vwba,	w$plcr
+	005256	006570
+      6	005260	007010 	007050 	007110 		.word	w$plfr,	w$plmo,	w$plsa
+      7	005266	007166 	007330 			.word	w$cset,	w$cera
+      8	005272	007370 	007462 	007534 		.word	w$fnin,	w$fnki,	w$fnfi,	w$fnlo
+	005300	007620
+      9	005302	007670 	007752 	005312 		.word	w$vwlo, w$prin,	w$arcr,	w$hbmv
+	005310	012644
+     10		000052 			cmdmax	= .-cmdtbl
+     11
+     12					;================================
+     13	005312				W$ARCR::
+     14	005312	011127 				mov	(r1),	(pc)+	;store area addr
+     15	005314				1$:	.blkw	1		;
+     16	005316	016127 	000006 			mov	ar.tas-ar.len(r1), (pc)+
+     17	005322				2$:	.blkw	1		;
+     18	005324	016100 	000002 			mov	ar.lins-ar.len(r1), r0 ;num of lins
+     19	005330	001524 				beq	arerr		;
+     20	005332	004737 	005606 			call	arcomm		;
+     21	005336	013701 	005314 			mov	1$,	r1	;
+     22					;	mov	@#hr4,	@#ur4	;
+     23					;	mov	@#hr5,	@#ur5	;
+     24	005342	010146 				mov	r1,	-(sp)	;
+     25	005344	005000 				clr	r0		;
+     26	005346					GETPAR	#promap
+     27	005356	073027 	000003 			ashc	#3,	r0	;
+     28	005362	006300 				asl	r0		;
+     29	005364	012601 				mov	(sp)+,	r1	;
+     30	005366	005002 				clr	r2		;
+     31	005370	032701 	010000 			bit	#10000,	r1	;
+     32	005374	001402 				beq	7$		;
+     33	005376	012702 	000020 			mov	#20,	r2	;
+     34	005402				7$:
+     35	005402	042701 	170003 			bic	#^c..addr,r1	;
+     36					;	add	@proadr,r0	;
+     37					;	add	p.ur0(r0), r2	;par
+     38	005406	066002 	001320 			add	promap(r0), r2	;
+     39	005412	053702 	005322 			bis	2$,	r2	;
+     40								;init tas
+     41	005416	016500 	177774 			mov	ar.lins-ar.tas(r5), r0	;
+     42	005422	016503 	177776 			mov	ar.slen-ar.tas(r5), r3	;
+     43	005426				10$:
+     44	005426	010125 				mov	r1,	(r5)+	;
+     45	005430	010225 				mov	r2,	(r5)+	;
+     46	005432	060301 				add	r3,	r1	;
+     47	005434	032701 	010000 			bit	#10000,	r1	;
+     48	005440	001404 				beq	11$		;
+     49	005442	042701 	010000 			bic	#10000,	r1	;
+     50	005446	062702 	000020 			add	#20,	r2	;
+     51	005452	077013 			11$:	sob	r0,	10$	;
+     52	005454	000207 				return			;
+     53
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 10-1
+Request processing
+
+     54					;================================
+     55	005456				W$ARIN::
+     56	005456	016100 	000002 			mov	ar.lins-ar.len(r1), r0 ;num of lins
+     57	005462	001447 				beq	arerr		;
+     58	005464	011105 				mov	(r1), r5	;is area installed ?
+     59	005466	001433 				beq	5$		;no
+     60	005470	032705 	177601 			bit	#^c176,	r5	;
+     61	005474	001042 				bne	arerr		;
+     62	005476	016505 	020354 			mov	artbl(r5), r5	;area's descr
+     63	005502	001437 				beq	arerr		;
+     64	005504	026500 	000004 			cmp	ar.lins(r5), r0	;
+     65	005510	103002 				bhis	2$		;
+     66	005512	016500 	000004 			mov	ar.lins(r5), r0	;
+     67	005516				2$:
+     68	005516	062705 	000010 			add	#ar.tas,r5	;point to start of tas
+     69	005522	010537 	004622 			mov	r5, t.tar	;
+     70	005526	062701 	000006 			add	#ar.tas-ar.len, r1	;
+     71	005532				1$:
+     72	005532	012115 				mov	(r1)+, (r5)	;
+     73	005534	042725 	170003 			bic	#^C..addr,(r5)+	;clear unused bits
+     74	005540	012115 				mov	(r1)+, (r5)	;
+     75	005542	042725 	000010 			bic	#^B0000000000001000,(r5)+
+     76	005546	077007 				sob	r0, 1$		;
+     77	005550	005137 	012640 			com	t.rdflg		;
+     78	005554	000207 				return			;
+     79	005556				5$:
+     80	005556	004737 	005606 			call	arcomm		;do common task
+     81	005562				110$:			;copy TAS to us
+     82	005562	012115 				mov	(r1)+, (r5)	;
+     83	005564	042725 	170003 			bic	#^C..addr,(r5)+	;clear unused bits
+     84	005570	012115 				mov	(r1)+, (r5)	;
+     85	005572	042725 	000010 			bic	#^B0000000000001000,(r5)+
+     86	005576	077007 				sob	r0, 110$	;
+     87	005600				200$:
+     88	005600	000207 				return			;
+     89	005602				arerr:
+     90	005602	005141 			        com	-(r1)
+     91	005604	000207 				return
+     92
+     93					;-------------
+     94	005606				arcomm:
+     95	005606	012703 	020354 			MOV	#ARTBL,	R3	;
+     96	005612	012702 	000100 			MOV	#ATL,	R2	;
+     97	005616	005723 			4$:	TST	(R3)+		;
+     98	005620	001404 				BEQ	9$		;
+     99	005622	077203 				SOB	R2,	4$	;
+    100	005624				999$:
+    101	005624	005141 			        com	-(r1)	;
+    102	005626	005726 				tst	(sp)+	;
+    103	005630	000207 				return
+    104	005632				9$:
+    105	005632	012704 	020052 			mov	#arfree, r4	;
+    106	005636	000401 				br	20$		;go to into search loop
+    107	005640				10$:
+    108	005640	010504 				mov	r5, r4		;go to next free-ar
+    109	005642				20$:
+    110	005642	011405 				mov	(r4), r5	;
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 10-2
+Request processing
+
+    111	005644	001405 				beq	50$		;queue is empty or end of queue
+    112	005646	020065 	000002 			cmp	r0, ar.len(r5)	;is it large enough ?
+    113	005652	101372 				bhi	10$		;no
+    114	005654	011514 				mov	(r5), (r4)	;remove this one from queue
+    115	005656	000422 				br	100$		;do common work
+    116	005660				50$:
+    117	005660	072027 	000002 			ash	#2, r0		;needed mem in bytes
+    118	005664	062700 	000010 			add	#ar.tas, r0	;
+    119	005670	013705 	020000 			mov	wheap, r5	;
+    120	005674	060037 	020000 			add	r0, wheap	;
+    121	005700	023727 	020000 	060000 		cmp	wheap, #win3	;
+    122	005706	101403 				blos	60$		;OK
+    123	005710	010537 	020000 			mov	r5, wheap	;restore pointer
+    124	005714	000743 				br	999$		;
+    125	005716				60$:
+    126	005716	016165 	000002 	000002 		mov	ar.lins-ar.len(r1), ar.len(r5)	;set real length
+    127	005724				100$:
+    128	005724	010543 				mov	r5,	-(r3)	;set in artbl
+    129	005726	162703 	020354 			sub	#artbl,	r3	;
+    130	005732	010321 				mov	r3, (r1)+	;return ar-num to user
+    131	005734	062705 	000004 			add	#ar.lins, r5	;
+    132	005740	012100 				mov	(r1)+,	r0	;lins
+    133	005742	010025 				mov	r0, (r5)+	;ar.lins
+    134	005744	012125 				mov	(r1)+, (r5)+	;ar.slen
+    135	005746	000207 				return			;
+    136					;================================
+    137	005750				W$ARKI::
+    138	005750	011100 				mov	(r1), r0	;ar's num
+    139	005752	001713 				beq	arerr		;
+    140	005754	032700 	177601 			bit	#^c176,	r0	;
+    141	005760	001310 				bne	arerr		;
+    142	005762	016005 	020354 			mov	artbl(r0), r5	;area's descr
+    143	005766	001705 				beq	arerr		;
+    144	005770	005060 	020354 			clr	artbl(r0)	;
+    145	005774	012704 	020052 			mov	#arfree, r4	;
+    146	006000	000405 				br	20$		;go into loop
+    147	006002				10$:
+    148	006002	026563 	000002 	000002 		cmp	ar.len(r5), ar.len(r3)	; ???
+    149	006010	101403 				blos	30$		;
+    150	006012	010304 				mov	r3, r4		;
+    151	006014				20$:
+    152	006014	011403 				mov	(r4), r3	;
+    153	006016	001371 				bne	10$		;
+    154	006020				30$:
+    155	006020	010514 				mov	r5, (r4)	;insert in queue
+    156	006022	010315 				mov	r3, (r5)	;
+    157								;kill all arear's views
+    158	006024	013703 	020002 			mov	screen, r3	;
+    159	006030	010002 				mov	r0,	r2	;
+    160	006032				40$:
+    161	006032	020263 	000004 			cmp	r2, vw.area(r3)	;is it its view ?
+    162	006036	001015 				bne	45$		;no
+    163	006040	011304 				mov	(r3),	r4	;save the next view
+    164	006042	004737 	003716 			call	vwrem		;
+    165	006046	013713 	020050 			mov	vwfree, (r3)	;
+    166	006052	010337 	020050 			mov	r3, vwfree	;
+    167	006056	116305 	000033 			movb	vw.num(r3), r5	;reset word in wdtbl !!!
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 10-3
+Request processing
+
+    168	006062	005065 	020154 			clr	wdtbl(r5)	;
+    169	006066	010403 				mov	r4,	r3	;
+    170	006070	000401 				br	47$		;continue
+    171	006072				45$:
+    172	006072	011303 				mov	(r3), r3	;
+    173	006074				47$:
+    174	006074	023703 	020002 			cmp	screen, r3	;
+    175	006100	001354 				bne	40$		;
+    176	006102				50$:
+    177	006102	010637 	012640 			mov	sp,	t.rdflg	;
+    178	006106	000207 				return			;
+    179					;===============================
+    180	006110				WNCHECK:
+    181	006110	011100 				mov	(r1),	r0
+    182	006112	001406 				beq	vwerr
+    183	006114	032700 	177601 			bit	#^C176,	r0
+    184	006120	001003 				bne	vwerr
+    185	006122	016003 	020154 			mov	wdtbl(r0),r3
+    186	006126	001002 				bne	ret
+    187	006130	005141 			vwerr:	com	-(r1)
+    188	006132	005726 				tst	(sp)+
+    189	006134	000207 			ret:	return
+    190					;================================
+    191	006136				W$VWCR::
+    192	006136	011103 				mov	(r1), r3	;is it CREATE ?
+    193	006140	001404 				beq	1$
+    194	006142	004737 	006110 			call	wncheck
+    195	006146	000137 	011550 			jmp	wcheck		;no, MODIFY
+    196	006152				1$:
+    197	006152	012700 	020154 			MOV	#WDTBL,	R0	;
+    198	006156	012702 	000100 			MOV	#WTL,	R2	;
+    199	006162	005720 			4$:	TST	(R0)+		;
+    200	006164	001402 				BEQ	9$		;
+    201	006166	077203 				SOB	R2,	4$	;
+    202	006170	000757 			        br	vwerr		;
+    203
+    204	006172				9$:
+    205	006172	013703 	020050 			mov	vwfree, r3	;any empty views ?
+    206	006176	001006 				bne	10$		;yes
+    207	006200	013703 	020000 			mov	wheap, r3	;take some mem from heap
+    208	006204	062737 	000044 	020000 		add	#vwlen, wheap	;
+    209	006212	000402 				br	20$		;
+    210	006214				10$:
+    211	006214	011337 	020050 			mov	(r3), vwfree	;remove it from empty queue
+    212	006220				20$:
+    213	006220	010305 				mov	r3, 	r5	;make work-pointer
+    214	006222	010340 				mov	r3,	-(r0)   ;
+    215	006224	062710 	000024 			add	#vw.tar,(r0)
+    216	006230	162700 	020154 			sub	#wdtbl,	r0
+    217	006234	010011 				mov	r0, 	(r1)	;send wnum to user
+    218	006236	012700 	000022 			mov	#vwlen/2, r0	;
+    219	006242				25$:			;clear descr
+    220	006242	005025 				clr	(r5)+		;
+    221	006244	077002 				sob	r0, 25$		;
+    222	006246	111163 	000033 			movb	(r1),	vw.num(r3)
+    223					;-------
+    224	006252				30$:
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 10-4
+Request processing
+
+    225	006252	010346 				mov	r3, -(sp)	;
+    226	006254	004737 	011550 			call	wcheck		;
+    227	006260	012603 				mov	(sp)+, r3	;
+    228	006262	103404 				bcs	399$		;
+    229
+    230					;-------
+    231	006264	013701 	020004 			mov	vwsucc, r1	;
+    232	006270	000137 	003732 			jmp	vwput		;put it in view's list
+    233
+    234	006274				399$:
+    235	006274	116300 	000033 			movb	vw.num(r3),r0
+    236	006300	005060 	020154 			clr	wdtbl(r0)
+    237	006304	013713 	020050 			mov	vwfree, (r3)	;
+    238	006310	010337 	020050 			mov	r3, vwfree	;
+    239	006314	000207 				return
+    240					;================================
+    241
+    242	006316				W$VWKI::
+    243	006316	004737 	006110 			call	wncheck
+    244	006322	162703 	000024 			sub	#vw.tar,r3
+    245	006326	005060 	020154 			clr	wdtbl(r0)	;
+    246	006332	004737 	003716 			call	vwrem		;remove from queue
+    247	006336	013713 	020050 			mov	vwfree, (r3)	;put it in free list
+    248	006342	010337 	020050 			mov	r3, vwfree	;
+    249	006346	000137 	003754 			jmp	redraw		;redraw needed
+    250
+    251					;================================
+    252	006352				W$VWTA::
+    253	006352	004737 	006110 			call	wncheck		;take win-num
+    254	006356	062701 	000022 		        add	#vw.tar-2, r1 ;
+    255	006362	012700 	000010 			mov	#vw.tar-vw.area/2, r0	;
+    256	006366				10$:			;copy view's descr to user
+    257	006366	014341 				mov	-(r3), -(r1)	;
+    258	006370	077002 				sob	r0, 10$		;
+    259	006372	000207 				return			;
+    260					;================================
+    261	006374				W$VWFO::
+    262	006374	012705 	020004 			mov	#vwsucc,r5	;;;;;;;;
+    263	006400	000402 				br	foba		;
+    264					;================================
+    265	006402				W$VWBA::
+    266	006402	012705 	020002 			mov	#screen,r5	;
+    267	006406				foba:
+    268	006406	004737 	006110 			call	wncheck		;take win-num
+    269	006412	162703 	000024 			sub	#vw.tar, r3	;
+    270	006416	004737 	003716 			call	VWREM		;
+    271	006422	011501 				mov	(r5),	r1	;;;;;;;;;
+    272	006424	010637 	012640 			mov	sp,	t.rdflg
+    273	006430	000137 	003732 			jmp	VWPUT		;
+    274					;================================
+    275					.enabl	lsb
+    276	006434	000010 	000010 	000010 	277$:	.word	8.,8.,8.,4.,0,0,0,2
+	006442	000004 	000000 	000000
+	006450	000000 	000002
+    277	006454	   007 	   002 	   007 	300$:	.byte	7,2, 7,18., 7,34., 3,50., 3,10., 3,26., 3,42., 1,58.	;
+	006457	   022 	   007 	   042
+	006462	   003 	   062 	   003
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 10-5
+Request processing
+
+	006465	   012 	   003 	   032
+	006470	   003 	   052 	   001
+	006473	   072
+    278	006474	000000 	000020 	000040 	400$:	.word	0,	20,	40,	60,	1000,	1020,	1040,	1060
+	006502	000060 	001000 	001020
+	006510	001040 	001060
+    279	006514	000100 	000120 	000140 		.word	100,	120,	140,	160,	1100,	1120,	1140,	1160
+	006522	000160 	001100 	001120
+	006530	001140 	001160
+    280	006534	000200 	000220 	000240 		.word	200,	220,	240,	260,	1200,	1220,	1240,	1260
+	006542	000260 	001200 	001220
+	006550	001240 	001260
+    281	006554	000300 	000320 	000340 		.word	300,	320,	340,	360
+	006562	000360
+    282	006564	002000 	003000 			.word	2000,	3000
+    283	006570				W$PLCR::
+    284	006570	010005 				mov	r0,	r5	;
+    285	006572	111100 				movb	(r1),	r0	;take mode# [0,1,2,3]
+    286	006574	042700 	177770 			bic	#^c7,	r0	;
+    287	006600	006300 				asl	r0
+    288	006602	116003 	006454 			movb	300$(r0),r3
+    289	006606	116004 	006455 			movb	300$+1(r0),r4
+    290	006612	062704 	020060 			add	#paltbl,r4
+    291	006616				10$:
+    292	006616	005724 				tst	(r4)+
+    293	006620	001402 				beq	20$
+    294	006622	077303 				sob	r3,	10$
+    295	006624	000207 				return
+    296	006626				20$:
+    297	006626	010244 				mov	r2,	-(r4)
+    298	006630	005403 				neg	r3
+    299					;!!	add	#8.,	r3
+    300	006632	066003 	006434 			add	277$(r0), r3		;!!
+    301	006636	072327 	000016 			ash	#14.,	r3
+    302	006642	103002 				bcc	25$
+    303	006644	052703 	000004 			bis	#4,	r3
+    304	006650				25$:
+    305					;!!	cmp	#vm8*2,	r0
+    306					;!!	bne	30$
+    307					;!!	bis	#4,	r3
+    308	006650				30$:
+    309	006650	150321 				bisb	r3,	(r1)+
+    310	006652	000303 				swab	r3
+    311	006654	110321 				movb	r3,	(r1)+
+    312
+    313	006656	162704 	020060 			sub	#paltbl,	r4
+    314	006662				333$:
+    315	006662	012737 	012124 	006750 		mov	#12124,	40$		; mov	(r1)+, (r4)+
+    316	006670	012737 	005024 	006776 		mov	#5024,	45$		; clr	(r4)+
+    317	006676				334$:
+    318	006676	016404 	006474 			mov	400$(r4),	r4
+    319	006702	062704 	060000 			add	#pal,	r4
+    320	006706	012700 	000010 			mov	#16./2,	r0
+    321	006712	032704 	002000 			bit	#2000,	r4
+    322	006716	001402 				beq	39$
+    323	006720	012700 	000200 			mov	#256./2,r0
+    324	006724				39$:
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 10-6
+Request processing
+
+    325	006724					.push	ur3
+    326	006730					.push	r0		;cnt
+    327	006732					.push	r4		;adr
+    328	006734	013737 	006750 	006770 		mov	40$,	44$
+    329	006742	013737 	024446 	161226 		mov	plpar,	ur3
+    330	006750	012124 			40$:	mov	(r1)+,	(r4)+
+    331	006752	077002 				sob	r0,	40$
+    332
+    333	006754					.pop	r4
+    334	006756	062704 	000400 			add	#400,	r4	;
+    335	006762					.pop	r0
+    336	006764	006205 				asr	r5
+    337	006766	103003 				bcc	45$		; even code (old style)
+    338	006770	012124 			44$:	mov	(r1)+,	(r4)+
+    339	006772	077002 				sob	r0,	44$
+    340	006774	000402 				br	47$
+    341	006776	005024 			45$:	clr	(r4)+
+    342	007000	077002 				sob	r0,	45$
+    343	007002				47$:
+    344	007002					.pop	ur3
+    345	007006				99$:			;no redraw
+    346	007006	000207 				return			;
+    347					;================================
+    348	007010				W$PLFR::
+    349	007010	112103 				movb	(r1)+,	r3
+    350	007012	042703 	177770 			bic	#^c7,	r3
+    351	007016	006303 				asl	r3
+    352	007020	116303 	006455 			movb	300$+1(r3),r3
+    353	007024	005743 				tst	-(r3)		;!!
+    354	007026	111100 				movb	(r1),	r0
+    355	007030	072027 	177773 			ash	#-5,	r0
+    356					;;!!	beq	999$
+    357	007034	042700 	177771 			bic	#^c6,	r0
+    358	007040	060003 				add	r0,	r3
+    359	007042	005063 	020060 			clr	paltbl(r3)
+    360	007046				999$:
+    361	007046	000207 				return
+    362					;================================
+    363	007050				W$PLMO::
+    364	007050	010005 				mov	r0,	r5	;
+    365	007052	112104 				movb	(r1)+,	r4
+    366	007054	042704 	177770 			bic	#^c7,	r4
+    367	007060	006304 				asl	r4
+    368	007062	000304 				swab	r4
+    369	007064	152104 				bisb	(r1)+,	r4
+    370	007066	072427 	177773 			ash	#-5,	r4
+    371	007072	032704 	000100 			bit	#100,	r4
+    372	007076	001671 				beq	333$
+    373	007100	012702 	000110 			mov	#110,	r2
+    374	007104	074204 				xor	r2,	r4
+    375	007106	000665 				br	333$
+    376					;================================
+    377	007110				W$PLSA::
+    378	007110	010005 				mov	r0,	r5	;
+    379	007112	012737 	012421 	006750 		mov	#12421,	40$	; mov (r4)+,(r1)+
+    380	007120	012737 	000240 	006776 		mov	#<nop>,	45$	;
+    381	007126	112104 				movb	(r1)+,	r4
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 10-7
+Request processing
+
+    382	007130	042704 	177770 			bic	#^c7,	r4
+    383	007134	006304 				asl	r4
+    384	007136	000304 				swab	r4
+    385	007140	152104 				bisb	(r1)+,	r4
+    386	007142	072427 	177773 			ash	#-5,	r4
+    387	007146	032704 	000100 			bit	#100,	r4
+    388	007152	001651 				beq	334$
+    389	007154	012702 	000110 			mov	#110,	r2
+    390	007160	074204 				xor	r2,	r4
+    391	007162	000137 	006676 			jmp	334$
+    392					.dsabl	lsb
+    393					;================================
+    394	007166				W$CSET::
+    395	007166	004737 	007330 			call	w$cera		;erase cursor
+    396	007172	012103 				mov	(r1)+,	r3	;take X
+    397	007174	020327 	000640 			cmp	r3,	#scrdots;
+    398	007200	103402 				blo	10$		;
+    399	007202	013703 	024442 			mov	xcur,	r3	;
+    400	007206				10$:
+    401	007206	010300 				mov	r3,	r0	;
+    402	007210	072327 	177775 			ash	#-3,	r3	;rel addr in eline
+    403	007214	042700 	177770 			bic	#177770,r0	;
+    404	007220	062703 	001004 			add	#eline0,r3	;
+    405	007224	010337 	024434 			mov	r3,	sxcur	;save r1 pointer
+    406	007230	012702 	000010 			mov	#10,	r2	;
+    407	007234	072200 				ash	r0,	r2	;
+    408	007236	110223 				movb	r2,	(r3)+	;
+    409	007240	000302 				swab	r2		;
+    410	007242	110223 				movb	r2,	(r3)+	;
+    411	007244	062703 	000062 			add	#elen-2,r3	;
+    412	007250	012702 	000167 			mov	#167,	r2	;
+    413	007254	072200 				ash	r0,	r2	;
+    414	007256	005102 				com	r2		;
+    415	007260	110223 				movb	r2,	(r3)+	;
+    416	007262	000302 				swab	r2		;
+    417	007264	110223 				movb	r2,	(r3)+	;
+    418
+    419	007266	012105 				mov	(r1)+,	r5	;
+    420	007270	020527 	000453 			cmp	r5,	#scrlins-1 ;
+    421	007274	103402 				blo	20$		;
+    422	007276	013705 	024444 			mov	ycur,	r5	;
+    423	007302				20$:
+    424	007302	006305 				asl	r5		;
+    425	007304	006305 				asl	r5		;
+    426	007306	062705 	060000 			add	#tas,	r5	;
+    427	007312	012700 	024436 			mov	#stas,	r0	;
+    428	007316	010520 				mov	r5,	(r0)+	;save pointer
+    429	007320	011510 				mov	(r5),	(r0)	;save tas
+    430	007322	013715 	024432 			mov	ctas,	(r5)	;set tas for cursor
+    431	007326	000207 				return			;
+    432					;================================
+    433	007330				W$CERA::
+    434	007330	013700 	024434 			mov	sxcur,	r0	;
+    435	007334	001414 				beq	10$		;nothing to do: no cursor !
+    436	007336	105020 				clrb	(r0)+		;
+    437	007340	105020 				clrb	(r0)+		;
+    438	007342	062700 	000062 			add	#elen-2,r0	;
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 10-8
+Request processing
+
+    439	007346	112720 	177777 			movb	#-1,	(r0)+	;
+    440	007352	112710 	177777 			movb	#-1,	(r0)	;
+    441	007356	012700 	024436 			mov	#stas,	r0	;
+    442	007362	012003 				mov	(r0)+,	r3	;
+    443	007364	011013 				mov	(r0),	(r3)	;
+    444	007366				10$:
+    445	007366	000207 				return			;
+    446					;================================
+    447	007370				W$FNIN::
+    448	007370	013702 	020056 			mov	fnfree,	r2	;take ptr to free descr
+    449	007374	001403 				beq	100$		;non free
+    450	007376	010237 	020056 			mov	r2,	fnfree	;remove free one from list
+    451	007402	000413 				br	110$		;
+    452	007404				100$:
+    453	007404	013702 	020000 			mov	wheap,	r2	;
+    454	007410	062737 	000004 	020000 		add	#fnlen,	wheap	;
+    455	007416	023727 	020000 	060000 		cmp	wheap,	#win3	;
+    456	007424	103402 				blo	110$		;
+    457	007426	005441 				neg	-(r1)		;report no-mem-error !
+    458	007430	000413 				br	999$		;
+    459	007432				110$:
+    460					;	mov	fnsucc,	(r2)	;put descr in list of available fonts
+    461					;	mov	r2,	fnsucc	;
+    462								;new font should be the last one in list
+    463	007432	012703 	020054 			mov	#fnsucc, r3	;
+    464	007436	011300 				mov	(r3),	r0	;take addr of 1st
+    465	007440				120$:
+    466	007440	021003 				cmp	(r0),	r3	;is it last one ?
+    467	007442	001402 				beq	130$		;yes
+    468	007444	011000 				mov	(r0),	r0	;take the next
+    469	007446	000774 				br	120$		;continue scanning
+    470	007450				130$:
+    471	007450	010312 				mov	r3,	(r2)	;
+    472	007452	010210 				mov	r2,	(r0)	;--------
+    473	007454	011162 	000002 			mov	(r1),	fn.par(r2) ;store the PAR of font
+    474	007460				999$:
+    475	007460	000207 				return			;
+    476					;================================
+    477	007462				W$FNKI::
+    478	007462	011100 				mov	(r1),	r0	;get font's par
+    479	007464	012703 	020054 			mov	#fnsucc,r3	;
+    480	007470	011302 				mov	(r3),	r2	;point to the 1st font's descr
+    481	007472				10$:
+    482	007472	020227 	020054 			cmp	r2,	#fnsucc	;is it the end of list ?
+    483	007476	001406 				beq	20$		;yes
+    484	007500	020062 	000002 			cmp	r0,	fn.par(r2) ;is it the font we need ? (to kill)
+    485	007504	001405 				beq	30$		;yes
+    486	007506	010203 				mov	r2,	r3	;don't forget about prev.font
+    487	007510	011202 				mov	(r2),	r2	;go to the next ...
+    488	007512	000767 				br	10$		;
+    489	007514				20$:
+    490	007514	005441 				neg	-(r1)		;font not found
+    491	007516	000405 				br	999$		;
+    492	007520				30$:
+    493	007520	011213 				mov	(r2),	(r3)	;remove him from list of fonts
+    494	007522	013712 	020056 			mov	fnfree,	(r2)	;put it if free list
+    495	007526	010237 	020056 			mov	r2,	fnfree	;
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 10-9
+Request processing
+
+    496					;	FREMEM	#1		;free 8K * 1 of RAM
+    497	007532				999$:
+    498	007532	000207 				return			;
+    499					;================================
+    500	007534				W$FNFI::
+    501	007534	010102 				mov	r1,	r2	;
+    502	007536	005722 				tst	(r2)+		;point to name of needed font
+    503	007540	012703 	020054 			mov	#fnsucc,r3	;
+    504	007544	011304 				mov	(r3),	r4	;
+    505	007546				10$:
+    506	007546	020427 	020054 			cmp	r4,	#fnsucc	;end of list
+    507	007552	001415 				beq	30$		;yes
+    508	007554	016437 	000002 	161234 		mov	fn.par(r4), @#ur6 ;map the font
+    509								;compare names
+    510	007562	010200 				mov	r2,	r0	;we need
+    511	007564	012705 	141006 			mov	#fn.nam+140000, r5 ;it's name
+    512	007570				20$:
+    513	007570	105715 				tstb	(r5)		;end of it's name
+    514	007572	001407 				beq	40$		;OK
+    515	007574	122025 				cmpb	(r0)+,	(r5)+	;
+    516	007576	001774 				beq	20$		;
+    517	007600	010403 				mov	r4,	r3	;go to next font
+    518	007602	011404 				mov	(r4),	r4	;
+    519	007604	000760 				br	10$		;
+    520	007606				30$:
+    521	007606	005441 				neg	-(r1)		;error return
+    522	007610	000402 				br	999$		;
+    523	007612				40$:
+    524	007612	016411 	000002 			mov	fn.par(r4), (r1);return it's PAR
+    525	007616				999$:
+    526	007616	000207 				return			;
+    527					;================================
+    528	007620				W$FNLO::
+    529	007620	010102 				mov	r1,	r2	;save user addr
+    530	007622	012100 				mov	(r1)+,	r0	;is it the 1st ?
+    531	007624	001406 				beq	10$		;yes
+    532	007626	011000 				mov	(r0),	r0	;point to next
+    533	007630	020027 	020054 			cmp	r0,	#fnsucc	;is it end of list ?
+    534	007634	001004 				bne	20$		;no
+    535	007636	005012 				clr	(r2)		;tell user about the END !
+    536	007640	000412 				br	999$		;
+    537	007642				10$:
+    538	007642	013700 	020054 			mov	fnsucc,	r0	;take pointer to 1st
+    539									;r1 - name's addr (in user)
+    540	007646				20$:
+    541	007646	010012 				mov	r0,	(r2)	;return user cur.font descr's addr
+    542	007650	016037 	000002 	161234 		mov	fn.par(r0), @#ur6 ;map the font
+    543	007656	012702 	141006 			mov	#fn.nam+140000, r2 ;point to font's name
+    544	007662				30$:
+    545	007662	112221 				movb	(r2)+,	(r1)+	;
+    546	007664	001376 				bne	30$		;
+    547	007666				999$:
+    548	007666	000207 				return			;
+    549					;================================
+    550	007670				W$VWLO::
+    551	007670	011100 				mov	(r1), r0	;take win-num
+    552	007672	032700 	177601 			bit	#^C176,	r0
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 10-10
+Request processing
+
+    553	007676	001021 				bne	999$
+    554	007700	016003 	020154 			mov	wdtbl(r0),r3
+    555	007704	001416 				beq	999$
+    556	007706	016303 	177754 			mov	-vw.tar(r3),	r3	;
+    557	007712	062703 	000024 			add	#vw.tar,	r3	;
+    558	007716	062701 	000022 		        add	#vw.tar-2, r1 ;
+    559	007722	012700 	000010 			mov	#vw.tar-vw.area/2, r0	;
+    560	007726				10$:			;copy view's descr to user
+    561	007726	014341 				mov	-(r3), -(r1)	;
+    562	007730	077002 				sob	r0, 10$		;
+    563	007732	116300 	000027 			movb	vw.num-vw.area(r3), r0	;
+    564	007736	010041 				mov	r0,	-(r1)	;
+    565	007740	000207 				return			;
+    566	007742				999$:
+    567	007742	005141 				com	-(r1)		;
+    568	007744	000207 				return			;
+    569
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 11
+Request processing
+
+      1						.include	"wd4.mac"
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 12
+Request processing
+
+		140000 			fnwind  = 140000
+      2		161234 			fnpar	= ur6
+      3		060000 			arwind	= 60000
+      4		161226 			arpar	= ur3
+      5		000012 			hf=10.
+      6		000024 			hfmax	=20.
+      7
+      8	007746				ccerr:
+      9	007746	005141 				com	-(r1)		;
+     10	007750	000207 				return			;
+     11	007752				w$prin:
+     12	007752	013700 	020054 			mov	fnsucc,	r0	;
+     13	007756	001773 				beq	ccerr		;
+     14	007760	016037 	000002 	161234 		mov	fn.par(r0), @#fnpar ;
+     15	007766	011103 				mov	(r1),	r3	; num of area-desc.
+     16	007770	001766 				beq	ccerr		;
+     17	007772	032703 	177601 			bit	#^c176,	r3	;
+     18	007776	001363 				bne	ccerr		;
+     19	010000	016303 	020354 			mov	artbl(r3),r3
+     20	010004	001760 				beq	ccerr		;
+     21	010006	005721 				tst	(r1)+		;
+     22	010010	062703 	000004 			add	#ar.lins,r3
+     23
+     24	010014	012327 				mov	(r3)+,	(pc)+	; lins
+     25	010016				ymax:	.blkw	1		;
+     26	010020	012327 				mov	(r3)+,	(pc)+	; slen
+     27	010022				xmax:	.blkw	1		;
+     28	010024	010327 				mov	r3,	(pc)+	;
+     29	010026				c.tas:	.blkw	1		;
+     30	010030	116300 	000002 			movb	2(r3),	r0	; V.MOD
+     31	010034	042700 	177774 			bic	#177774,r0
+     32	010040	022700 	000002 			cmp	#2,	r0	;vm40 ?
+     33	010044	001001 				bne	10$
+     34	010046	005200 				inc	r0		;--> vm40
+     35	010050				10$:
+     36	010050	010005 				mov	r0,	r5
+     37	010052	006300 				asl	r0
+     38	010054	006300 				asl	r0
+     39	010056	010027 				mov	r0,	(pc)+	;
+     40	010060				c.mod:	.blkw	1
+     41	010062	005205 				inc	r5
+     42	010064	010527 				mov	r5,	(pc)+
+     43	010066				c.slen:	.blkw	1
+     44	010070	011127 				mov	(r1),	(pc)+	; y0
+     45	010072				y0:	.blkw	1		;
+     46	010074	012127 				mov	(r1)+,	(pc)+	;
+     47	010076				yi:	.blkw	1		;
+     48	010100	011127 				mov	(r1),	(pc)+	; x0
+     49	010102				x0:	.blkw	1		;
+     50	010104	012127 				mov	(r1)+,	(pc)+	;
+     51	010106				xi:	.blkw	1		;
+     52									;
+     53	010110	011101 				mov	(r1),	r1	; str addr /user/
+     54					;	mov	@#hr4,	@#ur4	;
+     55					;	mov	@#hr5,	@#ur5	;
+     56	010112	005000 				clr	r0		;
+     57	010114					GETPAR	#promap
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 12-1
+Request processing
+
+     58	010124	073027 	000003 			ashc	#3,	r0	;
+     59	010130	006300 				asl	r0		;
+     60	010132	006001 				ror	r1		;
+     61	010134	006001 				ror	r1		;
+     62	010136	000261 				sec			;
+     63	010140	006001 				ror	r1		; r1 - str.addr /wd/
+     64					;	add	@proadr,r0	;
+     65					;	mov	p.ur0(r0),r3	;
+     66					;	mov	p.ur0+2(r0),@#ur5
+     67					;	mov	r3,	@#ur4	;
+     68	010142	016037 	001320 	161230 		mov	promap  (r0), @#ur4 ;
+     69	010150	016037 	001322 	161232 		mov	promap+2(r0), @#ur5 ;
+     70	010156	012702 	011166 			mov	#mapstk,r2	;
+     71	010162	012705 	000012 			mov	#hf,	r5
+     72	010166	004737 	010764 			call	cmap
+     73	010172	005027 				clr	(pc)+
+     74	010174				c.xor:	.blkw	1
+     75
+     76					;============================================================
+     77	010176				ccc:				;
+     78	010176	012746 	010176 			mov	#ccc,	-(sp)	; for RETURN
+     79	010202	012702 	011166 			mov	#mapstk,r2	;
+     80	010206	012705 	000012 			mov	#hf,	r5	;
+     81	010212				cret:
+     82	010212	012700 	160000 			mov	#fnwind/2,r0	;
+     83	010216	152100 				bisb	(r1)+,	r0	;
+     84	010220	006300 				asl	r0		;
+     85	010222	032700 	000700 			bit	#340*2,	r0	; cmd ?
+     86	010226	001002 				bne	10$		;
+     87	010230	000170 	050324 			jmp	@ccmd-fnwind(r0);
+     88	010234				10$:				;
+     89	010234	011000 				mov	(r0),	r0	;
+     90	010236	062700 	140000 			add	#fnwind,r0	;
+     91	010242	063737 	010066 	010106 	c.ccc:	add	c.slen,	xi
+     92	010250	023737 	010022 	010106 		cmp	xmax,	xi	;
+     93	010256	103755 				bcs	cret		;
+     94	010260	013704 	010174 			mov	c.xor,	r4
+     95	010264	013703 	010060 			mov	c.mod,	r3
+     96	010270	000173 	010304 			jmp	@c.jmp(r3)
+     97
+     98	010274				c.ufnt:
+     99	010274	010100 				mov	r1,	r0
+    100	010276	060501 				add	r5,	r1
+    101	010300	000760 				br	c.ccc
+    102					;----------------------------------------
+    103	010302				.print
+    104	010302	000240 			.iif ne <. & 2> nop
+    105	010304	010304 			.print c.jmp
+    106	010304	010724 	010744 	010424 	c.jmp:	.word	C1A,C1B,C2A,C2B,ETX,ETX,C4A,C4B
+	010312	010432 	011166 	011166
+	010320	010600 	010606
+    107
+    108					;----------------------------------------
+    109	010324				ccmd:
+    110	010324	011166 	011172 	011254 		.word	etx,	c.font,	c.x,	c.y,	c.neg,	c.bis,	c.mov,	c.col
+	010332	011314 	011332 	011344
+	010340	011354 	011364
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 12-2
+Request processing
+
+    111	010344	011520 	011526 	011220 		.word	c.000,	c.377,	c.cx,	c.cy,	c.ufnt,	cret,	cret,	cret
+	010352	011270 	010274 	010212
+	010360	010212 	010212
+    112	010364	010212 	010212 	010212 		.word	cret,	cret,	cret,	cret,	cret,	cret,	cret,	cret
+	010372	010212 	010212 	010212
+	010400	010212 	010212
+    113	010404	010212 	010212 	010212 		.word	cret,	cret,	cret,	cret,	cret,	cret,	cret,	cret
+	010412	010212 	010212 	010212
+	010420	010212 	010212
+    114
+    115					;----------------------------------------
+    116	010424				C2A:
+    117	010424	005037 	010602 			clr	c.m4
+    118	010430	000403 				br	c2ab
+    119	010432				C2B:
+    120	010432	012737 	000001 	010602 		mov	#1,	c.m4
+    121	010440				c2ab:
+    122					.ENABL	LSB
+    123	010440	010146 				mov	r1,	-(sp)
+    124	010442				1$:
+    125	010442	112004 				movb	(r0)+,	r4	;
+    126	010444	013701 	010174 			mov	c.xor,	r1
+    127	010450	074104 				xor	r1,	r4
+    128	010452	014237 	161226 			mov	-(r2),	@#arpar	;
+    129	010456	053737 	010602 	161226 		bis	c.m4,	@#arpar
+    130	010464	014203 				mov	-(r2),	r3
+    131
+    132		000010 			.rept	8.
+    133						ror	r4
+    134						ror	r1
+    135						asr	r1
+    136					.endr
+    137	010546	012704 				mov	(pc)+,	r4
+    138	010550				col2b:	.blkw	1
+    139	010552	040104 				bic	r1,	r4
+    140	010554	042701 				bic	(pc)+,	r1
+    141	010556				col2f:	.blkw	1
+    142	010560	050401 				bis	r4,	r1
+    143	010562	110123 				movb	r1,	(r3)+
+    144	010564	000301 				swab	r1
+    145	010566	110123 				movb	r1,	(r3)+
+    146	010570	010312 				mov	r3,	(r2)
+    147	010572	077555 				sob	r5,	1$
+    148	010574	012601 				mov	(sp)+,	r1
+    149	010576	000207 				RETURN
+    150
+    151					.DSABL	LSB
+    152					;-------------------------------
+    153
+    154	010600				C4A:
+    155	010600	005027 				clr	(pc)+
+    156	010602				c.m4:	.blkw	1
+    157	010604	000403 				br	c4ab
+    158	010606	012737 	000002 	010602 	C4B:	mov	#2,	c.m4
+    159	010614				c4ab:
+    160					.ENABL	LSB
+    161	010614	010146 				mov	r1,	-(sp)
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 12-3
+Request processing
+
+    162	010616				1$:
+    163	010616	112004 				movb	(r0)+,	r4	;
+    164	010620	013701 	010174 			mov	c.xor,	r1
+    165	010624	074104 				xor	r1,	r4
+    166	010626	014237 	161226 			mov	-(r2),	@#arpar	;
+    167	010632	053737 	010602 	161226 		bis	c.m4,	@#arpar
+    168	010640	014203 				mov	-(r2),	r3
+    169	010642	012737 	000004 	010710 		mov	#4,	10$
+    170	010650				4$:
+    171	010650	012701 				mov	(pc)+,	r1
+    172	010652				col40:	.blkw	1
+    173	010654	006004 				ror	r4
+    174	010656	103004 				bcc	5$
+    175	010660	042701 	000017 			bic	#17,	r1
+    176	010664	052701 				bis	(pc)+,	r1
+    177	010666				col4l:	.blkw	1
+    178	010670	006004 			5$:	ror	r4
+    179	010672	103004 				bcc	6$
+    180	010674	042701 	000360 			bic	#360,	r1
+    181	010700	052701 				bis	(pc)+,	r1
+    182	010702				col4h:	.blkw	1
+    183	010704	110123 			6$:	movb	r1,	(r3)+	;
+    184	010706	005327 				dec	(pc)+
+    185	010710				10$:	.blkw	1
+    186	010712	001356 				bne	4$
+    187
+    188	010714	010312 				mov	r3,	(r2)
+    189	010716	077541 				sob	r5,	1$
+    190	010720	012601 				mov	(sp)+,	r1
+    191	010722	000207 				RETURN
+    192					.DSABL	LSB
+    193					;-------------------------------
+    194
+    195	010724				C1A:
+    196	010724				10$:
+    197	010724	112003 				movb	(r0)+,	r3	;
+    198	010726	074403 				xor	r4,	r3
+    199	010730	014237 	161226 			mov	-(r2),	@#arpar	;
+    200	010734	110352 				movb	r3,	@-(r2)	;
+    201	010736	005212 				inc	(r2)		;
+    202	010740	077507 				sob	r5,	10$	;
+    203	010742	000207 				RETURN
+    204
+    205					;-------------------------------
+    206	010744				C1B:
+    207	010744				10$:
+    208	010744	112003 				movb	(r0)+,	r3	;
+    209	010746	074403 				xor	r4,	r3
+    210	010750	014237 	161226 			mov	-(r2),	@#arpar	;
+    211	010754	150352 				bisb	r3,	@-(r2)	;
+    212	010756	005212 				inc	(r2)		;
+    213	010760	077507 				sob	r5,	10$	;
+    214	010762	000207 				RETURN
+    215
+    216					;-------------------------------
+    217	010764				cmap:				;
+    218	010764	013703 	010076 			mov	yi,	r3	;r2 = mapstk
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 12-4
+Request processing
+
+    219	010770	060503 				add	r5,	r3	;r5 = hf
+    220	010772	023703 	010016 			cmp	ymax,	r3	;
+    221	010776	103002 				bcc	5$		;
+    222	011000	013703 	010016 			mov	ymax,	r3	;
+    223	011004				5$:				;
+    224	011004	160503 				sub	r5,	r3	;
+    225	011006	006303 				asl	r3		;
+    226	011010	006303 				asl	r3		;
+    227	011012	063703 	010026 			add	c.tas,	r3	;
+    228	011016	013700 	010106 			mov	xi,	r0	;
+    229	011022				10$:				;
+    230	011022	012304 				mov	(r3)+,	r4	; tas.addr
+    231	011024	052704 	060000 			bis	#arwind,r4	; virt addr
+    232	011030	060004 				add	r0,	r4	; + sx
+    233	011032	012342 				mov	(r3)+,	-(r2)	; save par
+    234	011034	042712 	000003 			bic	#3,	(r2)	; clr	mask bits
+    235	011040	010442 				mov	r4,	-(r2)	; save virt addr
+    236	011042	077511 				sob	r5,	10$	;
+    237	011044	000207 				return			;
+    238									;
+    239	011046				.blkw	2*hfmax			;
+    240	011166				mapstk:				;
+    241					;-------------------------------
+    242	011166	005726 			etx:	tst	(sp)+
+    243	011170	000207 				return			;
+    244					;-------------------------------
+    245	011172				c.font:				;
+    246	011172	112100 				movb	(r1)+,	r0	;
+    247	011174	012702 	020054 			mov	#fnsucc,r2	;
+    248	011200				10$:
+    249	011200	011202 				mov	(r2),	r2	;
+    250	011202	001405 				beq	20$		;
+    251	011204	005300 				dec	r0		;
+    252	011206	002374 				bge	10$		;
+    253	011210	016237 	000002 	161234 		mov	fn.par(r2),fnpar	;
+    254	011216				20$:
+    255	011216	000207 				RETURN
+    256					;-------------------------------
+    257	011220				c.cx:
+    258	011220	112103 				movb	(r1)+,	r3
+    259	011222	001416 				beq	c.x00
+    260	011224	070337 	010066 			mul	c.slen,	r3
+    261	011230	060337 	010106 		c.xxx:	add	r3,	xi
+    262	011234	023737 	010106 	010102 		cmp	xi,	x0
+    263	011242	103406 				bcs	c.x00
+    264	011244				14$:
+    265	011244	005742 				tst	-(r2)		;r2 = mapstk
+    266	011246	060342 				add	r3,	-(r2)	;
+    267	011250	077503 				sob	r5,	14$	;r5 = hf
+    268	011252	000207 				RETURN
+    269	011254				c.x:				;
+    270	011254	112103 				movb	(r1)+,	r3	;
+    271	011256	001364 				bne	c.xxx		;
+    272	011260	013737 	010102 	010106 	c.x00:	mov	x0,	xi	;
+    273	011266	000417 				br	c.y999		;
+    274					;-------------------------------
+    275	011270				c.cy:
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 12-5
+Request processing
+
+    276	011270	112103 				movb	(r1)+,	r3
+    277	011272	070305 				mul	r5,	r3	; r5 = hf
+    278	011274	001411 				beq	c.y00
+    279	011276	060337 	010076 		c.yyy:	add	r3,	yi
+    280	011302	023737 	010076 	010072 		cmp	yi,	y0
+    281	011310	103403 				bcs	c.y00
+    282	011312	000405 				br	c.y999
+    283	011314				c.y:				;
+    284	011314	112103 				movb	(r1)+,	r3	;
+    285	011316	001367 				bne	c.yyy		;
+    286	011320				c.y00:				;
+    287	011320	013737 	010072 	010076 		mov	y0,	yi	;
+    288	011326	000137 	010764 		c.y999:	jmp	cmap		;
+    289
+    290					;-------------------------------
+    291	011332				c.neg:
+    292	011332	111137 	010174 			movb	(r1),	c.xor
+    293	011336	112137 	010175 			movb	(r1)+,	c.xor+1
+    294	011342	000207 				RETURN
+    295
+    296	011344	052737 	000002 	010060 	c.bis:	bis	#2,	c.mod
+    297	011352	000207 				RETURN
+    298
+    299	011354	042737 	000002 	010060 	c.mov:	bic	#2,	c.mod
+    300	011362	000207 				RETURN
+    301
+    302	011364				c.col:
+    303	011364	005000 				clr	r0
+    304	011366	152100 				bisb	(r1)+,	r0	;0 0 f b
+    305	011370	032737 	000004 	010066 		bit	#4,	c.slen
+    306	011376	001420 				beq	20$
+    307
+    308	011400	010005 				mov	r0,	r5
+    309	011402	010004 				mov	r0,	r4
+    310	011404	072027 	000004 			ash	#4,	r0	;0 f b 0
+    311	011410	042705 	177760 			bic	#^C17,	r5	;0 0 0 b
+    312	011414	050500 				bis	r5,	r0	;0 f b b
+    313	011416	010037 	010652 			mov	r0,	col40	;
+    314	011422	000300 				swab	r0		;b b 0 f
+    315	011424	010037 	010666 			mov	r0,	col4l
+    316	011430	040504 				bic	r5,	r4	;0 0 f 0
+    317	011432	010437 	010702 			mov	r4,	col4h
+    318	011436	000207 				RETURN
+    319	011440				20$:
+    320	011440	012703 	052525 			mov	#^B0101010101010101,	r3
+    321	011444	010304 				mov	r3,	r4
+    322	011446	010305 				mov	r3,	r5
+    323	011450	005103 				com	r3
+    324	011452	006200 				asr	r0
+    325	011454	103401 				bcs	22$
+    326	011456	005005 				clr	r5
+    327	011460	006200 			22$:	asr	r0
+    328	011462	103001 				bcc	24$
+    329	011464	050305 				bis	r3,	r5
+    330	011466	010537 	010550 		24$:	mov	r5,	col2b
+    331	011472	072027 	177775 			ash	#-3,	r0
+    332	011476	103401 				bcs	26$
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 12-6
+Request processing
+
+    333	011500	005004 				clr	r4
+    334	011502	006200 			26$:	asr	r0
+    335	011504	103001 				bcc	28$
+    336	011506	050304 				bis	r3,	r4
+    337	011510	005104 			28$:	com	r4
+    338	011512	010437 	010556 			mov	r4,	col2f
+    339	011516	000207 				RETURN
+    340
+    341	011520				c.000:
+    342	011520	005037 	010174 			clr	c.xor
+    343	011524	000207 				RETURN
+    344	011526				c.377:
+    345	011526	012737 	177777 	010174 		mov	#-1,	c.xor
+    346	011534	000207 				RETURN
+    347
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 13
+Request processing
+
+      1						.include	"wd3.mac"
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 14
+Request processing
+
+					;==============================================================
+      2					;	r1	- ptr to USER_TBL+2
+      3	011536				e999$:
+      4	011536	012701 				mov	(pc)+,	r1
+      5	011540				e998$:	.blkw	1
+      6	011542	005141 				com	-(r1)
+      7	011544	000261 				sec
+      8	011546	000207 				return
+      9
+     10	011550				WCHECK::
+     11	011550	010137 	011540 			mov	r1,	e998$
+     12	011554	012703 	012602 			mov	#T.ADDR,r3		;
+     13	011560	012100 				mov	(r1)+,	r0		; check ptr to vw.desc
+     14	011562	016013 	020154 			mov	wdtbl(r0),(r3)		; ptr to view desc
+     15	011566	162723 	000024 			sub	#vw.tar,(r3)+
+     16
+     17	011572	012100 				mov	(r1)+,	r0		; vw.anum
+     18	011574	001760 				beq	e999$
+     19	011576	010023 				mov	r0,	(r3)+		; T.ANUM
+     20	011600	032700 	177601 			bit	#^C176,	r0		; check ptr to area
+     21	011604	001354 				bne	e999$
+     22	011606	016000 	020354 			mov	artbl(r0),r0		; r0 - ptr to area desc
+     23	011612	001751 				beq	e999$
+     24
+     25					;----------------------------------------------------
+     26	011614	062700 	000004 			add	#ar.lins, r0		; update pointer to area descr
+     27
+     28	011620	012105 				mov	(r1)+,	r5		; check VW.ARY
+     29	011622	100001 				bpl	2$
+     30	011624	005005 				clr	r5
+     31	011626	012004 			2$:	mov	(r0)+,	r4		; r4 - ar.lins
+     32	011630	001742 				beq	e999$
+     33	011632	020504 				cmp	r5,	r4		;
+     34	011634	103402 				bcs	4$
+     35	011636	010405 				mov	r4,	r5
+     36	011640	005305 				dec	r5
+     37	011642	010523 			4$:	mov	r5,	(r3)+		; T.ARY
+     38	011644	010437 	012626 			mov	r4,	T.LINS
+     39
+     40	011650	012105 				mov	(r1)+,	r5		; check VW.ARX
+     41	011652	100001 				bpl	10$
+     42	011654	005005 				clr	r5
+     43	011656	012004 			10$:	mov	(r0)+,	r4		; r4 - slen
+     44	011660	010037 	004622 			mov	r0,	t.tar
+     45	011664	042704 	000003 			bic	#3,	r4
+     46	011670	001722 				beq	e999$
+     47	011672	020504 				cmp	r5,	r4		;
+     48	011674	103402 				bcs	12$
+     49	011676	010405 				mov	r4,	r5
+     50	011700	005305 				dec	r5
+     51	011702				12$:
+     52	011702	042705 	000001 			bic	#1,	r5
+     53	011706	010523 				mov	r5,	(r3)+		; T.ARX
+     54	011710	010437 	012624 			mov	r4,	T.SLEN
+     55
+     56	011714	012704 	000453 			mov	#scrlins-1,r4
+     57	011720	012105 				mov	(r1)+,	r5		; check VW.SY1
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 14-1
+Request processing
+
+     58	011722	100001 				bpl	14$
+     59	011724	005005 				clr	r5
+     60	011726	020405 			14$:	cmp	r4,	r5
+     61	011730	103001 				bcc	16$
+     62	011732	010405 				mov	r4,	r5
+     63	011734	042705 	000003 		16$:	bic	#3,	r5
+     64	011740	010523 				mov	r5,	(r3)+		; T.SY1
+     65
+     66	011742	012102 				mov	(r1)+,	r2		; check VW.SY2
+     67	011744	100001 				bpl	20$
+     68	011746	010502 				mov	r5,	r2
+     69	011750	020402 			20$:	cmp	r4,	r2
+     70	011752	103001 				bcc	22$
+     71	011754	010402 				mov	r4,	r2
+     72	011756	020205 			22$:	cmp	r2,	r5
+     73	011760	103001 				bcc	24$
+     74	011762	010502 				mov	r5,	r2
+     75	011764	052702 	000003 		24$:	bis	#3,	r2
+     76	011770	010223 				mov	r2,	(r3)+		; T.SY2
+     77
+     78	011772	012704 	000031 			mov	#bmax-1,r4
+     79	011776	012105 				mov	(r1)+,	r5		; check VW.SX1
+     80	012000	100001 				bpl	26$
+     81	012002	005005 				clr	r5
+     82	012004	020405 			26$:	cmp	r4,	r5
+     83	012006	103001 				bcc	30$
+     84	012010	010405 				mov	r4,	r5
+     85	012012	010523 			30$:	mov	r5,	(r3)+		; T.SX1
+     86
+     87	012014	012102 				mov	(r1)+,	r2		; check VW.SX2
+     88	012016	100001 				bpl	32$
+     89	012020	005002 				clr	r2
+     90	012022	020402 			32$:	cmp	r4,	r2
+     91	012024	103001 				bcc	34$
+     92	012026	010402 				mov	r4,	r2
+     93	012030	020205 			34$:	cmp	r2,	r5
+     94	012032	103001 				bcc	36$
+     95	012034	010502 				mov	r5,	r2
+     96	012036	010223 			36$:	mov	r2,	(r3)+		; T.SX2
+     97
+     98	012040	012105 				mov	(r1)+,	r5		;check VW.DEN (HD)
+     99	012042	122705 	000002 			cmpb	#2,	r5
+    100	012046	001005 				bne	40$
+    101	012050	032760 	000003 	000002 		bit	#VM2+VM40,2(r0)		;r0 - ^TAS
+    102	012056	001001 				bne	40$
+    103	012060	105305 				decb	r5
+    104	012062	103001 			40$:	bcc	42$
+    105	012064	105005 				clrb	r5
+    106	012066				42$:
+    107	012066	105705 				tstb	r5
+    108	012070	001403 				beq	43$
+    109	012072	042737 	000003 	012610 		bic	#3,	t.arx		;
+    110	012100				43$:
+    111	012100	020527 	001400 			cmp	r5,	#3*400
+    112	012104	103402 				bcs	44$
+    113	012106	042705 	177400 			bic	#177400,	r5
+    114	012112	010523 			44$:	mov	r5,	(r3)+		; T.DEN
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 14-2
+Request processing
+
+    115					;------------------------------------------------
+    116	012114	105105 				comb	r5			; r5 = -( HD+1 )
+    117	012116	012300 				mov	(r3)+,	r0		; T.SLEN
+    118	012120	072005 				ash	r5,	r0		; r0 = SLEN shr (HD+1)
+    119	012122	105405 				negb	r5			; r5 = HD+1
+    120
+    121	012124	013702 	012616 			mov	T.SX1,	r2
+    122	012130	060002 				add	r0,	r2
+    123	012132	005302 				dec	r2		;
+    124	012134	020237 	012620 			cmp	r2,	T.SX2		; SX2 <= SX1 + SLEN shr (HD+1) ?
+    125	012140	103002 				bcc	50$
+    126	012142	010237 	012620 			mov	r2,	T.SX2
+    127	012146				50$:
+    128	012146	163702 	012620 			sub	T.SX2,	r2	;
+    129	012152	072205 				ash	r5,	r2	;r2={SX1+(SLEN shr (HD+1))-SX2} shl (HD+1)
+    130	012154	020237 	012610 			cmp	r2,	T.ARX
+    131	012160	103002 				bcc	54$
+    132	012162	010237 	012610 			mov	r2,	T.ARX
+    133	012166				54$:
+    134
+    135	012166	012301 				mov	(r3)+,	r1		; T.LINS
+    136	012170	005301 				dec	r1			;;;
+    137	012172	006301 				asl	r1
+    138	012174	006301 				asl	r1			; t.lins*4
+    139	012176	000305 				swab	r5
+    140	012200	105405 				negb	r5
+    141	012202	072105 				ash	r5,	r1		; r1 - LINS*4 shr VD
+    142									;r1 - high of area in v-lines due to V-dens
+    143
+    144	012204	013704 	012612 			mov	T.SY1,	r4
+    145	012210	060104 				add	r1,	r4
+    146	012212	020437 	012614 			cmp	r4,	T.SY2		; SY2 <= SY1 + ( LINS*4 shr VD )  ?
+    147	012216	103002 				bcc	60$
+    148	012220	010437 	012614 			mov	r4,	T.SY2		; SY2 := ^^^^^
+    149	012224				60$:
+    150	012224	163704 	012614 			sub	T.SY2,	r4
+    151	012230	006204 				asr	r4
+    152	012232	006204 				asr	r4
+    153	012234	105405 				negb	r5
+    154	012236	072405 				ash	r5,	r4
+    155	012240	020437 	012606 			cmp	r4,	T.ARY ; ARY <= (SY1 + (LINS*4 shr VD) - SY2)/4 shl VD ?
+    156	012244	103002 				bcc	64$
+    157	012246	010437 	012606 			mov	r4,	T.ARY
+    158	012252				64$:
+    159					;--------------------------------------------
+    160	012252	012700 	012602 			mov	#T.ADDR,r0
+    161	012256	005004 				clr	r4			; redraw flg
+    162	012260	012001 				mov	(r0)+,	r1		; r1 - ptr to vw.desc
+    163	012262	022121 				cmp	(r1)+,	(r1)+		; vw.succ,vw.pred
+    164	012264	021011 				cmp	(r0),	(r1)		; VW.ANUM
+    165	012266	001401 				beq	70$
+    166	012270	005204 				inc	r4
+    167	012272	012021 			70$:	mov	(r0)+,	(r1)+
+    168
+    169	012274	021011 				cmp	(r0),	(r1)		; VW.ARY
+    170	012276	001401 				beq	74$
+    171	012300	005204 				inc	r4
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 14-3
+Request processing
+
+    172	012302	012021 			74$:	mov	(r0)+,	(r1)+
+    173
+    174	012304	021011 				cmp	(r0),	(r1)		; VW.ARX
+    175	012306	001401 				beq	80$
+    176	012310	005204 				inc	r4
+    177	012312	012021 			80$:	mov	(r0)+,	(r1)+
+    178
+    179	012314	000304 				swab	r4
+    180	012316	021011 				cmp	(r0),	(r1)		; VW.SY1
+    181	012320	001404 				beq	82$
+    182	012322	005204 				inc	r4
+    183	012324	103402 				bcs	82$
+    184	012326	011113 				mov	(r1),	(r3)		; T.RDY1
+    185	012330	000401 				br	84$
+    186	012332	011013 			82$:	mov	(r0),	(r3)
+    187	012334	006213 			84$:	asr	(r3)
+    188	012336	006223 				asr	(r3)+
+    189	012340	012021 				mov	(r0)+,	(r1)+
+    190
+    191	012342	021011 				cmp	(r0),	(r1)		; VW.SY2
+    192	012344	001404 				beq	92$
+    193	012346	005204 				inc	r4
+    194	012350	103002 				bcc	92$
+    195	012352	011113 				mov	(r1),	(r3)		; T.RDY2
+    196	012354	000401 				br	94$
+    197	012356	011013 			92$:	mov	(r0),	(r3)
+    198	012360	006213 			94$:	asr	(r3)
+    199	012362	006223 				asr	(r3)+
+    200	012364	012021 				mov	(r0)+,	(r1)+
+    201
+    202	012366	021011 				cmp	(r0),	(r1)		; VW.SX1
+    203	012370	001404 				beq	102$
+    204	012372	005204 				inc	r4
+    205	012374	103402 				bcs	102$
+    206	012376	011123 				mov	(r1),	(r3)+		; T.RDX1
+    207	012400	000401 				br	104$
+    208	012402	011023 			102$:	mov	(r0),	(r3)+
+    209	012404	012021 			104$:	mov	(r0)+,	(r1)+
+    210
+    211	012406	021011 				cmp	(r0),	(r1)		; VW.SX2
+    212	012410	001404 				beq	112$
+    213	012412	005204 				inc	r4
+    214	012414	103002 				bcc	112$
+    215	012416	011123 				mov	(r1),	(r3)+		; T.RDX2
+    216	012420	000401 				br	114$
+    217	012422	011023 			112$:	mov	(r0),	(r3)+
+    218	012424	012021 			114$:	mov	(r0)+,	(r1)+
+    219
+    220										; VW.DEN
+    221	012426	021011 				cmp	(r0),	(r1)
+    222	012430	001401 				beq	120$
+    223	012432	005204 				inc	r4
+    224	012434	012021 			120$:	mov	(r0)+,	(r1)+
+    225	012436	000304 				swab	r4
+    226	012440	010413 				mov	r4,	(r3)		; T.RDFLG
+    227					;----------------------------------------
+    228	012442	013721 	004622 			mov	t.tar,	(r1)+			;VW.TAR
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 14-4
+Request processing
+
+    229
+    230	012446	013704 	012622 			mov	t.den,	r4		;
+    231	012452	110400 				movb	r4,	r0		;
+    232	012454	005200 				inc	r0			; vd52 or vd104 or vd208
+    233	012456	000300 				swab	r0			;
+    234	012460	150400 				bisb	r4,	r0		; vd - 0,1,2
+    235	012462	010021 				mov	r0,	(r1)+		;VW.HD
+    236
+    237	012464	013700 	012616 			mov	T.SX1,	r0
+    238	012470	072004 				ash	r4,	r0
+    239	012472	006237 	012610 			asr	T.ARX
+    240	012476	163700 	012610 			SUB	T.ARX,	r0
+    241	012502	010021 				mov	r0,	(r1)+		;VW.XOF:= (SX1 shl HD) - ARX/2
+    242
+    243	012504	000304 				swab	r4			;
+    244	012506	110421 				movb	r4,	(r1)+		; VW.YD
+    245	012510	112137 	012642 			movb	(r1)+,	t.num		; VW.NUM
+    246
+    247	012514	013700 	012612 			mov	T.SY1,	r0		; VW.YOF
+    248	012520	072004 				ash	r4,	r0		;
+    249	012522	006200 				asr	r0
+    250	012524	006200 				asr	r0
+    251	012526	163700 	012606 			SUB	T.ARY,	r0
+    252	012532	010021 				mov	r0,	(r1)+		;VW.YOF:= (SY1 shl VD) - ARY
+    253
+    254	012534	012704 	177774 			mov	#-4,	r4
+    255	012540	113700 	012623 			movb	t.den+1,r0
+    256	012544	072027 	000003 			ash	#3,	r0
+    257	012550	060007 				add	r0,	PC
+    258	012552	010421 				mov	r4,	(r1)+
+    259	012554	010421 				mov	r4,	(r1)+
+    260	012556	010421 				mov	r4,	(r1)+
+    261	012560	000407 				br	300$
+    262	012562	010421 				mov	r4,	(r1)+
+    263	012564	005021 				clr	(r1)+
+    264	012566	010421 				mov	r4,	(r1)+
+    265	012570	000403 				br	300$
+    266	012572	005021 				clr	(r1)+
+    267	012574	005021 				clr	(r1)+
+    268	012576	005021 				clr	(r1)+
+    269	012600				300$:
+    270	012600	000207 				return
+    271
+    272	012602				T.ADDR:	.blkw	1
+    273	012604				T.AREA:	.blkw	1
+    274	012606				T.ARY:	.blkw	1
+    275	012610				T.ARX:	.blkw	1
+    276	012612				T.SY1:	.blkw	1
+    277	012614				T.SY2:	.blkw	1
+    278	012616				T.SX1:	.blkw	1
+    279	012620				T.SX2:	.blkw	1
+    280	012622				T.DEN:	.blkw	1
+    281
+    282	012624				T.SLEN:	.blkw	1
+    283	012626				T.LINS:	.blkw	1
+    284
+    285	012630	000000 			T.RDY1:	.word	0
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 14-5
+Request processing
+
+    286	012632	000112 			T.RDY2:	.word	loglins-1
+    287	012634	000000 			T.RDX1:	.word	0
+    288	012636	000031 			T.RDX2:	.word	bmax-1
+    289	012640	000401 			T.RDFLG:.word	401
+    290	012642	000000 			t.num:	.word	0
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 15
+Request processing
+
+      1						.include	"wd5.mac"
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 16
+Request processing
+
+					;============================================================;
+      2					;	cmd format
+      3					;------------------------------------------
+      4		000200 			v.mask	=^o200	; mask
+      5		000100 			v.dx	=^O100	; dir. x = back
+      6		000040 			v.dy	=^O040	; dir. y = up
+      7		000030 			v.vp	=^O030	; vram to process ram
+      8		000020 			v.vv	=^O020	; vram to vram
+      9		000010 			v.pv	=^O010	; process ram to vram
+     10		000000 			v.cv	=^O000	; const to vram
+     11		000006 			v.bic	=^O006	; dst:=dst and not src
+     12		000004 			v.bis	=^O004	; dst:=dst or src
+     13		000002 			v.xor	=^O002	; dst:=dst xor src
+     14		000000 			v.mov	=^O000	; dst:=src
+     15		000001 			v.byte	=^O001	; move byte
+     16					;----------------------------------------
+     17					;	request format
+     18					;----------------------------------------
+     19					;	.byte	ar1num,	cmd	;
+     20					;	.word	ar1y		; dst
+     21					;	.word	ny		;
+     22					;	.word	ar1x		;
+     23					;	.word	nx		;
+     24					;	.word	ar2num	/ buf addr / const	; src
+     25					;	.word	ar2y	/ buf len		;
+     26					;	.word	ar2x	/ buf wid		;
+     27					;
+     28					;HBMOVE	= ^O50	;high-speed video-block move
+     29					;.macro	HBMOVE	area,ar1num,cmd,ar1y,ny,ar1x,nx,ar2num,ar2y,ar2x
+     30					;============================================================
+     31		161226 				ar1par	= ur3
+     32		060000 				ar1win	= 60000
+     33		161230 				ar2par	= ur4
+     34		100000 				ar2win	=100000
+     35		161232 				prcpar	= ur5	;& ur6
+     36		120000 				prcwin	=120000
+     37
+     38	012644				.print ;hbmv
+     39	012644				W$HBMV:
+     40	012644	112100 				movb	(r1)+,	r0	; ar1
+     41	012646	003513 				ble	hb.err		;
+     42	012650	016003 	020354 			mov	artbl(r0),r3	;
+     43	012654	001510 				beq	hb.err
+     44	012656	022323 				cmp	(r3)+,	(r3)+	;
+     45	012660	012327 				mov	(r3)+,	(pc)+	;ar1_lins
+     46	012662				.print ;a1lin,a1wid
+     47	012662	000000 			a1lin:	.word	0		;
+     48	012664	012327 				mov	(r3)+,	(pc)+	;ar1_slen
+     49	012666	000000 			a1wid:	.word	0		;
+     50					;................................
+     51	012670	005005 				clr	r5
+     52	012672	112100 				movb	(r1)+,	r0	;cmd
+     53	012674	100402 				bmi	10$		;mask mode
+     54	012676	012705 	000003 			mov	#3,	r5	;
+     55	012702	010527 			10$:	mov	r5,	(pc)+	;
+     56	012704				.print ;a1mask
+     57	012704	000000 			a1mask:	.word	0		;ar1_mask
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 16-1
+Request processing
+
+     58					;................................
+     59	012706	012105 				mov	(r1)+,	r5	;ar1_y0
+     60	012710	100472 				bmi	hb.err		;
+     61	012712	012104 				mov	(r1)+,	r4	;ar1_ny
+     62	012714	060504 				add	r5,	r4	;ar1_y1
+     63	012716	023704 	012662 			cmp	a1lin,	r4	;
+     64	012722	103002 				bcc	10$		;
+     65	012724	013704 	012662 			mov	a1lin,	r4	;
+     66	012730	160504 			10$:	sub	r5,	r4	;
+     67	012732	010427 				mov	r4,	(pc)+	;
+     68	012734				.print ;a1ny
+     69	012734	000000 			a1ny:	.word	0		;
+     70	012736	003457 				ble	hb.err
+     71	012740	032700 	000040 			bit	#v.dy,	r0	;y+?
+     72	012744	001401 				beq	20$		;yes
+     73	012746	060405 				add	r4,	r5	;y0:=y1
+     74	012750				20$:				;
+     75	012750	006305 				asl	r5		;
+     76	012752	006305 				asl	r5		;
+     77	012754	060503 				add	r5,	r3	;^tas1
+     78					;................................
+     79	012756	012105 				mov	(r1)+,	r5	;ar1_x0
+     80	012760	100446 				bmi	hb.err		;
+     81	012762	012104 				mov	(r1)+,	r4	;ar1_nx
+     82	012764	060504 				add	r5,	r4	;ar1_x1
+     83	012766	023704 	012666 			cmp	a1wid,	r4	;
+     84	012772	103002 				bcc	10$		;
+     85	012774	013704 	012666 			mov	a1wid,	r4	;
+     86	013000	160504 			10$:	sub	r5,	r4	;
+     87	013002	010427 				mov	r4,	(pc)+	;
+     88	013004				.print ;a1nx
+     89	013004	000000 			a1nx:	.word	0		;
+     90	013006	003433 				ble	hb.err
+     91	013010	032700 	000100 			bit	#v.dx,	r0	;x+?
+     92	013014	001401 				beq	20$		;yes
+     93	013016	060405 				add	r4,	r5	;x0:=x1
+     94	013020				20$:				;
+     95	013020	052705 	060000 			bis	#ar1win,r5	;virt.addr
+     96	013024	010527 				mov	r5,	(pc)+	;
+     97	013026				.print ;a1dx
+     98	013026	000000 			a1dx:	.word	0
+     99					;................................
+    100	013030	012104 				mov	(r1)+,	r4	; ar2num / buff_addr / const
+    101	013032	032700 	000010 			bit	#v.pv,	r0	;
+    102	013036	001420 				beq	hb10		; vram-vram or const-vram
+    103	013040	012105 				mov	(r1)+,	r5	; buff_wid
+    104	013042	001002 				bne	10$		;
+    105	013044	013705 	013004 			mov	a1nx,	r5	;
+    106	013050				10$:
+    107		003720 			maxwid	=2000.
+    108	013050	022705 	003720 			cmp	#maxwid,r5	;
+    109	013054	103410 				bcs	hb.err		;
+    110	013056	010527 				mov	r5,	(pc)+	;
+    111	013060				.print ;bufwid
+    112	013060	000000 			bufwid:	.word	0		;
+    113	013062	013737 	161210 	161230 		mov	hr4,	ur4	;
+    114	013070	012701 	160000 			mov	#160000,r1
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 16-2
+Request processing
+
+    115	013074	000461 				br	hb20		;
+    116
+    117					;--------------------------------
+    118	013076				HB.ERR:
+    119	013076	000207 				return
+    120					;--------------------------------
+    121	013100				hb10:				;
+    122	013100	032700 	000020 			bit	#v.vv,	r0	;
+    123	013104	001455 				beq	hb20		; const to vram
+    124	013106	105704 				tstb	r4		;
+    125	013110	003772 				ble	hb.err		;
+    126	013112	016404 	020354 			mov	artbl(r4),r4	;
+    127	013116	001767 				beq	hb.err
+    128	013120	022424 				cmp	(r4)+,	(r4)+	;
+    129	013122	012405 				mov	(r4)+,	r5	;ar2_lins
+    130					;................................
+    131	013124	012102 				mov	(r1)+,	r2	;ar2_y0
+    132	013126	100763 				bmi	hb.err
+    133	013130	160205 				sub	r2,	r5	;ar2lins-ar2y0
+    134	013132	100761 				bmi	hb.err		;
+    135	013134	020537 	012734 			cmp	r5,	a1ny	;
+    136	013140	103003 				bcc	10$		;
+    137	013142	010537 	012734 			mov	r5,	a1ny	;
+    138	013146	003753 				ble	hb.err
+    139	013150	032700 	000040 		10$:	bit	#v.dy,	r0	;
+    140	013154	001402 				beq	15$		;
+    141	013156	063702 	012734 			add	a1ny,	r2	;
+    142					;................................
+    143	013162				15$:
+    144	013162	012405 				mov	(r4)+,	r5	;ar2_slen
+    145	013164	003744 				ble	hb.err		;
+    146	013166	006302 				asl	r2		;
+    147	013170	006302 				asl	r2		;
+    148	013172	060204 				add	r2,	r4	;^tas2
+    149	013174	012102 				mov	(r1)+,	r2	;ar2_x0
+    150	013176	160205 				sub	r2,	r5	;
+    151	013200	100736 				bmi	hb.err		;
+    152	013202	020537 	013004 			cmp	r5,	a1nx	;
+    153	013206	103003 				bcc	20$		;
+    154	013210	010537 	013004 			mov	r5,	a1nx	;
+    155	013214	003730 				ble	hb.err
+    156	013216				20$:
+    157	013216	032700 	000100 			bit	#v.dx,	r0	;
+    158	013222	001402 				beq	25$		;
+    159	013224	063702 	013004 			add	a1nx,	r2	;
+    160	013230				25$:				;
+    161	013230	052702 	100000 			bis	#ar2win,r2	;
+    162	013234	010227 				mov	r2,	(pc)+	;
+    163	013236	000000 			a2dx:	.word	0		;
+    164					;--------------------------------
+    165	013240				hb20:
+    166	013240	010005 				mov	r0,	r5	;select map.call
+    167	013242	042705 	177707 			bic	#^C70,	r5	;
+    168	013246	006205 				asr	r5		;
+    169	013250	006205 				asr	r5		;
+    170	013252	016505 	013426 			mov	map.tbl(r5),r5	;
+    171	013256	010527 				mov	r5,	(pc)+	;
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 16-3
+Request processing
+
+    172	013260				.print ;hb.map
+    173	013260				hb.map:	.blkw	1		;
+    174					;................................
+    175	013262	013702 	013004 			mov	a1nx,	r2	;
+    176	013266	042700 	177640 			bic	#177400+v.dy+v.mask,r0	;
+    177	013272	032700 	000100 			bit	#v.dx,	r0	;
+    178	013276	001402 				beq	10$		;
+    179	013300	062700 	177740 			add	#v.dy-v.dx,r0	;
+    180	013304				10$:
+    181	013304	032700 	000001 			bit	#v.byte,r0	;
+    182	013310	001005 				bne	15$		;
+    183	013312	006202 				asr	r2		;x.cnt
+    184	013314	001670 				beq	hb.err		;
+    185	013316	042737 	000001 	013004 		bic	#1,	a1nx
+    186	013324				15$:
+    187	013324	010237 	013410 			mov	r2,	hbxcnt	;
+    188	013330	006300 				asl	r0		;
+    189	013332	016002 	013476 			mov	instbl(r0),r2	;
+    190	013336	032702 	177400 			bit	#177400,r2	;
+    191	013342	001002 				bne	20$		;
+    192	013344	000172 	013446 			jmp	@xortbl(r2)	;
+    193	013350				20$:
+    194	013350	005737 	012704 			tst	a1mask		;
+    195	013354	001011 				bne	30$		;
+    196	013356	032763 	000003 	000002 		bit	#3,	2(r3)	;vm0?
+    197	013364	001005 				bne	30$
+    198	013366	032702 	040001 			bit	#40001,	r2	;mov (r1),(r0)?
+    199	013372	001002 				bne	30$		;NO
+    200	013374	052702 	040000 			bis	#40000,	r2	;
+    201	013400				30$:
+    202	013400	010237 	013412 			mov	r2,	hb33	;
+    203					;--------------------------------
+    204	013404				hb30:
+    205	013404	004715 				call	(r5)		;calc. map
+    206	013406	012702 				mov	(pc)+,	r2	;
+    207	013410	000000 			hbxcnt:	.word	0		;
+    208	013412				hb31:				;
+    209	013412	011010 			hb33:	mov	(r0),	(r0)	;
+    210	013414	077202 				sob	r2,	hb31	;
+    211	013416	005337 	012734 			dec	a1ny		;
+    212	013422	001370 				bne	hb30		;
+    213	013424	000207 				return			;
+    214					;----------------------------------------------------------------
+    215	013426	014402 	014460 	014370 	map.tbl:.word	c4map,	c2map,	c0map,	c2map,	c5map,	c3map,	c1map,	c3map
+	013434	014460 	014436 	014576
+	013442	014424 	014576
+    216	013446	013676 	013724 	013752 	xortbl:	.word	xor0,	xor2,	xor4,	xor6,	xor10,	xor12,	xor14,	xor16
+	013454	014012 	014040 	014100
+	013462	014126 	014154
+    217	013466	014214 	014242 	014302 		.word	xor20,	xor22,	xor24,	xor26
+	013474	014330
+    218					;----------------------------------------------------------------
+    219	013476				instbl:
+    220	013476	010420 				mov	r4,	(r0)+
+    221	013500	110420 				movb	r4,	(r0)+
+    222	013502	074420 				xor	r4,	(r0)+
+    223	013504	000000 				0
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 16-4
+Request processing
+
+    224	013506	050420 				bis	r4,	(r0)+
+    225	013510	150420 				bisb	r4,	(r0)+
+    226	013512	040420 				bic	r4,	(r0)+
+    227	013514	140420 				bicb	r4,	(r0)+
+    228					;............................
+    229	013516	012120 				mov	(r1)+,	(r0)+
+    230	013520	112120 				movb	(r1)+,	(r0)+
+    231	013522	000002 				2
+    232	013524	000004 				4
+    233	013526	052120 				bis	(r1)+,	(r0)+
+    234	013530	152120 				bisb	(r1)+,	(r0)+
+    235	013532	042120 				bic	(r1)+,	(r0)+
+    236	013534	142120 				bicb	(r1)+,	(r0)+
+    237					;............................
+    238	013536	012120 				mov	(r1)+,	(r0)+
+    239	013540	112120 				movb	(r1)+,	(r0)+
+    240	013542	000002 				2
+    241	013544	000004 				4
+    242	013546	052120 				bis	(r1)+,	(r0)+
+    243	013550	152120 				bisb	(r1)+,	(r0)+
+    244	013552	042120 				bic	(r1)+,	(r0)+
+    245	013554	142120 				bicb	(r1)+,	(r0)+
+    246					;............................
+    247	013556	012021 				mov	(r0)+,	(r1)+
+    248	013560	112021 				movb	(r0)+,	(r1)+
+    249	013562	000006 				6
+    250	013564	000010 				10
+    251	013566	052021 				bis	(r0)+,	(r1)+
+    252	013570	152021 				bisb	(r0)+,	(r1)+
+    253	013572	042021 				bic	(r0)+,	(r1)+
+    254	013574	142021 				bicb	(r0)+,	(r1)+
+    255					;--------------------------------
+    256	013576	010440 				mov	r4,	-(r0)
+    257	013600	110440 				movb	r4,	-(r0)
+    258	013602	074440 				xor	r4,	-(r0)
+    259	013604	000012 				12
+    260	013606	050440 				bis	r4,	-(r0)
+    261	013610	150440 				bisb	r4,	-(r0)
+    262	013612	040440 				bic	r4,	-(r0)
+    263	013614	140440 				bicb	r4,	-(r0)
+    264					;............................
+    265	013616	012140 				mov	(r1)+,	-(r0)
+    266	013620	112140 				movb	(r1)+,	-(r0)
+    267	013622	000014 				14
+    268	013624	000016 				16
+    269	013626	052140 				bis	(r1)+,	-(r0)
+    270	013630	152140 				bisb	(r1)+,	-(r0)
+    271	013632	042140 				bic	(r1)+,	-(r0)
+    272	013634	142140 				bicb	(r1)+,	-(r0)
+    273					;............................
+    274	013636	014140 				mov	-(r1),	-(r0)
+    275	013640	114140 				movb	-(r1),	-(r0)
+    276	013642	000020 				20
+    277	013644	000022 				22
+    278	013646	054140 				bis	-(r1),	-(r0)
+    279	013650	154140 				bisb	-(r1),	-(r0)
+    280	013652	044140 				bic	-(r1),	-(r0)
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 16-5
+Request processing
+
+    281	013654	144140 				bicb	-(r1),	-(r0)
+    282					;............................
+    283	013656	014021 				mov	-(r0),	(r1)+
+    284	013660	114021 				movb	-(r0),	(r1)+
+    285	013662	000024 				24
+    286	013664	000026 				26
+    287	013666	054021 				bis	-(r0),	(r1)+
+    288	013670	154021 				bisb	-(r0),	(r1)+
+    289	013672	044021 				bic	-(r0),	(r1)+
+    290	013674	144021 				bicb	-(r0),	(r1)+
+    291					;------------------------------------------------
+    292	013676				xor0:				; xorb	r4,	(r0)+
+    293	013676	004715 			5$:	call	(r5)		;
+    294	013700	013702 	013410 			mov	hbxcnt,	r2	;
+    295	013704	111001 			10$:	movb	(r0),	r1	;;;;
+    296	013706	074401 				xor	r4,	r1	;;;;
+    297	013710	110120 				movb	r1,	(r0)+	;;;;
+    298	013712	077204 				sob	r2,	10$	;
+    299	013714	005337 	012734 			dec	a1ny		;
+    300	013720	001366 				bne	5$		;
+    301	013722	000207 				return			;
+    302					;................................
+    303	013724				xor2:				; xor	(r1)+,	(r0)+
+    304	013724	004777 	177330 		5$:	call	@hb.map		;
+    305	013730	013702 	013410 			mov	hbxcnt,	r2	;
+    306	013734	012105 			10$:	mov	(r1)+,	r5	;;;;
+    307	013736	074520 				xor	r5,	(r0)+	;;;;
+    308	013740	077203 				sob	r2,	10$	;
+    309	013742	005337 	012734 			dec	a1ny		;
+    310	013746	001366 				bne	5$		;
+    311	013750	000207 				return			;
+    312					;................................
+    313	013752				xor4:				; xorb	(r1)+,	(r0)+
+    314	013752	004777 	177302 		5$:	call	@hb.map		;
+    315	013756	013737 	013410 	013776 		mov	hbxcnt,	15$	;
+    316	013764	112105 			10$:	movb	(r1)+,	r5	;;;;
+    317	013766	111002 				movb	(r0),	r2	;;;;
+    318	013770	074502 				xor	r5,	r2	;;;;
+    319	013772	110220 				movb	r2,	(r0)+	;;;;
+    320	013774	005327 				dec	(pc)+		;
+    321	013776				15$:	.blkw	1		;
+    322	014000	001371 				bne	10$		;
+    323	014002	005337 	012734 			dec	a1ny		;
+    324	014006	001361 				bne	5$		;
+    325	014010	000207 				return			;
+    326					;................................
+    327	014012				xor6:				; xor	(r0)+,	(r1)+
+    328	014012	004777 	177242 		5$:	call	@hb.map		;
+    329	014016	013702 	013410 			mov	hbxcnt,	r2	;
+    330	014022	012005 			10$:	mov	(r0)+,	r5	;;;;
+    331	014024	074521 				xor	r5,	(r1)+	;;;;
+    332	014026	077203 				sob	r2,	10$	;
+    333	014030	005337 	012734 			dec	a1ny		;
+    334	014034	001366 				bne	5$		;
+    335	014036	000207 				return			;
+    336					;................................
+    337	014040				xor10:				; xorb	(r0)+,	(r1)+
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 16-6
+Request processing
+
+    338	014040	004777 	177214 		5$:	call	@hb.map		;
+    339	014044	013737 	013410 	014064 		mov	hbxcnt,	15$	;
+    340	014052	112005 			10$:	movb	(r0)+,	r5	;;;;
+    341	014054	111102 				movb	(r1),	r2	;;;;
+    342	014056	074502 				xor	r5,	r2	;;;;
+    343	014060	110221 				movb	r2,	(r1)+	;;;;
+    344	014062	005327 				dec	(pc)+		;
+    345	014064				15$:	.blkw	1		;
+    346	014066	001371 				bne	10$		;
+    347	014070	005337 	012734 			dec	a1ny		;
+    348	014074	001361 				bne	5$		;
+    349	014076	000207 				return			;
+    350					;................................
+    351	014100				xor12:				; xorb	r4,	-(r0)
+    352	014100	004715 			5$:	call	(r5)		;
+    353	014102	013702 	013410 			mov	hbxcnt,	r2	;
+    354	014106	114001 			10$:	movb	-(r0),	r1	;;;;
+    355	014110	074401 				xor	r4,	r1	;;;;
+    356	014112	110110 				movb	r1,	(r0)	;;;;
+    357	014114	077204 				sob	r2,	10$	;
+    358	014116	005337 	012734 			dec	a1ny		;
+    359	014122	001366 				bne	5$		;
+    360	014124	000207 				return			;
+    361					;................................
+    362	014126				xor14:				; xor	(r1)+,	-(r0)
+    363	014126	004777 	177126 		5$:	call	@hb.map		;
+    364	014132	013702 	013410 			mov	hbxcnt,	r2	;
+    365	014136	012105 			10$:	mov	(r1)+,	r5	;;;;
+    366	014140	074540 				xor	r5,	-(r0)	;;;;
+    367	014142	077203 				sob	r2,	10$	;
+    368	014144	005337 	012734 			dec	a1ny		;
+    369	014150	001366 				bne	5$		;
+    370	014152	000207 				return			;
+    371					;................................
+    372	014154				xor16:				; xorb	(r1)+,	-(r0)
+    373	014154	004777 	177100 		5$:	call	@hb.map		;
+    374	014160	013737 	013410 	014200 		mov	hbxcnt,	15$	;
+    375	014166	112105 			10$:	movb	(r1)+,	r5	;;;;
+    376	014170	114002 				movb	-(r0),	r2	;;;;
+    377	014172	074502 				xor	r5,	r2	;;;;
+    378	014174	110210 				movb	r2,	(r0)	;;;;
+    379	014176	005327 				dec	(pc)+		;
+    380	014200				15$:	.blkw	1		;
+    381	014202	001371 				bne	10$		;
+    382	014204	005337 	012734 			dec	a1ny		;
+    383	014210	001361 				bne	5$		;
+    384	014212	000207 				return			;
+    385					;................................
+    386	014214				xor20:				; xor	-(r1),	-(r0)
+    387	014214	004777 	177040 		5$:	call	@hb.map		;
+    388	014220	013702 	013410 			mov	hbxcnt,	r2	;
+    389	014224	014105 			10$:	mov	-(r1),	r5	;;;;
+    390	014226	074540 				xor	r5,	-(r0)	;;;;
+    391	014230	077203 				sob	r2,	10$	;
+    392	014232	005337 	012734 			dec	a1ny		;
+    393	014236	001366 				bne	5$		;
+    394	014240	000207 				return			;
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 16-7
+Request processing
+
+    395					;................................
+    396	014242				xor22:				; xorb	-(r1),	-(r0)
+    397	014242	004777 	177012 		5$:	call	@hb.map		;
+    398	014246	013737 	013410 	014266 		mov	hbxcnt,	15$	;
+    399	014254	114105 			10$:	movb	-(r1),	r5	;;;;
+    400	014256	114002 				movb	-(r0),	r2	;;;;
+    401	014260	074502 				xor	r5,	r2	;;;;
+    402	014262	110210 				movb	r2,	(r0)	;;;;
+    403	014264	005327 				dec	(pc)+		;
+    404	014266				15$:	.blkw	1		;
+    405	014270	001371 				bne	10$		;
+    406	014272	005337 	012734 			dec	a1ny		;
+    407	014276	001361 				bne	5$		;
+    408	014300	000207 				return			;
+    409					;................................
+    410	014302				xor24:				; xor	-(r0),	(r1)+
+    411	014302	004777 	176752 		5$:	call	@hb.map		;
+    412	014306	013702 	013410 			mov	hbxcnt,	r2	;
+    413	014312	014005 			10$:	mov	-(r0),	r5	;;;;
+    414	014314	074521 				xor	r5,	(r1)+	;;;;
+    415	014316	077203 				sob	r2,	10$	;
+    416	014320	005337 	012734 			dec	a1ny		;
+    417	014324	001366 				bne	5$		;
+    418	014326	000207 				return			;
+    419					;................................
+    420	014330				xor26:				; xorb	-(r0),	(r1)+
+    421	014330	004777 	176724 		5$:	call	@hb.map		;
+    422	014334	013737 	013410 	014354 		mov	hbxcnt,	15$	;
+    423	014342	114005 			10$:	movb	-(r0),	r5	;;;;
+    424	014344	111102 				movb	(r1),	r2	;;;;
+    425	014346	074502 				xor	r5,	r2	;;;;
+    426	014350	110221 				movb	r2,	(r1)+	;;;;
+    427	014352	005327 				dec	(pc)+		;
+    428	014354				15$:	.blkw	1		;
+    429	014356	001371 				bne	10$		;
+    430	014360	005337 	012734 			dec	a1ny		;
+    431	014364	001361 				bne	5$		;
+    432	014366	000207 				return			;
+    433					;................................
+    434					;--------------------------------
+    435	014370				c0map:				; move ar2/y+ to  ar1/y+
+    436	014370	012401 				mov	(r4)+,	r1	;
+    437	014372	063701 	013236 			add	a2dx,	r1	;
+    438	014376	012437 	161230 			mov	(r4)+,	ar2par	;
+    439	014402				c4map:
+    440	014402	012300 				mov	(r3)+,	r0	;
+    441	014404	063700 	013026 			add	a1dx,	r0	;
+    442	014410	012337 	161226 			mov	(r3)+,	ar1par	;
+    443	014414	043737 	012704 	161226 		bic	a1mask,	ar1par	;
+    444	014422	000207 				return			;
+    445					;--------------------------------
+    446	014424				c1map:				; move ar2/y- to  ar1/y-
+    447	014424	014437 	161230 			mov	-(r4),	ar2par	;
+    448	014430	014401 				mov	-(r4),	r1	;
+    449	014432	063701 	013236 			add	a2dx,	r1	;
+    450	014436				c5map:
+    451	014436	014337 	161226 			mov	-(r3),	ar1par	;
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 16-8
+Request processing
+
+    452	014442	043737 	012704 	161226 		bic	a1mask,	ar1par	;
+    453	014450	014300 				mov	-(r3),	r0	;
+    454	014452	063700 	013026 			add	a1dx,	r0	;
+    455	014456	000207 				return			;
+    456					;--------------------------------
+    457	014460				c2map:				; prcram <--> ar1/y+
+    458	014460	063701 	013060 			add	bufwid,	r1	;
+    459	014464	022701 	160000 			cmp	#160000,r1	; out of prcwin ?
+    460	014470	103403 				bcs	20$		;
+    461	014472	163701 	013004 			sub	a1nx,	r1	;
+    462	014476	000424 				br	50$		;
+    463	014500				20$:
+    464					;	mov	hr5,	ur5	;
+    465	014500	010401 				mov	r4,	r1	;
+    466	014502	005000 				clr	r0		;
+    467	014504					GETPAR	#promap
+    468	014514	073027 	000003 			ashc	#3,	r0	;
+    469	014520	006300 				asl	r0		;
+    470	014522	006001 				ror	r1		;
+    471	014524	006001 				ror	r1		;
+    472	014526	006001 				ror	r1		;
+    473	014530	052701 	120000 			bis	#prcwin,r1	;
+    474					;	add	@proadr,r0	;
+    475					;	mov	p.ur0+2(r0),prcpar+2
+    476					;	mov	p.ur0(r0),prcpar;
+    477	014534	016037 	001320 	161232 		mov	promap  (r0), prcpar   ;
+    478	014542	016037 	001322 	161234 		mov	promap+2(r0), prcpar+2 ;
+    479	014550				50$:
+    480	014550	063704 	013060 			add	bufwid,	r4	;
+    481	014554	012300 				mov	(r3)+,	r0	;
+    482	014556	063700 	013026 			add	a1dx,	r0	;
+    483	014562	012337 	161226 			mov	(r3)+,	ar1par	;
+    484	014566	043737 	012704 	161226 		bic	a1mask,	ar1par	;
+    485	014574	000207 				return			;
+    486					;--------------------------------
+    487	014576				c3map:				; prcram <--> ar1/y-
+    488	014576	063701 	013060 			add	bufwid,	r1	;
+    489	014602	022701 	160000 			cmp	#160000,r1	; out of prcwin ?
+    490	014606	103403 				bcs	20$		;
+    491	014610	163701 	013004 			sub	a1nx,	r1	;
+    492	014614	000424 				br	50$		;
+    493	014616				20$:
+    494					;	mov	hr5,	ur5	;
+    495	014616	010401 				mov	r4,	r1	;
+    496	014620	005000 				clr	r0		;
+    497	014622					GETPAR	#promap
+    498	014632	073027 	000003 			ashc	#3,	r0	;
+    499	014636	006300 				asl	r0		;
+    500	014640	006001 				ror	r1		;
+    501	014642	006001 				ror	r1		;
+    502	014644	006001 				ror	r1		;
+    503	014646	052701 	120000 			bis	#prcwin,r1	;
+    504					;	add	@proadr,r0	;
+    505					;	mov	p.ur0+2(r0),prcpar+2
+    506					;	mov	p.ur0(r0),prcpar;
+    507	014652	016037 	001320 	161232 		mov	promap  (r0), prcpar   ;
+    508	014660	016037 	001322 	161234 		mov	promap+2(r0), prcpar+2 ;
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 16-9
+Request processing
+
+    509	014666				50$:
+    510	014666	063704 	013060 			add	bufwid,	r4	;
+    511	014672	014337 	161226 			mov	-(r3),	ar1par	;
+    512	014676	043737 	012704 	161226 		bic	a1mask,	ar1par	;
+    513	014704	014300 				mov	-(r3),	r0	;
+    514	014706	063700 	013026 			add	a1dx,	r0	;
+    515	014712	000207 				return			;
+    516					;--------------------------------
+    517
+WINDOW	- monitor process	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 17
+Request processing
+
+      1
+      2		001410 			.end	START
+Errors detected:  0
+
+*** Assembler statistics
+
+
+Work  file  reads: 0
+Work  file writes: 0
+Size of work file: 11129 Words  ( 44 Pages)
+Size of core pool: 16384 Words  ( 64 Pages)
+Operating  system: RT-11
+
+Elapsed time: 00:00:00.30
+DK:WD,DK:WD=DK:WD

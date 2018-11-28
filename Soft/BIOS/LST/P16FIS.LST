@@ -1,0 +1,28 @@
+.MAIN.	MACRO V05.06R Wednesday 28-Nov-18 10:57
+Table of contents
+
+    2- 462	common definitions for bios monitor
+    4-   1	P12FIS
+.MAIN.	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 1
+
+
+      1					.enabl  lc
+      2					.enabl	ama
+      3					.enabl  gbl
+      4					.mcall	.push,.pop
+.MAIN.	MACRO V05.06R Wednesday 28-Nov-18 10:57  Page 4
+P12FIS
+
+Errors detected:  0
+
+*** Assembler statistics
+
+
+Work  file  reads: 0
+Work  file writes: 0
+Size of work file: 9808 Words  ( 39 Pages)
+Size of core pool: 16384 Words  ( 64 Pages)
+Operating  system: RT-11
+
+Elapsed time: 00:00:00.07
+DK:P16FIS,DK:P16FIS=DK:P16,DK:P16FIS
