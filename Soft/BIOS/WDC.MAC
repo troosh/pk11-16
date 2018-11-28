@@ -392,4 +392,3 @@ HBMOVE	= ^O50	;high-speed video-block move
 	cm2...	ar2y,14.
 	cm2...	ar2x,16.,x
 .endm
-                                           
