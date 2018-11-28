@@ -1,40 +1,40 @@
 ! From P16BOT.COM
-mac p16+p16bot/obj
+mac p16+p16bot/obj/list
 ! From P16RST.COM
-mac p16+p16rst/obj
+mac p16+p16rst/obj/list
 ! From P16KBE.COM
-mac p16+p16kbe/obj
+mac p16+p16kbe/obj/list
 ! From P16HDC.COM
-mac p16+p16hdc/obj
+mac p16+p16hdc/obj/list
 
 ! From ??
-mac wd
+mac wd/list
 lin wd/map
 
 ! From ??
-mac vt
+mac vt/list
 lin vt/map
 
 ! From P16HLT.COM
-mac p16+p16ini+p16hlt/obj
+mac p16+p16ini+p16hlt/obj/list
 
 ! From P16CAL.COM
-mac p16+p16sub+p16cal/obj
+mac p16+p16sub+p16cal/obj/list
 
 ! From P16FIS.COM
-mac p16+p16fis/obj
+mac p16+p16fis/obj/list
 
 ! From P16CLK.COM
-mac p16+p16clk/obj
+mac p16+p16clk/obj/list
 
 ! From P16VDC.COM
-mac p16+p16vdc/obj
+mac p16+p16vdc/obj/list
 
 ! From P16DBG.COM
-mac p16+p16dbg/obj
+mac p16+p16dbg/obj/list
 
 ! From ???
-mac p16unp/obj
+mac p16unp/obj/list
 
 ! ------------------------------------
 
