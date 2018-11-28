@@ -1,0 +1,310 @@
+        .TITLE  VT100   - LEVEL 1
+;=======================================================
+;       .PSECT  V1.ROM
+v1.rom	== .
+ME.52:  .ASCIZ  "V T -  5 2   "
+ME.100: .ASCIZ  "V T - 1 0 0  "
+ME.15:	.ASCIZ	"1 5 -  "<184.>" "<205.>"   "
+ME.:	.asciz	"V2.7     Font : "
+VTBASE: .ASCIZ  <C.ESC>"[?l;0c"
+VT52:   .ASCIZ  <C.ESC>"/Z"
+vtstate:.asciz	<c.esc>"[00000z"	;report of VT100 state
+ME.bel:	.asciz	"B  e  e  p  . . ."
+;-------------------------------
+; CTRL - TABLE
+
+CTR.CT:
+        .BYTE   005,    007,    010,    011,    012,    013
+        .BYTE   014,    015,    016,    017
+        .BYTE   030,    027,    033,    377	;vt15 -change ^Z to ^W
+        .EVEN
+CTR.AT:
+        .WORD   V1$ENQ, V1$BEL, V1$BS,  V1$HT,  V1$LF,  V1$LF
+        .WORD   V1$LF,  V1$CR,  V1$SO,  V1$SI
+        .WORD   V1$CAN, V1$15,   V1$ESC
+
+;*******************************
+;  ESC  - TABLE #1
+
+ES1.CT:
+        .BYTE   '[,     '#,     '(,     '),     'D,     'E
+        .BYTE   'M,     '7,     '8,     'H,     'c,     '=
+        .BYTE   '>,     'Z,     'W,     377
+        .EVEN
+ES1.AT:
+        .WORD   E1.LON, E1.SHT, E1.SHT, E1.SHT, V1$LF,  V1$NL
+        .WORD   V1$RLF, V1$SAV, V1$RES, V1$STB, V1$INI, V1$KAP
+        .WORD   V1$KNM, V1$CNF, VX$SWC
+
+;*******************************
+;  ESC  - TABLE FOR VT52-MODE
+
+E52.CT:
+        .BYTE   'A,     'B,     'C,     'D,     'F,     'G
+        .BYTE   'H,     'I,     'J,     'K,     'Y,     'Z
+        .BYTE   '=,     '>,     '<,     377
+        .EVEN
+E52.AT:
+        .WORD   V1$CUP, V1$CUD, V1$CUR, V1$CUL, V5$EGM, V5$XGM
+        .WORD   CURHOM, V1$RLF, V1$EOS, V1$EOL, E1.Y,   V1$CNF
+        .WORD   V1$KAP, V1$KNM, VT52EN
+
+;*******************************
+;  ESC  - TABLE #2
+
+ES2.CT:
+        .BYTE   'A,     'B,     'C,     'D,     'H,     'f
+        .BYTE   'm,     'K,     'J,     'q,     'r,     'g
+        .BYTE   'h,     'l,     'n,     'c,     'X,     'Y
+	.byte	'Z, 377
+        .EVEN
+ES2.AT:
+        .WORD   VL$CUU, VL$CUD, VL$CUF, VL$CUB, VL$POS, VL$POS
+        .WORD   VL$CAT, VL$ERL, VL$ERS, VL$LED, VL$SCR, VL$TAB
+        .WORD   VL$MOD, VL$MOD, VL$REP, VL$CNF, VL$COL, VL$BOD
+	.word	VL$FON
+
+;=======================================================
+;       .PSECT  V1.COD          
+v1.cod	== .
+;*******************************
+; VT-100 EMULATOR ENTRY
+;       ENTER:  R0 - A CHAR
+                 
+V1$SYM::                                  
+        CMP     #C.DEL, R0      ;
+        BEQ     999$            ; IGNORE DEL
+        CMP     R0, #C.SP       ;
+        BHIS    1$              ;
+    ; CTRLS SHOULD BE PROCESSED IMMEDIATELLY !!!
+        CALL    SC$CER          ; ERASE CURSOR (IF NOT ALREADY ERASED)
+        MOV     #CTR.CT, R1     ;
+        MOV     #CTR.AT, R2     ;
+        CALL    TB$JMP          ;
+        BR      998$            ; GO OUT AND SET CURSOR
+1$:
+        ADD     ESC.J, PC       ;
+         BR 2$          ; NORMAL
+         BR 100$        ;
+         BR 200$        ;
+         BR 300$        ;
+         BR 400$        ; ESC-Y-LIN 
+         BR 500$        ; ESC-Y-LIN-COL
+2$:
+	movb	v.gmod,	r1	;
+	beq	2222$		;
+	tstb	r0		;
+	bmi	2222$		;
+	cmp	r0, #140	;???
+	blo	2222$		;
+	bic	r1,	r0	;GR mode ?
+2222$:
+	mov	i15,	r1	;
+	ble	2244$		;
+	movb	i15t(r0),r0	;
+	bic	#177400, r0	;
+2244$:
+        MOV     CURS.Y, R1      ;
+        MOV     CURS.X, R2      ;
+;;;     CALL    V1$CUR          ;
+	cmp	r2,	col.e
+	beq	990$
+	inc	curs.x
+	bit	#1,	curs.t
+	bne	980$
+        jmp     SC$SYC          ;sym+cur
+980$:
+	jmp	SC$SYM		;sym
+990$:
+	call	SC$SYM
+        BIT     #M.WRAP, V1.MOD ;
+        BEQ     995$            ;
+        CALL    V1$NL           ;
+995$:	jmp     SC$CUR          ;
+
+998$:
+	tst	esc.j
+	beq	995$ 
+999$:   RETURN
+
+100$:                   ; 1-ST CHAR AFTER ESC
+        MOVB    R0, ES.BUF      ; SAVE IT FOR LATER
+        CLR     ESC.J           ; SET NORMAL STATE FOR THE SHORTEST ESCS
+        BIT     #M.ANSI, V1.MOD ;
+        BNE     101$            ;
+        MOV     #E52.CT, R1     ;
+        MOV     #E52.AT, R2     ;
+        BR      102$            ;
+101$:
+        MOV     #ES1.CT, R1     ;
+        MOV     #ES1.AT, R2     ;
+102$:
+        CALL    TB$JMP          ;
+        BR      998$            ;
+200$:                   ; 2-ND CHAR AFTER ESC (LONG FORMAT)
+        MOVB    R0, @ES.PTR     ; SAVE NEXT CHAR
+        INC     ES.PTR          ; CORRECT POINTER
+                        ; END OF LONG ESC - LETTER !!!
+        CMP     R0, #100        ;
+        BLOS    999$            ; NO
+        CMP     R0, #133        ;
+        BLO     201$            ; YES
+        CMP     R0, #140        ;
+        BLOS    999$            ;NO
+        CMP     R0, #173        ;
+        BHIS    999$            ; NO
+201$:                   ; THIS IS THE END OF LONG ESC
+        CLR     ESC.J           ;
+        MOV     #ES2.CT, R1     ;
+        MOV     #ES2.AT, R2     ;
+        MOV     #ES.BUF+1, R4   ;
+        MOV     ES.PTR, R5      ;
+        MOVB    -(R5), R0       ;
+        CALL    TB$JMP          ;
+        BR      998$            ; EXIT AND SET CURSOR
+300$:                   ; THIS IS ESC IN SHORT FORMAT
+        CLR     ESC.J           ;
+        MOVB    ES.BUF, R1      ;
+        MOV     #ESC.LS, R2     ;
+        CMP     #'#, R1         ;
+        BEQ     301$            ;
+        MOV     #ESC.G0, R2     ;
+        CMP     #'(, R1         ;
+        BEQ     301$            ;
+        MOV     #ESC.G1, R2     ;
+301$:
+        CALL    @R2             ;
+        BR      998$
+400$:                   ; THIS IS ESC-Y PROCESSING IN VT52-MODE
+        MOV     #12, ESC.J      ;
+        SUB     #37, R0         ;
+        MOV     R0, R3          ;
+        CALL    SETY            ;
+        BR      999$            ;
+500$:
+        CLR     ESC.J           ;
+        SUB     #37, R0         ;
+        MOV     R0, R3          ;
+        CALL    SETX            ;
+        BR      998$            ;
+
+;*******************************
+V1$CAN::
+        CLR     ESC.J           ; CLEAR ESC-PROCESSIGN FLAG
+        RETURN
+;*******************************
+V1$ESC::
+        MOV     #2, ESC.J       ; SET START OF ESC (ABORT IF IN PROGRESS)
+        MOV     #ES.BUF+1, ES.PTR ; SET POINTER TO START OF BUFFER
+        TST     (SP)+           ; RETURN WITHOUT CURSOR
+        RETURN
+;*******************************
+V1$15:
+	mov	#-1,	i15	;set i15 mode
+	bic	#m.ansi, v1.mod	;
+	call	hellow		;
+	return			;	
+;*******************************
+V1$SO::
+	tst	i15		;is it i15 ?
+	beq	10$		;no
+	mov	#i15t,	i15	;
+	br	v1$enq		;
+10$:
+	movb	#340, v.gmod	;enable graghics
+	br	v1$enq		;
+V1$SI::
+	tst	i15		;is it i15 ?
+	beq	10$		;no
+	mov	#-1,	i15	;
+10$:
+	clrb	v.gmod		;desable graphics
+V1$ENQ::                ; TRANSMITE ANSWERBACK MESSAGE
+        RETURN
+.ENABL  LSB
+;*******************************
+E1.LON::
+        MOV     #4, R0          ;
+        BR      1$              ;
+E1.SHT::
+        MOV     #6, R0          ;
+        BR      1$              ;
+E1.Y::
+        MOV     #10, R0         ;
+1$:
+        MOV     R0, ESC.J       ;
+        TST     (SP)+           ;
+        RETURN
+.DSABL  LSB
+;*******************************
+; CURSOR STEPS: UP, DOWN, LEFT, RIGHT
+;       EXIT :  C-SET - O.K.
+;               C-CLR - CANNOT MOVE
+V1$CUP::                   
+        CMP     CURS.Y, TOP.L           ;
+        BEQ     1$                      ;
+        DEC     CURS.Y                  ;
+        SEC                             ;
+1$:     RETURN
+V1$BS::
+V1$CUL::
+        CMP     CURS.X, COL.S           ;
+        BEQ     1$                      ;
+        DEC     CURS.X                  ;
+        SEC                             ;
+1$:     RETURN
+V1$CUD::                
+        CMP     CURS.Y, BOT.L           ;
+        BEQ     1$                      ;
+        INC     CURS.Y                  ;
+        SEC                             ;
+1$:     RETURN
+V1$CUR::
+        CMP     CURS.X, COL.E           ;
+        BEQ     1$                      ;
+        INC     CURS.X                  ;
+        SEC                             ;
+1$:     RETURN
+;*******************************
+V1$CR::
+        MOV     COL.S, CURS.X   ;
+        RETURN
+;*******************************
+V1$HT::                 ; HORISONTAL TAB
+        CALL    V1$CUR          ;
+        BCC     1$              ;
+        MOV     CURS.X, R0      ; R0 = CURS.X
+        SUB     COL.S, R0       ;
+        TSTB    V1.TAB(R0)      ;
+        BEQ     V1$HT           ;
+1$:
+        RETURN
+.ENABL  LSB     ;<<<<<<<<<<<<<<<<
+;*******************************
+V1$NL::                 ; NEW LINE
+        CALL    V1$CR           ;
+;*******************************
+V1$LF::                 ; LINE FEED
+        CALL    V1$CUD          ;
+        BCS     12$             ;
+        MOV     top.L, r1       ;
+	call	V1$CR1		;clear line
+	mov	bot.l, r2	;
+        CALL    SC$SCU          ;
+12$:
+        BIT     #M.NL, V1.MOD   ;
+        BNE     V1$CR           ;
+1$:
+        RETURN                  ;
+;*******************************
+V1$RLF::                ; REVERSE LINE FEED
+        CALL    V1$CUP          ;
+        BCS     1$              ;
+        MOV     bot.L, r1       ;
+	call	V1$CR1		;
+	mov	top.l, r1	;
+        CALL    SC$SCD          ;
+        RETURN
+.DSABL  LSB     ;>>>>>>>>>>>>>>>>
+.ENABL  LSB     ;<<<<<<<<<<<<<<<<
+                                                                                                                                                                                                                                                                            

@@ -1,0 +1,518 @@
+;============================================================;
+;	cmd format
+;------------------------------------------
+v.mask	=^o200	; mask 
+v.dx	=^O100	; dir. x = back
+v.dy	=^O040	; dir. y = up
+v.vp	=^O030	; vram to process ram
+v.vv	=^O020	; vram to vram
+v.pv	=^O010	; process ram to vram
+v.cv	=^O000	; const to vram
+v.bic	=^O006	; dst:=dst and not src
+v.bis	=^O004	; dst:=dst or src
+v.xor	=^O002	; dst:=dst xor src
+v.mov	=^O000	; dst:=src
+v.byte	=^O001	; move byte
+;----------------------------------------
+;	request format
+;----------------------------------------
+;	.byte	ar1num,	cmd	;
+;	.word	ar1y		; dst
+;	.word	ny		;
+;	.word	ar1x		;
+;	.word	nx		;	
+;	.word	ar2num	/ buf addr / const	; src
+;	.word	ar2y	/ buf len		;
+;	.word	ar2x	/ buf wid		;
+;
+;HBMOVE	= ^O50	;high-speed video-block move
+;.macro	HBMOVE	area,ar1num,cmd,ar1y,ny,ar1x,nx,ar2num,ar2y,ar2x
+;============================================================
+	ar1par	= ur3
+	ar1win	= 60000
+	ar2par	= ur4
+	ar2win	=100000
+	prcpar	= ur5	;& ur6
+	prcwin	=120000
+
+.print ;hbmv
+W$HBMV:
+	movb	(r1)+,	r0	; ar1
+	ble	hb.err		;
+	mov	artbl(r0),r3	;
+	beq	hb.err
+	cmp	(r3)+,	(r3)+	;
+	mov	(r3)+,	(pc)+	;ar1_lins
+.print ;a1lin,a1wid
+a1lin:	.word	0		;
+	mov	(r3)+,	(pc)+	;ar1_slen
+a1wid:	.word	0		;
+;................................
+	clr	r5
+	movb	(r1)+,	r0	;cmd
+	bmi	10$		;mask mode
+	mov	#3,	r5	;
+10$:	mov	r5,	(pc)+	;
+.print ;a1mask
+a1mask:	.word	0		;ar1_mask
+;................................
+	mov	(r1)+,	r5	;ar1_y0
+	bmi	hb.err		;
+	mov	(r1)+,	r4	;ar1_ny
+	add	r5,	r4	;ar1_y1
+	cmp	a1lin,	r4	;
+	bcc	10$		;
+	mov	a1lin,	r4	;
+10$:	sub	r5,	r4	;
+	mov	r4,	(pc)+	;
+.print ;a1ny
+a1ny:	.word	0		;
+	ble	hb.err
+	bit	#v.dy,	r0	;y+?
+	beq	20$		;yes
+	add	r4,	r5	;y0:=y1
+20$:				;
+	asl	r5		;
+	asl	r5		;
+	add	r5,	r3	;^tas1
+;................................
+	mov	(r1)+,	r5	;ar1_x0
+	bmi	hb.err		;
+	mov	(r1)+,	r4	;ar1_nx
+	add	r5,	r4	;ar1_x1
+	cmp	a1wid,	r4	;
+	bcc	10$		;
+	mov	a1wid,	r4	;
+10$:	sub	r5,	r4	;
+	mov	r4,	(pc)+	;
+.print ;a1nx
+a1nx:	.word	0		;
+	ble	hb.err
+	bit	#v.dx,	r0	;x+?
+	beq	20$		;yes
+	add	r4,	r5	;x0:=x1
+20$:				;
+	bis	#ar1win,r5	;virt.addr
+	mov	r5,	(pc)+	;
+.print ;a1dx
+a1dx:	.word	0
+;................................
+	mov	(r1)+,	r4	; ar2num / buff_addr / const
+	bit	#v.pv,	r0	;
+	beq	hb10		; vram-vram or const-vram
+	mov	(r1)+,	r5	; buff_wid
+	bne	10$		;
+	mov	a1nx,	r5	;
+10$:
+maxwid	=2000.
+	cmp	#maxwid,r5	;
+	bcs	hb.err		;
+	mov	r5,	(pc)+	;
+.print ;bufwid
+bufwid:	.word	0		;
+	mov	hr4,	ur4	;
+	mov	#160000,r1
+	br	hb20		;
+
+;--------------------------------
+HB.ERR:
+	return
+;--------------------------------
+hb10:				;
+	bit	#v.vv,	r0	;
+	beq	hb20		; const to vram
+	tstb	r4		;
+	ble	hb.err		;		
+	mov	artbl(r4),r4	;
+	beq	hb.err
+	cmp	(r4)+,	(r4)+	;
+	mov	(r4)+,	r5	;ar2_lins
+;................................
+	mov	(r1)+,	r2	;ar2_y0
+	bmi	hb.err
+	sub	r2,	r5	;ar2lins-ar2y0
+	bmi	hb.err		;
+	cmp	r5,	a1ny	;
+	bcc	10$		;
+	mov	r5,	a1ny	;
+	ble	hb.err
+10$:	bit	#v.dy,	r0	;
+	beq	15$		;
+	add	a1ny,	r2	;
+;................................
+15$:	
+	mov	(r4)+,	r5	;ar2_slen
+	ble	hb.err		;
+	asl	r2		;
+	asl	r2		;
+	add	r2,	r4	;^tas2
+	mov	(r1)+,	r2	;ar2_x0
+	sub	r2,	r5	;
+	bmi	hb.err		;
+	cmp	r5,	a1nx	;
+	bcc	20$		;
+	mov	r5,	a1nx	;
+	ble	hb.err
+20$:
+	bit	#v.dx,	r0	;
+	beq	25$		;
+	add	a1nx,	r2	;
+25$:				;
+	bis	#ar2win,r2	;
+	mov	r2,	(pc)+	;
+a2dx:	.word	0		;
+;--------------------------------
+hb20:
+	mov	r0,	r5	;select map.call
+	bic	#^C70,	r5	;
+	asr	r5		;
+	asr	r5		;
+	mov	map.tbl(r5),r5	;
+	mov	r5,	(pc)+	;
+.print ;hb.map
+hb.map:	.blkw	1		;
+;................................
+	mov	a1nx,	r2	;
+	bic	#177400+v.dy+v.mask,r0	;
+	bit	#v.dx,	r0	;
+	beq	10$		;
+	add	#v.dy-v.dx,r0	;
+10$:
+	bit	#v.byte,r0	;
+	bne	15$		;
+	asr	r2		;x.cnt
+	beq	hb.err		;
+	bic	#1,	a1nx
+15$:
+	mov	r2,	hbxcnt	;
+	asl	r0		;
+	mov	instbl(r0),r2	;
+	bit	#177400,r2	;
+	bne	20$		;
+	jmp	@xortbl(r2)	;
+20$:	
+	tst	a1mask		;
+	bne	30$		;
+	bit	#3,	2(r3)	;vm0?
+	bne	30$
+	bit	#40001,	r2	;mov (r1),(r0)?
+	bne	30$		;NO
+	bis	#40000,	r2	;
+30$:
+	mov	r2,	hb33	;
+;--------------------------------
+hb30:
+	call	(r5)		;calc. map	
+	mov	(pc)+,	r2	;
+hbxcnt:	.word	0		;
+hb31:				;
+hb33:	mov	(r0),	(r0)	;
+	sob	r2,	hb31	;
+	dec	a1ny		;
+	bne	hb30		;
+	return			;
+;----------------------------------------------------------------
+map.tbl:.word	c4map,	c2map,	c0map,	c2map,	c5map,	c3map,	c1map,	c3map	
+xortbl:	.word	xor0,	xor2,	xor4,	xor6,	xor10,	xor12,	xor14,	xor16
+	.word	xor20,	xor22,	xor24,	xor26
+;----------------------------------------------------------------
+instbl:
+	mov	r4,	(r0)+
+	movb	r4,	(r0)+
+	xor	r4,	(r0)+
+	0
+	bis	r4,	(r0)+
+	bisb	r4,	(r0)+
+	bic	r4,	(r0)+
+	bicb	r4,	(r0)+
+;............................
+	mov	(r1)+,	(r0)+
+	movb	(r1)+,	(r0)+
+	2
+	4
+	bis	(r1)+,	(r0)+
+	bisb	(r1)+,	(r0)+
+	bic	(r1)+,	(r0)+
+	bicb	(r1)+,	(r0)+
+;............................
+	mov	(r1)+,	(r0)+
+	movb	(r1)+,	(r0)+
+	2
+	4
+	bis	(r1)+,	(r0)+
+	bisb	(r1)+,	(r0)+
+	bic	(r1)+,	(r0)+
+	bicb	(r1)+,	(r0)+
+;............................
+	mov	(r0)+,	(r1)+
+	movb	(r0)+,	(r1)+
+	6
+	10
+	bis	(r0)+,	(r1)+
+	bisb	(r0)+,	(r1)+
+	bic	(r0)+,	(r1)+
+	bicb	(r0)+,	(r1)+
+;--------------------------------
+	mov	r4,	-(r0)
+	movb	r4,	-(r0)
+	xor	r4,	-(r0)
+	12
+	bis	r4,	-(r0)
+	bisb	r4,	-(r0)
+	bic	r4,	-(r0)
+	bicb	r4,	-(r0)
+;............................
+	mov	(r1)+,	-(r0)
+	movb	(r1)+,	-(r0)
+	14	
+	16
+	bis	(r1)+,	-(r0)
+	bisb	(r1)+,	-(r0)
+	bic	(r1)+,	-(r0)
+	bicb	(r1)+,	-(r0)
+;............................
+	mov	-(r1),	-(r0)
+	movb	-(r1),	-(r0)
+	20
+	22
+	bis	-(r1),	-(r0)
+	bisb	-(r1),	-(r0)
+	bic	-(r1),	-(r0)
+	bicb	-(r1),	-(r0)
+;............................
+	mov	-(r0),	(r1)+
+	movb	-(r0),	(r1)+
+	24
+	26
+	bis	-(r0),	(r1)+
+	bisb	-(r0),	(r1)+
+	bic	-(r0),	(r1)+
+	bicb	-(r0),	(r1)+
+;------------------------------------------------
+xor0:				; xorb	r4,	(r0)+
+5$:	call	(r5)		;
+	mov	hbxcnt,	r2	;
+10$:	movb	(r0),	r1	;;;;
+	xor	r4,	r1	;;;;
+	movb	r1,	(r0)+	;;;;
+	sob	r2,	10$	;
+	dec	a1ny		;
+	bne	5$		;
+	return			;
+;................................
+xor2:				; xor	(r1)+,	(r0)+
+5$:	call	@hb.map		;
+	mov	hbxcnt,	r2	;
+10$:	mov	(r1)+,	r5	;;;;
+	xor	r5,	(r0)+	;;;;
+	sob	r2,	10$	;
+	dec	a1ny		;
+	bne	5$		;
+	return			;
+;................................
+xor4:				; xorb	(r1)+,	(r0)+
+5$:	call	@hb.map		;
+	mov	hbxcnt,	15$	;
+10$:	movb	(r1)+,	r5	;;;;
+	movb	(r0),	r2	;;;;
+	xor	r5,	r2	;;;;
+	movb	r2,	(r0)+	;;;;
+	dec	(pc)+		;
+15$:	.blkw	1		;
+	bne	10$		;
+	dec	a1ny		;
+	bne	5$		;
+	return			;
+;................................
+xor6:				; xor	(r0)+,	(r1)+
+5$:	call	@hb.map		;
+	mov	hbxcnt,	r2	;
+10$:	mov	(r0)+,	r5	;;;;
+	xor	r5,	(r1)+	;;;;
+	sob	r2,	10$	;
+	dec	a1ny		;
+	bne	5$		;
+	return			;
+;................................
+xor10:				; xorb	(r0)+,	(r1)+
+5$:	call	@hb.map		;
+	mov	hbxcnt,	15$	;
+10$:	movb	(r0)+,	r5	;;;;
+	movb	(r1),	r2	;;;;
+	xor	r5,	r2	;;;;
+	movb	r2,	(r1)+	;;;;
+	dec	(pc)+		;
+15$:	.blkw	1		;
+	bne	10$		;
+	dec	a1ny		;
+	bne	5$		;
+	return			;
+;................................
+xor12:				; xorb	r4,	-(r0)
+5$:	call	(r5)		;
+	mov	hbxcnt,	r2	;
+10$:	movb	-(r0),	r1	;;;;
+	xor	r4,	r1	;;;;
+	movb	r1,	(r0)	;;;;
+	sob	r2,	10$	;
+	dec	a1ny		;
+	bne	5$		;
+	return			;
+;................................
+xor14:				; xor	(r1)+,	-(r0)
+5$:	call	@hb.map		;
+	mov	hbxcnt,	r2	;
+10$:	mov	(r1)+,	r5	;;;;
+	xor	r5,	-(r0)	;;;;
+	sob	r2,	10$	;
+	dec	a1ny		;
+	bne	5$		;
+	return			;
+;................................
+xor16:				; xorb	(r1)+,	-(r0)
+5$:	call	@hb.map		;
+	mov	hbxcnt,	15$	;
+10$:	movb	(r1)+,	r5	;;;;
+	movb	-(r0),	r2	;;;;
+	xor	r5,	r2	;;;;
+	movb	r2,	(r0)	;;;;
+	dec	(pc)+		;
+15$:	.blkw	1		;
+	bne	10$		;
+	dec	a1ny		;
+	bne	5$		;
+	return			;
+;................................
+xor20:				; xor	-(r1),	-(r0)
+5$:	call	@hb.map		;
+	mov	hbxcnt,	r2	;
+10$:	mov	-(r1),	r5	;;;;
+	xor	r5,	-(r0)	;;;;
+	sob	r2,	10$	;
+	dec	a1ny		;
+	bne	5$		;
+	return			;
+;................................
+xor22:				; xorb	-(r1),	-(r0)
+5$:	call	@hb.map		;
+	mov	hbxcnt,	15$	;
+10$:	movb	-(r1),	r5	;;;;
+	movb	-(r0),	r2	;;;;
+	xor	r5,	r2	;;;;
+	movb	r2,	(r0)	;;;;
+	dec	(pc)+		;
+15$:	.blkw	1		;
+	bne	10$		;
+	dec	a1ny		;
+	bne	5$		;
+	return			;
+;................................
+xor24:				; xor	-(r0),	(r1)+
+5$:	call	@hb.map		;
+	mov	hbxcnt,	r2	;
+10$:	mov	-(r0),	r5	;;;;
+	xor	r5,	(r1)+	;;;;
+	sob	r2,	10$	;
+	dec	a1ny		;
+	bne	5$		;
+	return			;
+;................................
+xor26:				; xorb	-(r0),	(r1)+
+5$:	call	@hb.map		;
+	mov	hbxcnt,	15$	;
+10$:	movb	-(r0),	r5	;;;;
+	movb	(r1),	r2	;;;;
+	xor	r5,	r2	;;;;
+	movb	r2,	(r1)+	;;;;
+	dec	(pc)+		;
+15$:	.blkw	1		;
+	bne	10$		;
+	dec	a1ny		;
+	bne	5$		;
+	return			;
+;................................
+;--------------------------------
+c0map:				; move ar2/y+ to  ar1/y+
+	mov	(r4)+,	r1	;
+	add	a2dx,	r1	;
+	mov	(r4)+,	ar2par	;
+c4map:
+	mov	(r3)+,	r0	;
+	add	a1dx,	r0	;
+	mov	(r3)+,	ar1par	;
+	bic	a1mask,	ar1par	;
+	return			;
+;--------------------------------
+c1map:				; move ar2/y- to  ar1/y-
+	mov	-(r4),	ar2par	;
+	mov	-(r4),	r1	;
+	add	a2dx,	r1	;
+c5map:
+	mov	-(r3),	ar1par	;
+	bic	a1mask,	ar1par	;
+	mov	-(r3),	r0	;
+	add	a1dx,	r0	;
+	return			;
+;--------------------------------
+c2map:				; prcram <--> ar1/y+
+	add	bufwid,	r1	;
+	cmp	#160000,r1	; out of prcwin ?
+	bcs	20$		;
+	sub	a1nx,	r1	;
+	br	50$		;
+20$:
+;	mov	hr5,	ur5	;
+	mov	r4,	r1	;
+	clr	r0		;
+	GETPAR	#promap
+	ashc	#3,	r0	;
+	asl	r0		;
+	ror	r1		;
+	ror	r1		;
+	ror	r1		;
+	bis	#prcwin,r1	;
+;	add	@proadr,r0	;
+;	mov	p.ur0+2(r0),prcpar+2
+;	mov	p.ur0(r0),prcpar;
+	mov	promap  (r0), prcpar   ;
+	mov	promap+2(r0), prcpar+2 ;
+50$:
+	add	bufwid,	r4	;
+	mov	(r3)+,	r0	;
+	add	a1dx,	r0	;
+	mov	(r3)+,	ar1par	;
+	bic	a1mask,	ar1par	;
+	return			;
+;--------------------------------
+c3map:				; prcram <--> ar1/y-
+	add	bufwid,	r1	;
+	cmp	#160000,r1	; out of prcwin ?
+	bcs	20$		;
+	sub	a1nx,	r1	;
+	br	50$		;
+20$:
+;	mov	hr5,	ur5	;
+	mov	r4,	r1	;
+	clr	r0		;
+	GETPAR	#promap
+	ashc	#3,	r0	;
+	asl	r0		;
+	ror	r1		;
+	ror	r1		;
+	ror	r1		;
+	bis	#prcwin,r1	;
+;	add	@proadr,r0	;
+;	mov	p.ur0+2(r0),prcpar+2
+;	mov	p.ur0(r0),prcpar;
+	mov	promap  (r0), prcpar   ;
+	mov	promap+2(r0), prcpar+2 ;
+50$:
+	add	bufwid,	r4	;
+	mov	-(r3),	ar1par	;
+	bic	a1mask,	ar1par	;
+	mov	-(r3),	r0	;
+	add	a1dx,	r0	;
+	return			;
+;--------------------------------
+
+                                                                                                                                                                                                                                                                                                                                                                                                

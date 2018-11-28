@@ -1,0 +1,903 @@
+.enabl ama
+	.Title	Hard Disk Controller
+;--------------------------------------------------
+; WD1010-05 map description
+;
+	hd.buff = 161040	; data buffer
+	hd.err	= 161042	; wr. precomp cyl.
+		e.dmnf	= 1	;data mark not found
+		e.tr0	= 2	;track 000 not found
+		e.ac	= 4	;cmd aborted
+		e.idnf	=20	;ident not found or crc error
+		e.crc	=100	;crc error /data field
+		e.bad	=200	;bad-block detected
+	hd.scnt = 161044	; Sector count rg.
+	hd.snum = 161046	; Sector number rg.
+	hd.cnlo = 161050	; Cylinder addr lo.
+	hd.cnhi = 161052	; Cylinder addr hi.
+	hd.sdh	= 161054	; Sector:Disk:Head
+		sdh0	= 1	;head 0 / side
+		sdh1	= 2	;head 1 / dens.lo
+		dens.lo = sdh1	;
+		sdh2	= 4	;head 2 / f1sel
+		f1sel	= sdh2	;
+		sd0h	=10	;hdsel
+		run	=20	;run
+		s256	= 0	;sector size	= 256
+		s512	=40	;		= 512
+		s1024	=100	;		= 1024
+		s128	=140	;		= 128
+		x.ecc	=200	;ext for ECC
+	hd.csr	= 161056	; Command & status reg
+		s.err	= 1	; error
+		s.cmd	= 2	; cmd in progress
+		s.drq	=10	;sgl 'DRQ'
+		s.sc	=20	;sgl 'SEEK COMPLETE'
+		s.wf	=40	;sgl 'WRITE FAULT'
+		s.rdy	=100	;sgl 'DISK READY'
+		s.busy	=200	;busy
+;----------------------------------------
+	fdcsr	= 161070	;
+	fdbuf	= 161072	;
+	fdcnt	= 161076	;
+		ba9	= 1	;
+		ba10	= 2	;
+		fd.ini	= 20	;
+;----------------------------------------
+; bdir	= wr	: rd/wr hdsdh	;
+; bdir	= rd	: rd/wr hdcsr	;
+;----------------------------------------
+; Command`s format
+
+	RESTORE =  20	;RESTORE + rate
+	SEEK	= 160	;SEEK	 + rate
+	RDSECT	=  40	;RDSECT  ! I ! M ! T
+	WRSECT	=  60	;WRSECT      ! M ! T
+	SCAN	= 100	;SCAN		 ! T
+	FORMAT	= 120
+		I  = 10 ; interrupt at end of cmd
+		M  =  4 ; multiple sectors
+		T  =  1 ; dis. retries
+		r0.035	= 0
+		r0.5	= 1
+		r1.0	= 2
+		r7.5	= 17
+;--------------------------------------------------
+;
+	HDCBUF	== 177130
+	HDCVEC	== 230
+	FDCVEC	== 234
+	M.HD	=  M.flop
+	V.HD	=  V.flop
+
+	HDC.BUF = <HDCBUF & 7777> + L.REG
+;------------------------------------------------
+bootd:	.word	10		; no boot partition
+bootw:	.word	100		; no warm boot partition
+	.byte	0		; motor on
+bcnt:	.byte	0
+h.fail:	.word	0
+;------------------------------------------------
+f.read	=106*400+9.
+f.write =105*400+9.
+f.form  =115*400+6.
+f.rec	=  7*400+2
+f.seek	= 17*400+3
+f.sds	=  4*400+2
+f.sis	= 10*400+1
+;................................
+f.spec: .byte	3,   12.*20+1, 2
+;................................
+f.cmd:	.byte	106
+f.hds:	.byte	0
+f.cyl:	.byte	0
+f.head: .byte	0
+f.sect: .byte	1
+f.len:	.byte	2
+f.eot:	.byte	37
+f.gpl:	.byte	5.
+f.dtl:	.byte	377
+;................................
+s.st0:	.blkb	1
+s.st1:	.blkb	1
+s.st2:	.blkb	1
+s.cyl:	.blkb	1
+s.hd:	.blkb	1
+s.sec:	.blkb	1
+s.len:	.blkb	1
+s.sp:	.blkb	1
+;------------------------------------------------
+rdstat: 			; 7346
+	mov	#s.st0,	r0	;
+	clr	13$		;
+10$:				;
+	add	#1,	(pc)+	;
+13$:	.word	0		;
+	bcs	99$		;
+	tstb	fdcsr		;
+	bpl	10$		;
+	cmpb	#277,	fdcsr	;
+	bcc	99$		;
+	movb	fdbuf,	(r0)+	;
+	cmp	#s.st0+8.,r0	;
+	bcc	10$		;
+99$:	return			;
+;----------------------------------------
+.macro	fcmd,	cmd		;
+	jsr	r5,	wrcmd	;
+	.word	cmd		;
+.endm				;
+;................................
+f.reset:			;
+	mov	#20,	fdcnt	;
+	mov	#2000,	r1	;
+	clr	fdcnt		;
+	sob	r1,	.	;
+f.set:
+	mov	#f.spec,r0	;
+	mov	#3,	r1	;
+	br	wrcmd1		;
+;................................
+wrcmd:				;
+	mov	#f.cmd,	r0	;
+	movb	(r5)+,	r1	; cnt
+	movb	(r5)+,	(r0)	; cmd
+wrcmd1: 			;
+	clr	13$		;
+10$:				;
+	add	r1,	(pc)+	;
+13$:	.word	0		;
+	bcs	99$		;
+	tstb	fdcsr		;
+	bpl	10$		;
+	cmpb	#277,	fdcsr	;
+	bcs	99$		;
+	movb	(r0)+,	(pc)+	;
+15$:	.word	0		;
+	mov	15$,	fdbuf	;
+	sob	r1,	10$	;
+99$:	rts	r5		;
+;----------------------------------------
+p.err:				;
+	mov	(r5)+,	ierr	;
+	DSTRIN	#ierr		;
+	rts	r5		;
+ierr:	.byte	0,0,22,172,263,233
+;................................
+.macro	ERROR,	cod		;
+	jsr	r5,	p.err	;
+	.byte	5*16.+0,cod	;
+.endm				;
+;----------------------------------------
+xread:				;
+xwr:	mov	#xerr,	r2	;
+	mov	#hd.err,r5	;
+	clr	-(sp)		;
+	movb	xsdh,	(sp)	; !!!!
+	bit	#10,	(sp)	;
+	beq	8$		;
+	bis	#177400,(sp)	;
+8$:
+	bis	#s512+sd0h,(sp)	;
+	bitb	#10,	h.err+1	; dev 10..17 ?
+	beq	10$		;
+	bic	#sd0h,	(sp)	; select flop
+10$:				;
+	movb	(r2)+,	(r5)+	;
+	inc	r5		;
+	cmp	#hd.sdh-2,r5	;
+	bcc	10$		;
+	movb	(sp),	(r2)+	;	
+	mov	(sp)+,	(r5)+	;
+;--------------------------------
+	mov	xcyl,	D95$	;
+	bitb	#10,	h.err+1 ;
+	bne	F.RW		;
+	bitb	#20,	(r2)	;
+	beq	20$		;
+	decb	bcnt		;
+	bicb	#^C3,	bcnt	; 
+20$:				;
+	movb	bcnt,	fdcnt	; buf.addr
+	movb	(r2),	(r5)	;
+	DSTRING #D96$		;
+	DVAL	#D95$		;
+	WAITINT #m.hd		;
+	movb	bcnt,	fdcnt	; buf.addr
+	bit	#s.err, (r5)	;
+	bne	1$		;
+	clc			;
+1$:	bit	#e.crc, hd.err	;
+	return			;
+;------------------------------------------------
+f.rw:
+	.push	<r0,r1,r3>
+	mov	f.hds,	r2
+	clrb	f.hds
+	movb	xsdh,	r0
+	rorb	r0
+	rolb	f.hds
+	movb	f.hds,	f.head
+	rolb	f.hds
+	rorb	r0
+	rorb	r0
+	movb	#333,	d97$+2
+	bcc	5$
+	movb	#73,	d97$+2
+5$:
+	rolb	f.hds
+	movb	xcyl,	f.cyl
+	sub	f.hds,	r2
+	movb	xsnum,	f.sect
+	bic	#376,	r2
+	beq	10$
+;................................
+	FCMD	f.seek		;
+	mov	#50,	r3	;
+	WAITINT #m.hd+m.tio	;
+	FCMD	f.sis		;
+	call	rdstat		;
+;--------------------------------
+10$:				;
+	movb	bcnt,	fdcnt	; buf.addr
+	cmpb	#rdsect+m,xcsr	;
+	bne	20$		;
+	FCMD	f.read		;
+	br	88$		;
+;................................
+20$:
+	cmpb	#wrsect+m,xcsr	;
+	bne	30$		;
+	tst	(r5)		; hd.csr
+	FCMD	f.write		;
+	br	88$		;
+;................................
+30$:
+	cmpb	#format,xcsr	;
+	bne	99$		;
+	.push	f.hds		;
+	movb	#2,	f.cyl	;
+	movb	p$sn(r4),f.head	;
+	movb	p$rl(r4),f.sect	;
+	movb	p$rl+2(r4),f.len;
+	tst	(r5)		; hd.csr
+	FCMD	f.form		;
+	movb	#2,	f.len	;
+	.pop	f.hds		;
+;................................
+88$:
+	DSTRING #D97$		;
+	DVAL	#D95$		;
+	mov	#50.,	r3	;
+	WAITINT #m.hd+m.tio	;
+	tst	r2		;
+	beq	96$		;
+;........................................
+	mov	#1000,	r2	;
+94$:				;
+	clr	fdcnt		;
+	sob	r2,	94$	;	
+	bis	#10,	h.err	;
+;........................................
+96$:
+	call	rdstat		;
+	movb	bcnt,	fdcnt	; buf.addr
+	tst	(r5)		; hd.csr
+99$:	cmpb	#77,	s.st0	;
+	bcc	999$		;
+991$:	movb	#-1,	f.cyl	;
+nop
+999$:
+	.pop	<r3,r1,r0>	;
+	return			;
+;------------------------------------------------
+D95$:	.WORD	 0,10.*400+<3*16.>
+D96$:	.BYTE	 3*16.+2,2,263,233
+D97$:	.BYTE	 3*16.+2,2,333,132
+;................................
+	.byte	 0		; !!!!!!!!\/
+xerr:	.byte	-1		;
+xscnt:	.byte	 0		;
+xsnum:	.byte	-1		;
+xcyl:	.word	 0		;
+xsdh:	.byte	 s512		;
+xcsr:	.byte	 rdsect 	;
+;--------------------------------------------------
+HDBTBL: .WORD	 HDCBUF,      0,      0,   2000,  H.WBUF,-1
+pname:	.asciz	/Hard-disk proc/
+.EVEN
+;------------------------------------------------
+hdcini::			;
+	mov	#pname, r2	;
+	mov	pc,	sp	;
+	call	wname		;
+	SETPRI	#30		;
+	clr	r0		;
+	PROVEC	#V.HD		;
+;------------------------------------------------
+	mov	#hd.csr,r5	;
+	tst	(r5)		; reset h.int
+	clr	-(r5)		; select flop
+	jsr	r5,	f.reset ; init FDC
+	mov	#2*50.,	r3	; wait 
+	mov	#f.cb0,	r4	;
+2$:
+	mov	p$hb(r4),(r5)	;
+	FCMD	f.rec		;
+	WAITINT #M.TIO+M.HD	;
+	FCMD	f.sis		;
+	call	rdstat		;
+	com	#0		;
+	bne	2$		;
+	tst	r2		;
+	bne	4$		;
+	bitb	#300,	s.st0	;
+	bne	4$		;
+	mov	#pm.off,(r4)	;
+4$:				;
+	add	#par.len,r4	;
+	com	#0		;
+	bne	2$		;
+;------------------------------------------------
+	mov	#sd0h,	(r5)+	; hd.sdh, select hd0
+;	movb	#10,	h.err+1	;
+	mov	#20.,	r4	;
+10$:	mov	#50.,	r3	;
+	WAITINT #M.TIO		;
+	bit	#s.rdy, (r5)	; hd.csr
+	bne	20$		;
+	sob	r4,	10$	;
+	ERROR	201		; err #1
+	br	fail		;
+;................................
+20$:	mov	#RESTORE,(r5)	;
+	mov	#20.*50., r3	;
+	WAITINT #M.HD+M.TIO	;
+	bit	#s.err, (r5)	; hd.csr
+	beq	ok		;
+	ERROR	362		; err #2
+fail:				;
+	inc	h.fail
+	jmp	loop0
+;----------------------------------------
+;----------------------------------------
+ok:				;
+	mov	#xread, r4	;
+	call	(r4)		;
+	bcs	foreign 	;
+10$:				;
+	mov	#par.fre,r0	;
+	mov	#hd.buff,r1	;
+15$:	tst	(r1)		;
+	sob	r0,	15$	;
+;................................
+	mov	#par.siz,r0	;
+	mov	r0,	r3	;
+	mov	#h0.sec, r2	;
+20$:	movb	(r1),	(r2)+	;
+	sob	r0,	20$	;
+	cmp	-2(r2),#123456	; signature
+	beq	30$		;
+	ERROR	343		; err #3
+25$:	clrb	-(r2)		; clear both par. tab !
+	sob	r3,	25$	;
+	jmp	loop0		;
+;----------------------------------------
+30$:	mov	h0.sec, r0	;
+	beq	bad		;
+	mul	h0.head,r0	;
+	mov	r1,	r0	;
+	beq	bad		;
+	mul	h0.track,r0	; r1 - lo, r0 - hi
+	cmp	r1,	h0.size ;
+	bne	bad		;
+	cmp	r0,	h0.size+2
+	beq	cont		;
+bad:	ERROR	213		; ERR #4
+;----------------------------------------
+; total disk space OK!
+; now test all partitions to be correct
+cont:
+	clr	r3		;
+	mov	#p.cb0, r2	; part # * size
+10$:	bic	#pm.off,p$cb(r2); part. off
+	mov	p$sn(r2),r0	;
+	beq	20$		;
+	mul	p$hn(r2),r0	;
+	mov	r1,	r0	;
+	beq	20$		;
+	mul	p$cn(r2),r0	;
+	cmp	r1,	p$sz(r2);
+	bne	20$		;
+	cmp	r0,	p$sz+2(r2)
+	bne	20$		;
+	bis	#pm.off,p$cb(r2); size OK -> part. on
+	bit	#pm.nb,	(r2)	;
+	beq	15$		;
+	mov	r3, bootd	;
+15$:	bit	#pm.wb,	(r2)	;
+	beq	20$		;
+	mov	r3,	r4	;
+	ash	#3,	r4	;
+	mov	r4, bootw	;
+20$:	add	#par.len, r2	;
+	inc	r3		;
+	cmp	#8.,	r3	;
+	bne	10$		;
+	br	loop0		;
+;----------------------------------------
+foreign:			;
+	mov	#xsnum,r3	; hd.snum
+	incb	(r3)		;
+	bmi	loop0		;
+	call	(r4)		;
+	bcc	30$		;
+	beq	foreign 	;
+;................................
+30$:				;
+	movb	(r3),	p.sb0	;
+40$:				;
+	incb	(r3)		;
+	call	(r4)		;
+	bcc	40$		;
+	bne	40$		;
+	movb	(r3),	p.sn0	;
+	sub	p.sb0,	p.sn0	;
+	decb	(r3)		;
+;................................
+	mov	#xsdh,	r3	; hd.sdh
+	movb	#s512+sd0h, (r3)
+50$:				;
+	decb	(r3)		;
+	call	(r4)		;
+	bcc	55$		;
+	beq	50$		;
+55$:				;
+	bicb	#^C7,	(r3)	;
+	incb	(r3)		;
+	movb	(r3),	p.hn0	;
+	mov	#1024., p.cn0	;
+	mov	#177770,p.sz0	;
+	bis	#pm.off,p.cb0	;
+;------------------------------------------------
+loop0:				;
+	PROREG	#hdbtbl 	;
+	tst	(r0)+		;
+	mov	r0,	hb.copy ;
+	mov	bootd,	hdc.buf ;
+loop:				;
+	clr	r5		;
+	bitb	#run,	xsdh	;
+	beq	10$		;
+	mov	#100.,	r3	;
+	mov	#run,	r4	; 
+	mov	#m.tio,	r5	;
+10$:
+	mov	#ret,	r0	;
+	mov	r0,	r1	;
+	clr	r2		;
+	WAITINT r5		;
+	.push	#loop		;
+	bicb	r2,	hd.sdh	;
+	bicb	r2,	xsdh	;
+	jsr	r0,	(r1)	;
+;------------------------------------------------
+h.wbuf: 			;
+	clr	@hb.copy	;
+	.push	#h.exit 	;
+	movb	#3,	bcnt	;
+	clr	h.err		;
+	clr	r0		;
+	GETPAR	#hr.map 	;
+	mov	hdc.buf,r1	;
+	bic	#177776,hdc.buf ;
+	call	SETMAP		;
+	mov	#hr.blk, r2	;
+	mov	(r1)+,	(r2)+	;hr.blk
+	mov	(r1)+,	(r2)+	;hr.dev
+	mov	r2,	r5	;
+	mov	(r1)+,	(r2)+	;hr.buf
+	movb	#RDSECT!M,xcsr	;
+	mov	(r1),	(r2)	;hr.cntw
+	beq	25$		; 
+	bpl	20$		;
+	movb	#WRSECT!M,xcsr
+	neg	(r2)		;
+20$:				;
+;................................
+	movb	-(r5),	r4	; hr.dev+1
+	bic	#^c17,	r4	;
+	movb	r4,	h.err+1	;dev.num for late..
+	mov	#par.len,r3	;
+	mul	r4,	r3	;
+	add	#p.cb0,	r3	;
+	mov	r3,	r4	;
+	bitb	#10,	h.err+1	;
+	bne	21$		;
+	tstb	h.fail		;
+	beq	22$		;
+	br	23$		;
+;................................
+21$:	tst	(r4)+		; skip sign
+	movb	p$rl+1(r4), f.spec+1;
+	jsr	r5,	f.set	; step rate
+	bitb	#run,	xsdh	;
+	bne	22$		;
+	bisb	#run,	xsdh	;
+	bisb	#run,	hd.sdh	;
+	mov	#20,	r3	;
+	WAITINT	#M.TIO		;
+;................................	
+22$:
+	mov	hr.buf,	r1	;
+	call	setmap		;
+	bit	#pm.off,(r4)	;
+	bne	30$		;
+	cmpb	-(r5),	#360	; hr.dev
+	beq	55$		;
+23$:	bis	#10,	h.err	;
+25$:
+	return			;
+;----------------------------------------
+30$:				;
+	tstb	-(r5)		; hr.dev
+	beq	130$		; read/write
+40$:	cmpb	#373,	(r5)	; spfun getsize
+	bne	50$		;
+	mov	p$sz(r4),(r1)	;
+	tst	p$cb(r4)	;
+	bpl	45$		;
+	dec	(r1)		;
+45$:	return			;
+;----------------------------------------
+50$:				;
+	cmpb	#360,	(r5)	;
+	bne	80$		;
+55$:	dec	hr.cntw		;  
+	bne	110$		; key not match
+	mov	#par.len,r2	;
+	bitb	#10,	h.err+1	;
+	bne	59$		;
+	mov	#h0.sec,r4	;
+	mov	#h0.sign-h0.sec+2,r2
+59$:
+	bitb	#20,	xcsr	;
+	beq	70$		;
+60$:	movb	(r1)+,(r4)+	;
+	sob	r2,	60$	;
+	return			;
+70$:	movb	(r4)+,(r1)+	;
+	sob	r2,	70$	;
+	return			;
+;----------------------------------------
+80$:				;
+	cmpb	#362,	(r5)	;
+	bne	120$		;
+	cmp	#-123456,hr.cntw;
+	bne	110$		;
+	mov	r1,	r3	; 
+	mov	#xscnt, r2	;
+	movb	h0.sec, (r2)+	; xscnt
+	movb	h0.gap3,(r2)+	; xsnum
+	mov	hr.blk, r1	; Format
+	clr	r0		;
+	div	p$hn(r4),r0	; r1 - head, r0 - cyl
+	add	p$hb(r4),r1	;
+	cmp	p$cn(r4),r0	;
+	blos	110$		;
+	add	p$cb(r4),r0	;
+	bic	#174000, r0	;
+;................................
+	mov	r0,	(r2)+	; xcyl
+	bicb	#17,	(r2)	; xsdh
+	bisb	r1,	(r2)+	; xsdh !!!!
+
+	movb	#format,(r2)	; xcsr
+;................................
+	mov	r3,	r1	;
+	mov	#256.,	r3	;
+	mov	#hd.buf,r0	;
+	movb	bcnt,	fdcnt	;
+	tst	hd.sdh		;
+90$:	
+	movb	(r1)+,	(r0)	;
+	movb	(r1)+,	(r0)	;
+	sob	r3,	90$	;
+	jmp	xwr		;
+;----------------------------------------
+110$:	bis	#40,	h.err	;
+	return			;
+;----------------------------------------
+120$:	cmp	#361,	(r5)	; hr.dev
+	bne	110$		;
+	dec	hr.cntw		;
+	bne	110$		;
+	cmp	#123456,hr.blk	;
+	bne	110$		;
+	mov	#hr.cntw,r5	;
+	clr	(r5)		;
+	mov	#400,	r3	; cntw
+	mov	#xscnt,	r0	;
+	mov	#177401,(r0)+	; xscnt,xsnum
+	clr	(r0)+		; xcyl
+	bicb	#17,  	(r0)	; xsdh	!!!!
+	br	180$		;
+;----------------------------------------
+130$:	tst	(r4)		; start from 1 or 2: bypass part. sec
+	bpl	135$		;
+	inc	hr.blk		;
+135$:	bitb	#20,	xcsr	; write cmd ?
+	beq	140$		;
+	bit	#pm.rw,(r4)	;
+	bne	110$		; read only err	
+;------------------------------------------------
+140$:				;
+	clr	r0		;
+	mov	#xscnt, r2	;
+	mov	#hr.cntw+1,r5	;	
+	movb	(r5),	(r2)	;
+	cmpb	r0,	-(r5)	;
+	adc	(r2)		;
+;................................
+	mov	hr.blk,	r1	;
+	mov	p$sn(r4),r3	;
+	div	r3,	r0	; r1 = rel sector adr, r0 = h*c
+	sub	r1,	r3	;
+	add	p$sb(r4),r1	;
+;................................
+	cmpb	r3,	(r2)	;
+	bcc	142$		;
+	movb	r3,	(r2)	;
+142$:				;
+	cmpb	#4,	(r2)	;
+	bcc	144$		;
+	movb	#4,	(r2)	;
+144$:				;
+	movb	(r2)+,	r3	;
+	movb	r3,	bcnt	;
+	negb	bcnt		;
+	bicb	#^C3,	bcnt	;
+	add	r3,	hr.blk	;
+	swab	r3		;
+	sub	r3,	(r5)	; wcnt
+	bpl	146$		;
+	add	(r5),	r3	;
+146$:				;
+;................................
+	movb	r1,	(r2)+	; xsnum
+	mov	r0,	r1	;
+	clr	r0		;
+	div	p$hn(r4),r0	; r1 = rel head adr, r0 = cyl
+	add	p$hb(r4),r1	;
+	cmp	p$cn(r4),r0	;
+	bgt	150$		;
+	comb	h.err		;
+	return			;
+150$:				;
+	add	p$cb(r4),r0	;
+	bic	#174000, r0	;
+	mov	r0,	(r2)+	; xcyl
+	bicb	#17,	(r2)	; xsdh !!!!
+	bisb	r1,	(r2)	; xsdh
+;................................
+180$:				; !!!!!!!!!!
+	mov	-(r5),	r1	; hr.buf
+	add	r3,	(r5)	;
+	add	r3,	(r5)+	;
+	call	setmap		;
+;................................
+190$:				;
+	mov	#hd.buf,r0	;
+	bitb	#20,	xcsr	;
+	beq	220$		;
+;................................
+	movb	bcnt,	fdcnt	; write
+	tst	hd.sdh		; bdir := write
+200$:	
+	movb	(r1)+,	(r0)	;
+	movb	(r1)+,	(r0)	;
+	sob	r3,	200$	;
+	tst	(r5)		; wcnt
+	bpl	220$		;
+210$:				;
+	mov	r3,	(r0)	;
+	mov	r3,	(r0)	;
+	inc	(r5)		;
+	bmi	210$		;
+220$:
+;...........................................
+	call	xwr		;!!!!!!!!!!!
+;...........................................
+	bitb	#20,	xcsr	;
+	bne	290$		;
+230$:				; read
+	movb	(r0),	(r1)+	;
+	movb	(r0),	(r1)+	;
+	sob	r3,	230$	;
+290$:				;
+	bcs	ret		;
+	tst	hr.cntw		;
+	bgt	140$		;
+	return			;
+;------------------------------------------------
+h.exit:				;
+	bitb	#10,	h.err+1	;
+	beq	8$		;
+;................................
+	bitb	#300,	s.st0	;
+	beq	5$		;
+	bisb	s.st1,	h.err	;
+5$:				;
+	ror	hdc.buf		;
+	bcc	7$		;
+	SETINT	#fdcvec		;
+7$:	br	20$		;
+;................................
+8$:				;
+	mov	#hdcvec,r5	;
+	bit	#s.err,	hd.csr	;
+	beq	10$		;
+	bis	hd.err,	h.err	;
+10$:	ror	hdc.buf		;
+	bcc	20$		;
+	SETINT	#hdcvec		;
+;................................
+20$:				;
+	mov	h.err,	r0	;
+	swab	r0		;
+	bis	#200,	r0	;
+	bis	bootw,	r0	;
+	mov	r0,	hdc.buf	;
+	mov	#2000,	@hb.copy;
+ret:	return			;
+;--------------------------------
+SETMAP:	                	;R1::ADDR
+	clr	r0		;
+	ashc	#3,	r0	;
+	asl	r0		;
+	ror	r1		;
+	sec			;bis 40000
+	ror	r1		;
+	ror	r1		;
+	mov	hr.map(r0),ur2	;
+	mov	hr.map+2(r0),ur3
+	return			;
+;--------------------------------
+;	Boot record and Partition Table Stucture
+;
+h0.SEC:	 .blkw	1	; Number of sectors per track
+h0.HEAD: .blkw	1	; Number of heads
+h0.TRACK:.blkw	1	; Number of cylinders
+h0.SIZE: .blkw	2	; Total size of disk in blocks
+h0.pcm:	 .blkw	1	; Precomp.
+h0.gap3: .blkw	1	; Gap 3 length
+;------------------------
+p.CB0:	.blkw	1	; Number of first cylinder of the partition #0
+p.CN0:	.blkw	1	; Number of cylinder`s in the partition #0
+p.HB0:	.blkw	1	; Number of first head of the partition #0
+p.HN0:	.blkw	1	; Number of heads in the partition #0
+p.SB0:	.blkw	1	; Number of first sector of the partition #0
+p.SN0:	.blkw	1	; Number of sectors in the partition #0
+p.RL0:	.blkw	2	; Relative sector partition #0
+p.SZ0:	.blkw	2	; Size of partition #0 in sector`s
+;........................
+par.len = . - p.cb0	;
+;........................
+	.blkb	par.len*7
+;........................
+h0.SIGN: .blkw	1	; signature 123456
+;........................
+par.siz	= . - h0.sec	; total partition tables size
+par.fre	= 1000 - par.siz; empty
+;================================================================
+dsect	0		;
+dw	p$CB		; Number of first cylinder of the partition #0
+dw	p$CN		; Number of cylinder`s in the partition #0
+dw	p$HB		; Number of first head of the partition #0
+dw	p$HN		; Number of heads in the partition #0
+dw	p$SB		; Number of first sector of the partition #0
+dw	p$SN		; Number of sectors in the partition #0
+dw	p$RL,2		; Relative sector partition #0
+dw	p$SZ,2		; Size of partition #0 in sector`s
+;----------------------------------------------------------------
+; p.CB*
+;	b0-b10	: Cylinder number
+;	b15	: 0 - start from sector 1, 1 - from 2
+;	b14	: 0 - off,		   1 - on disk
+;	b13	: 0 - R/W,		   1 - read only
+;	b12	: 0 - non bootable,	   1 - bootable disk
+;	b11	: 0 - no warm boot	   1 - warm boot disk
+
+	pm.st1	= 100000
+	pm.off	= 040000
+	pm.rw	= 020000
+	pm.nb	= 010000
+	pm.wb	= 004000
+;------------------------------------------------------------------
+f.CB0:	.word	0	; Number of first cylinder of the flop #0
+f.CN0:	.word	82.	; Number of cylinder`s
+f.HB0:	.word	2	; Number of first head
+f.HN0:	.word	2	; Number of heads
+f.SB0:	.word	1	; Number of first sector
+f.SN0:	.word	10.	; Number of sectors
+f.RL0:	.byte	30., 14.*20+1	; gap3, step rate
+	.byte	123,	0	; filler byte
+f.SZ0:	.word	82.*2*10., 0	; Size of partition
+;..................................................................
+f.CB1:	.word	0	; Number of first cylinder of the flop #0
+f.CN1:	.word	82.	; Number of cylinder`s
+f.HB1:	.word	6	; Number of first head
+f.HN1:	.word	2	; Number of heads
+f.SB1:	.word	1	; Number of first sector
+f.SN1:	.word	10.	; Number of sectors
+f.RL1:	.byte	30., 14.*20+1	; gap3, step rate
+	.byte	123,	0	; filler byte
+f.SZ1:	.word	82.*2*10., 0	; Size of partition
+;.............................................................
+f.CB2:	.word	40000	; Number of first cylinder of the flop #1
+f.CN2:	.word	82.	; Number of cylinder`s
+f.HB2:	.word	0	; Number of first head
+f.HN2:	.word	2	; Number of heads
+f.SB2:	.word	1	; Number of first sector
+f.SN2:	.word	20.	; Number of sectors
+f.RL2:	.byte	20., 13.*20+1	; gap3, step rate
+	.byte	123,	0	; filler byte
+f.SZ2:	.word	82.*2*20., 0	; Size of partition
+;..................................................................
+f.CB3:	.word	40000	; Number of first cylinder of the flop #1
+f.CN3:	.word	82.	; Number of cylinder`s
+f.HB3:	.word	4	; Number of first head
+f.HN3:	.word	2	; Number of heads
+f.SB3:	.word	1	; Number of first sector
+f.SN3:	.word	17.	; Number of sectors
+f.RL3:	.byte	20., 13.*20+1	; gap3, step rate
+	.byte	123,	0	; filler byte
+f.SZ3:	.word	82.*17.*2,0 	; Size of partition
+;..................................................................
+f.CB4:	.word	0	; Number of first cylinder of the flop #1
+f.CN4:	.word	80.	; Number of cylinder`s
+f.HB4:	.word	0	; Number of first head
+f.HN4:	.word	2	; Number of heads
+f.SB4:	.word	1	; Number of first sector
+f.SN4:	.word	10.	; Number of sectors
+f.RL4:	.word	0,0	; Relative sector
+f.SZ4:	.word	1640.,0 ; Size of partition
+;..................................................................
+f.CB5:	.word	0	; Number of first cylinder of the flop #1
+f.CN5:	.word	80.	; Number of cylinder`s
+f.HB5:	.word	0	; Number of first head
+f.HN5:	.word	2	; Number of heads
+f.SB5:	.word	1	; Number of first sector
+f.SN5:	.word	10.	; Number of sectors
+f.RL5:	.word	0,0	; Relative sector
+f.SZ5:	.word	1640.,0 ; Size of partition
+;..................................................................
+f.CB6:	.word	0	; Number of first cylinder of the flop #1
+f.CN6:	.word	80.	; Number of cylinder`s
+f.HB6:	.word	0	; Number of first head
+f.HN6:	.word	2	; Number of heads
+f.SB6:	.word	1	; Number of first sector
+f.SN6:	.word	10.	; Number of sectors
+f.RL6:	.word	0,0	; Relative sector
+f.SZ6:	.word	1640.,0 ; Size of partition
+;..................................................................
+f.CB7:	.word	0	; Number of first cylinder of the flop #1
+f.CN7:	.word	80.	; Number of cylinder`s
+f.HB7:	.word	0	; Number of first head
+f.HN7:	.word	2	; Number of heads
+f.SB7:	.word	1	; Number of first sector
+f.SN7:	.word	10.	; Number of sectors
+f.RL7:	.word	0,0	; Relative sector
+f.SZ7:	.word	1640.,0 ; Size of partition
+;------------------------------------------------------------------
+HDC.CPRC:.blkw	1		;
+HB.COPY: .blkw	1		;
+HR.MAP:  .blkw	7		;
+HR.BLK:  .blkw	1		;
+HR.DEV:  .blkw	1		;
+HR.BUF:  .blkw	1		;
+HR.CNTW: .blkw	1		;
+H.ERR:   .word	0		;
+;--------------------------------
+	.end
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            

@@ -1,0 +1,570 @@
+.sbttl	request processing
+
+cmdtbl:
+	.word	w$arin,	w$arki, w$vwcr,	w$vwki
+	.word	w$vwta,	w$vwfo,	w$vwba,	w$plcr
+	.word	w$plfr,	w$plmo,	w$plsa
+	.word	w$cset,	w$cera
+	.word	w$fnin,	w$fnki,	w$fnfi,	w$fnlo
+	.word	w$vwlo, w$prin,	w$arcr,	w$hbmv
+cmdmax	= .-cmdtbl
+
+;================================
+W$ARCR::
+	mov	(r1),	(pc)+	;store area addr
+1$:	.blkw	1		;
+	mov	ar.tas-ar.len(r1), (pc)+
+2$:	.blkw	1		;
+	mov	ar.lins-ar.len(r1), r0 ;num of lins
+	beq	arerr		;
+	call	arcomm		;
+	mov	1$,	r1	;
+;	mov	@#hr4,	@#ur4	;
+;	mov	@#hr5,	@#ur5	;
+	mov	r1,	-(sp)	;
+	clr	r0		;
+	GETPAR	#promap
+	ashc	#3,	r0	;
+	asl	r0		;
+	mov	(sp)+,	r1	;
+	clr	r2		;
+	bit	#10000,	r1	;
+	beq	7$		;
+	mov	#20,	r2	;
+7$:
+	bic	#^c..addr,r1	;
+;	add	@proadr,r0	;
+;	add	p.ur0(r0), r2	;par
+	add	promap(r0), r2	;
+	bis	2$,	r2	;
+			;init tas
+	mov	ar.lins-ar.tas(r5), r0	;
+	mov	ar.slen-ar.tas(r5), r3	;
+10$:
+	mov	r1,	(r5)+	;
+	mov	r2,	(r5)+	;
+	add	r3,	r1	;
+	bit	#10000,	r1	;
+	beq	11$		;
+	bic	#10000,	r1	;
+	add	#20,	r2	;
+11$:	sob	r0,	10$	;
+	return			;
+
+;================================
+W$ARIN::
+	mov	ar.lins-ar.len(r1), r0 ;num of lins
+	beq	arerr		;
+	mov	(r1), r5	;is area installed ?
+	beq	5$		;no
+	bit	#^c176,	r5	;
+	bne	arerr		;
+	mov	artbl(r5), r5	;area's descr
+	beq	arerr		;
+	cmp	ar.lins(r5), r0	;
+	bhis	2$		;
+	mov	ar.lins(r5), r0	;
+2$:
+	add	#ar.tas,r5	;point to start of tas
+	mov	r5, t.tar	;
+	add	#ar.tas-ar.len, r1	;
+1$:
+	mov	(r1)+, (r5)	;
+	bic	#^C..addr,(r5)+	;clear unused bits
+	mov	(r1)+, (r5)	;
+	bic	#^B0000000000001000,(r5)+
+	sob	r0, 1$		;
+	com	t.rdflg		;
+	return			;
+5$:
+	call	arcomm		;do common task
+110$:			;copy TAS to us
+	mov	(r1)+, (r5)	;
+	bic	#^C..addr,(r5)+	;clear unused bits
+	mov	(r1)+, (r5)	;
+	bic	#^B0000000000001000,(r5)+
+	sob	r0, 110$	;
+200$:
+	return			;
+arerr:
+        com	-(r1)
+	return
+
+;-------------
+arcomm:
+	MOV	#ARTBL,	R3	;
+	MOV	#ATL,	R2	;
+4$:	TST	(R3)+		;
+	BEQ	9$		;
+	SOB	R2,	4$	;
+999$:
+        com	-(r1)	;
+	tst	(sp)+	;
+	return
+9$:
+	mov	#arfree, r4	;
+	br	20$		;go to into search loop
+10$:
+	mov	r5, r4		;go to next free-ar
+20$:
+	mov	(r4), r5	;
+	beq	50$		;queue is empty or end of queue
+	cmp	r0, ar.len(r5)	;is it large enough ?
+	bhi	10$		;no
+	mov	(r5), (r4)	;remove this one from queue
+	br	100$		;do common work
+50$:
+	ash	#2, r0		;needed mem in bytes
+	add	#ar.tas, r0	;
+	mov	wheap, r5	;
+	add	r0, wheap	;
+	cmp	wheap, #win3	;
+	blos	60$		;OK
+	mov	r5, wheap	;restore pointer
+	br	999$		;
+60$:
+	mov	ar.lins-ar.len(r1), ar.len(r5)	;set real length
+100$:
+	mov	r5,	-(r3)	;set in artbl
+	sub	#artbl,	r3	;
+	mov	r3, (r1)+	;return ar-num to user
+	add	#ar.lins, r5	;
+	mov	(r1)+,	r0	;lins
+	mov	r0, (r5)+	;ar.lins
+	mov	(r1)+, (r5)+	;ar.slen
+	return			;
+;================================
+W$ARKI::
+	mov	(r1), r0	;ar's num
+	beq	arerr		;
+	bit	#^c176,	r0	;
+	bne	arerr		;
+	mov	artbl(r0), r5	;area's descr
+	beq	arerr		;
+	clr	artbl(r0)	;
+	mov	#arfree, r4	;
+	br	20$		;go into loop
+10$:
+	cmp	ar.len(r5), ar.len(r3)	; ???
+	blos	30$		;
+	mov	r3, r4		;
+20$:
+	mov	(r4), r3	;
+	bne	10$		;
+30$:
+	mov	r5, (r4)	;insert in queue
+	mov	r3, (r5)	;
+			;kill all arear's views
+	mov	screen, r3	;
+	mov	r0,	r2	;
+40$:
+	cmp	r2, vw.area(r3)	;is it its view ?
+	bne	45$		;no
+	mov	(r3),	r4	;save the next view
+	call	vwrem		;
+	mov	vwfree, (r3)	;
+	mov	r3, vwfree	;
+	movb	vw.num(r3), r5	;reset word in wdtbl !!!
+	clr	wdtbl(r5)	;
+	mov	r4,	r3	;
+	br	47$		;continue
+45$:
+	mov	(r3), r3	;
+47$:
+	cmp	screen, r3	;
+	bne	40$		;
+50$:
+	mov	sp,	t.rdflg	;
+	return			;
+;===============================
+WNCHECK:
+	mov	(r1),	r0
+	beq	vwerr
+	bit	#^C176,	r0
+	bne	vwerr
+	mov	wdtbl(r0),r3
+	bne	ret
+vwerr:	com	-(r1)
+	tst	(sp)+
+ret:	return
+;================================
+W$VWCR::
+	mov	(r1), r3	;is it CREATE ?
+	beq	1$
+	call	wncheck
+	jmp	wcheck		;no, MODIFY
+1$:
+	MOV	#WDTBL,	R0	;
+	MOV	#WTL,	R2	;
+4$:	TST	(R0)+		;
+	BEQ	9$		;
+	SOB	R2,	4$	;
+        br	vwerr		;
+
+9$:
+	mov	vwfree, r3	;any empty views ?
+	bne	10$		;yes
+	mov	wheap, r3	;take some mem from heap
+	add	#vwlen, wheap	;
+	br	20$		;
+10$:
+	mov	(r3), vwfree	;remove it from empty queue
+20$:
+	mov	r3, 	r5	;make work-pointer
+	mov	r3,	-(r0)   ;
+	add	#vw.tar,(r0)
+	sub	#wdtbl,	r0
+	mov	r0, 	(r1)	;send wnum to user
+	mov	#vwlen/2, r0	;
+25$:			;clear descr
+	clr	(r5)+		;
+	sob	r0, 25$		;
+	movb	(r1),	vw.num(r3)
+;-------
+30$:
+	mov	r3, -(sp)	;
+	call	wcheck		;
+	mov	(sp)+, r3	;
+	bcs	399$		;
+
+;-------
+	mov	vwsucc, r1	;
+	jmp	vwput		;put it in view's list
+
+399$:
+	movb	vw.num(r3),r0
+	clr	wdtbl(r0)
+	mov	vwfree, (r3)	;
+	mov	r3, vwfree	;
+	return
+;================================
+
+W$VWKI::
+	call	wncheck
+	sub	#vw.tar,r3
+	clr	wdtbl(r0)	;
+	call	vwrem		;remove from queue
+	mov	vwfree, (r3)	;put it in free list
+	mov	r3, vwfree	;
+	jmp	redraw		;redraw needed
+
+;================================
+W$VWTA::
+	call	wncheck		;take win-num
+        add	#vw.tar-2, r1 ;
+	mov	#vw.tar-vw.area/2, r0	;
+10$:			;copy view's descr to user
+	mov	-(r3), -(r1)	;
+	sob	r0, 10$		;
+	return			;
+;================================
+W$VWFO::
+	mov	#vwsucc,r5	;;;;;;;;
+	br	foba		;
+;================================
+W$VWBA::
+	mov	#screen,r5	;
+foba:
+	call	wncheck		;take win-num
+	sub	#vw.tar, r3	;
+	call	VWREM		;
+	mov	(r5),	r1	;;;;;;;;;
+	mov	sp,	t.rdflg
+	jmp	VWPUT		;
+;================================
+.enabl	lsb
+277$:	.word	8.,8.,8.,4.,0,0,0,2
+300$:	.byte	7,2, 7,18., 7,34., 3,50., 3,10., 3,26., 3,42., 1,58.	;
+400$:	.word	0,	20,	40,	60,	1000,	1020,	1040,	1060
+	.word	100,	120,	140,	160,	1100,	1120,	1140,	1160
+	.word	200,	220,	240,	260,	1200,	1220,	1240,	1260
+	.word	300,	320,	340,	360
+	.word	2000,	3000
+W$PLCR::
+	mov	r0,	r5	;
+	movb	(r1),	r0	;take mode# [0,1,2,3]
+	bic	#^c7,	r0	;
+	asl	r0
+	movb	300$(r0),r3
+	movb	300$+1(r0),r4
+	add	#paltbl,r4
+10$:
+	tst	(r4)+
+	beq	20$
+	sob	r3,	10$
+	return
+20$:
+	mov	r2,	-(r4)
+	neg	r3
+;!!	add	#8.,	r3
+	add	277$(r0), r3		;!!
+	ash	#14.,	r3
+	bcc	25$
+	bis	#4,	r3
+25$:
+;!!	cmp	#vm8*2,	r0
+;!!	bne	30$
+;!!	bis	#4,	r3
+30$:
+	bisb	r3,	(r1)+
+	swab	r3
+	movb	r3,	(r1)+
+
+	sub	#paltbl,	r4
+333$:
+	mov	#12124,	40$		; mov	(r1)+, (r4)+
+	mov	#5024,	45$		; clr	(r4)+
+334$:
+	mov	400$(r4),	r4
+	add	#pal,	r4
+	mov	#16./2,	r0
+	bit	#2000,	r4
+	beq	39$
+	mov	#256./2,r0
+39$:
+	.push	ur3
+	.push	r0		;cnt
+	.push	r4		;adr
+	mov	40$,	44$
+	mov	plpar,	ur3
+40$:	mov	(r1)+,	(r4)+
+	sob	r0,	40$
+
+	.pop	r4
+	add	#400,	r4	;
+	.pop	r0
+	asr	r5
+	bcc	45$		; even code (old style)
+44$:	mov	(r1)+,	(r4)+
+	sob	r0,	44$
+	br	47$
+45$:	clr	(r4)+
+	sob	r0,	45$
+47$:
+	.pop	ur3
+99$:			;no redraw
+	return			;
+;================================
+W$PLFR::
+	movb	(r1)+,	r3
+	bic	#^c7,	r3
+	asl	r3
+	movb	300$+1(r3),r3
+	tst	-(r3)		;!!
+	movb	(r1),	r0
+	ash	#-5,	r0
+;;!!	beq	999$
+	bic	#^c6,	r0
+	add	r0,	r3
+	clr	paltbl(r3)
+999$:
+	return
+;================================
+W$PLMO::
+	mov	r0,	r5	;
+	movb	(r1)+,	r4
+	bic	#^c7,	r4
+	asl	r4
+	swab	r4
+	bisb	(r1)+,	r4
+	ash	#-5,	r4
+	bit	#100,	r4
+	beq	333$
+	mov	#110,	r2
+	xor	r2,	r4
+	br	333$
+;================================
+W$PLSA::
+	mov	r0,	r5	;
+	mov	#12421,	40$	; mov (r4)+,(r1)+
+	mov	#<nop>,	45$	; 
+	movb	(r1)+,	r4
+	bic	#^c7,	r4
+	asl	r4
+	swab	r4
+	bisb	(r1)+,	r4
+	ash	#-5,	r4
+	bit	#100,	r4
+	beq	334$
+	mov	#110,	r2
+	xor	r2,	r4
+	jmp	334$
+.dsabl	lsb
+;================================
+W$CSET::
+	call	w$cera		;erase cursor
+	mov	(r1)+,	r3	;take X
+	cmp	r3,	#scrdots;
+	blo	10$		;
+	mov	xcur,	r3	;
+10$:
+	mov	r3,	r0	;
+	ash	#-3,	r3	;rel addr in eline
+	bic	#177770,r0	;
+	add	#eline0,r3	;
+	mov	r3,	sxcur	;save r1 pointer
+	mov	#10,	r2	;
+	ash	r0,	r2	;
+	movb	r2,	(r3)+	;
+	swab	r2		;
+	movb	r2,	(r3)+	;
+	add	#elen-2,r3	;
+	mov	#167,	r2	;
+	ash	r0,	r2	;
+	com	r2		;
+	movb	r2,	(r3)+	;
+	swab	r2		;
+	movb	r2,	(r3)+	;
+
+	mov	(r1)+,	r5	;
+	cmp	r5,	#scrlins-1 ;
+	blo	20$		;
+	mov	ycur,	r5	;
+20$:
+	asl	r5		;
+	asl	r5		;
+	add	#tas,	r5	;
+	mov	#stas,	r0	;
+	mov	r5,	(r0)+	;save pointer
+	mov	(r5),	(r0)	;save tas
+	mov	ctas,	(r5)	;set tas for cursor
+	return			;
+;================================
+W$CERA::
+	mov	sxcur,	r0	;
+	beq	10$		;nothing to do: no cursor !
+	clrb	(r0)+		;
+	clrb	(r0)+		;
+	add	#elen-2,r0	;
+	movb	#-1,	(r0)+	;
+	movb	#-1,	(r0)	;
+	mov	#stas,	r0	;
+	mov	(r0)+,	r3	;
+	mov	(r0),	(r3)	;
+10$:
+	return			;
+;================================
+W$FNIN::
+	mov	fnfree,	r2	;take ptr to free descr
+	beq	100$		;non free
+	mov	r2,	fnfree	;remove free one from list
+	br	110$		;
+100$:
+	mov	wheap,	r2	;
+	add	#fnlen,	wheap	;
+	cmp	wheap,	#win3	;
+	blo	110$		;
+	neg	-(r1)		;report no-mem-error !
+	br	999$		;
+110$:
+;	mov	fnsucc,	(r2)	;put descr in list of available fonts
+;	mov	r2,	fnsucc	;
+			;new font should be the last one in list
+	mov	#fnsucc, r3	;
+	mov	(r3),	r0	;take addr of 1st
+120$:
+	cmp	(r0),	r3	;is it last one ?
+	beq	130$		;yes
+	mov	(r0),	r0	;take the next
+	br	120$		;continue scanning
+130$:
+	mov	r3,	(r2)	;
+	mov	r2,	(r0)	;--------
+	mov	(r1),	fn.par(r2) ;store the PAR of font
+999$:
+	return			;
+;================================
+W$FNKI::
+	mov	(r1),	r0	;get font's par
+	mov	#fnsucc,r3	;
+	mov	(r3),	r2	;point to the 1st font's descr
+10$:
+	cmp	r2,	#fnsucc	;is it the end of list ?
+	beq	20$		;yes
+	cmp	r0,	fn.par(r2) ;is it the font we need ? (to kill)
+	beq	30$		;yes
+	mov	r2,	r3	;don't forget about prev.font
+	mov	(r2),	r2	;go to the next ...
+	br	10$		;
+20$:
+	neg	-(r1)		;font not found
+	br	999$		;
+30$:
+	mov	(r2),	(r3)	;remove him from list of fonts
+	mov	fnfree,	(r2)	;put it if free list
+	mov	r2,	fnfree	;
+;	FREMEM	#1		;free 8K * 1 of RAM
+999$:
+	return			;
+;================================
+W$FNFI::
+	mov	r1,	r2	;
+	tst	(r2)+		;point to name of needed font
+	mov	#fnsucc,r3	;
+	mov	(r3),	r4	;
+10$:
+	cmp	r4,	#fnsucc	;end of list
+	beq	30$		;yes
+	mov	fn.par(r4), @#ur6 ;map the font
+			;compare names
+	mov	r2,	r0	;we need
+	mov	#fn.nam+140000, r5 ;it's name
+20$:
+	tstb	(r5)		;end of it's name
+	beq	40$		;OK
+	cmpb	(r0)+,	(r5)+	;
+	beq	20$		;
+	mov	r4,	r3	;go to next font
+	mov	(r4),	r4	;
+	br	10$		;
+30$:
+	neg	-(r1)		;error return
+	br	999$		;
+40$:
+	mov	fn.par(r4), (r1);return it's PAR
+999$:
+	return			;
+;================================
+W$FNLO::
+	mov	r1,	r2	;save user addr
+	mov	(r1)+,	r0	;is it the 1st ?
+	beq	10$		;yes
+	mov	(r0),	r0	;point to next
+	cmp	r0,	#fnsucc	;is it end of list ?
+	bne	20$		;no
+	clr	(r2)		;tell user about the END !
+	br	999$		;
+10$:
+	mov	fnsucc,	r0	;take pointer to 1st
+				;r1 - name's addr (in user)
+20$:
+	mov	r0,	(r2)	;return user cur.font descr's addr
+	mov	fn.par(r0), @#ur6 ;map the font
+	mov	#fn.nam+140000, r2 ;point to font's name
+30$:
+	movb	(r2)+,	(r1)+	;
+	bne	30$		;
+999$:
+	return			;
+;================================
+W$VWLO::
+	mov	(r1), r0	;take win-num
+	bit	#^C176,	r0
+	bne	999$
+	mov	wdtbl(r0),r3
+	beq	999$
+	mov	-vw.tar(r3),	r3	;
+	add	#vw.tar,	r3	;
+        add	#vw.tar-2, r1 ;
+	mov	#vw.tar-vw.area/2, r0	;
+10$:			;copy view's descr to user
+	mov	-(r3), -(r1)	;
+	sob	r0, 10$		;
+	movb	vw.num-vw.area(r3), r0	;
+	mov	r0,	-(r1)	;
+	return			;
+999$:
+	com	-(r1)		;
+	return			;
+
+                                                                                                                                                            
