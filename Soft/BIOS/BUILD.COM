@@ -1,3 +1,7 @@
+! Load FPU emulation
+copy EM.SYS SY:
+SET EM ON
+
 ! From P16BOT.COM
 mac p16+p16bot/obj/list
 ! From P16RST.COM
