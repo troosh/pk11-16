@@ -1,0 +1,153 @@
+.enabl ama
+.radix	10
+mmm	= ^o137776
+;--------------------------------
+unpack::			;
+	mov	#1,	mmm	;
+	mov	#prc$$$,r5	;
+	mov	#getx,	r0	;
+	mov	#16,	r1	;
+	call	(r0)		;
+	mov	r2,	r3	;
+	asl	r3		;
+	add	#^O40000,r3	;
+	mov	r3,	-(sp)	;
+	call	(r0)		;
+	asl	r2		;
+	sub	r2,	r3	;
+	mov	r3,	-(sp)	;
+;--------------------------------
+10$:				;
+	cmp	r3,	2(sp)	;
+	bcc	unp0		;
+	mov	#1,	r1	;
+	mov	r1,	r4	;
+	call	(r0)		;
+	bne	62$		; ptr
+;--------------------------------
+	call	(r0)		;
+	bne	30$		; 
+	mov	#16,	r1	; w16
+	br	33$		;
+30$:	call	(r0)		;
+	bne	40$		; 
+	mov	#13,	r1	; w13
+33$:	call	(r0)		;
+	mov	r2,	(r3)+	;
+	br	10$		;
+;--------------------------------
+40$:
+	call	(r0)		;
+	beq	60$		;
+	mov	#3,	r1	;
+	call	(r0)		;
+	add	r2,	r4	;
+	inc	r4		;
+	cmp	#7,	r4	;
+	bcc	60$		;
+;................................
+	bic	#^C1,	r2	;
+	inc	r1		; r1=4
+	call	getn		;
+	mov	r2,	r4	;
+	add	#9,	r4	;
+	cmp	#36,	r4	;
+	bcc	62$		;
+;................................
+	bic	#^C3,	r2	;
+	call	getn		;
+	mov	r2,	r4	;
+	add	#36,	r4	;	
+60$:	inc	r4		; slen=2
+;--------------------------------
+62$:	mov	r4,	-(sp)	; get.a
+	mov	#3,	r1	;
+	call	(r0)		;
+	mov	r2,	r4	;
+	ash	#2,	r4	;
+	add	#77$,	r4	;
+	mov	(r4)+,	r1	;
+	call	(r0)		;
+	add	(r4),	r2	;
+	com	r2		;
+	asl	r2		;
+	add	r3,	r2	;
+	mov	(sp)+,	r4	;
+;--------------------------------
+64$:	mov	(r2)+,	(r3)+	;
+	sob	r4,	64$	;
+	br	10$		;
+77$:	.word	3,0, 3,8, 6,16, 7,80, 8,208, 9,464, 11,976, 13,3024
+;--------------------------------
+ga0:				;
+	mov	r4,	-(sp)	;
+	mov	#3,	r1	;
+	call	(r0)		;
+	mov	r2,	r4	;
+	sub	#4,	r4	;
+	bmi	10$		;
+	ash	#2,	r4	;
+	add	#17$,	r4	;
+	mov	(r4)+,	r1	;
+	call	(r0)		;
+	add	(r4),	r2	;
+	cmp	(r4),	#12	;
+	bne	10$		;
+	cmp	#15,	r2	;
+	bcs	12$		;
+10$:	clc			;
+12$:	mov	(sp)+,	r4	;
+	return			;
+17$:	.word	3,4,	3,12,	7,16,	13,144
+;--------------------------------
+unp0:
+	mov	#^O40000,r4	;
+	mov	(sp)+,	r3	;
+5$:				;
+	call	ga0		;
+	bcs	20$		;
+	tst	r2		;
+	beq	15$		;
+10$:				;
+	mov	(r3)+,	(r4)+	;
+	sob	r2,	10$	;
+15$:	inc	r2		;
+	br	30$		;
+20$:				;
+	sub	#14,	r2	;
+	cmp	#5,	r2	;
+	bne	30$		;
+	call	ga0		;
+	add	#5,	r2	;
+30$:				;
+	clr	(r4)+		;
+	sob	r2,	30$	;
+	cmp	r4,	(sp)	;
+	bcs	5$		;
+	tst	(sp)+		;
+	return			;
+;----------------------------------------
+getx:				;
+	clr	r2		;
+getn:
+	mov	r1,	-(sp)	;
+	mov	r0,	-(sp)	;
+1$:
+	asl	r2		;
+	bit	mmm,	(r5)	;
+	beq	5$		;
+	inc	r2		;
+5$:				;
+	asl	mmm		;
+	bcc	15$		;
+	tst	(r5)+		;
+	inc	mmm		;
+15$:				;
+	sob	r1,	1$	;
+	mov	(sp)+,	r0	;
+	mov	(sp)+,	r1	;
+	tst	r2		;
+	return			;
+;----------------------------------------
+.print .-unpack			
+.end

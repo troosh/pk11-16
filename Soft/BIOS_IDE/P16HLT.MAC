@@ -1,0 +1,293 @@
+;------------------------------------------------
+$$csr:	mov	(r0),	r5	;
+	add	#vrqtbl-v.low+4,r5
+	bit	#100,	(r1)	; l.reg
+	bne	10$		;
+	jmp	res.int		;
+;................................
+10$:	tstb	(r1)		; l.reg
+	bpl	20$		;
+	jmp	set.int		;
+20$:	return			;
+;------------------------------------------------
+vec.to: 
+    	mov	r5,	sav.r5
+	mov	r0,	sav.r0
+	mov	vrqtbl, r5	
+	mov	(r5)+,	r0
+	cmp	(r5),	r0
+	bne	15$
+	bic	#c.irq,	vrqflg
+	bis	#c.irq, ppic
+	cmp	#vrqtbl+2,r5
+	beq	99$
+15$:
+	mov	r0,	@(r5)+
+	mov	-(r5),  2(r0)
+	clr	-(r5)
+	sub	#vrqtbl-v.low+4,r5
+	mfus
+	wcpc
+	mfus
+	wcps
+99$:
+        mov	sav.r0,r0
+	mov	sav.r5,r5
+ 	step
+;------------------------------------------------
+        rd = 10			;
+        wr =  4			;
+	p.hlt=1			;
+vhlt::  			;
+	mov     sp,     @running;
+	mov	running,sp	;
+	.push	<r5,r4,r3,r2,r1,r0>
+	mov	sp,	r2	;
+	sub	#p.r0,	r2	;
+	mov	#hstack,sp	;
+	tst	tcflg		;
+	bne	5$		;
+;--------------------------------
+	mov	#sndcsr,r3	;
+	mov	#264,	(r3)	;
+	mov	-(r3),	r1	;
+	swab	r1		;
+	bisb	(r3),	r1	;
+	swab	r1		;
+	neg	r1		;
+	clr	r0		;
+	mov	r0,	(r3)	;
+	mov	r0,	(r3)	;
+	ashc	#-5,	r0	;
+	add	r1,	c.tim0	;
+	adc	c.tim1		;
+;--------------------------------
+5$:				;
+	mov	ppib,	r0	;
+	bis	#340,	r0	;
+	mtps	r0		;
+	bvc	write		;
+	bcc	read		;
+	beq	ioint		;
+	br	hlt		;
+;------------------------------------------------
+read:				;
+	mov	hr1,	r1	;
+	beq	100$		;
+	mov	-20000(r1),r0	; l.rda
+	beq	trap4.		;
+	bpl	100$		;
+	add	#4,	r0	;
+	movb	#rd,	(r0)	;
+	call	$$put1		;
+;................................		
+100$:	mov	hr0,	r1	;
+	mov	-20000(r1),r0	; l.rda
+	beq	trap4.		;
+	bpl	h.int		;
+	add	#4,	r0	;
+	movb	#rd,	(r0)	;
+	br	$$put0		;
+;----------------------------------------
+write:	mov	hr1,	r1	;
+	beq	10$		;
+        bic     #30000,	r1	; l.reg
+	mov	10000(r1),r0	; l.rda
+	bpl	jrq		;
+     	bic	(r0)+,	(r1)	; l.reg
+	bis	(r0)+,	(r1)	;
+	movb	#wr+rd,	(r0)	;
+	call	$$put1		;
+;................................
+10$:	mov	hr0,	r1	;
+        bic     #30000,	r1	; l.reg
+	mov	10000(r1),r0	; l.rda
+	bpl	jrq		;
+     	bic	(r0)+,	(r1)	;
+	bis	(r0)+,	(r1)	;
+	movb	#wr+rd, (r0)	;
+;------------------------------------------------
+$$put0:				;
+	bitb	(r0)+,	(r0)	;
+	beq	h.int		;
+	bitb	#p.hlt, (r0)+	;
+	beq	10$		;
+	mov	#h.int,	-(sp)	;
+	mov	(r0)+,	pc	; call hlt-process
+10$:				;
+	mov	(r0)+,	r3	;
+	bit	#m.run,	p.mask(r3)
+	bne	h.int		;
+	mov	(r0)+,	p.r0(r3)
+	mov	r2,	p.cprc(r3)
+	mov	readyq,	r1	;
+	call	putpri		;
+;------------------------------------------------
+h.int:				;
+	bit	#4,	ppib	;
+	beq	schedule	;
+ioint:	mov	#piccsr,r1	;
+	mov	#14,    (r1)	;
+	clr	r0		;
+	bisb	(r1),   r0	;
+	aslb	r0		;
+	bcc     schedule	;
+				;
+ 	mov	#40,	(r1)+   ;eoi
+        aslb	r0		;
+	add	#v.init,r0	;
+int4:	mov	(r0)+,	r3	;+2
+	beq	supr		;
+int5:	bmi	int10		;
+	call	(r3)		; call hlt-process
+	br	schedule	;
+;................................
+jrq:				;
+trap4.:	beq	trap4		;
+	mov	r2,	r3	;
+	mov	r0,	r2	;
+	mov	(r1),	r5	; l.reg
+	rcps			;
+	ror	r0		;
+	asl	r0		;
+	wcps			;
+	jmp	(r2)		;
+;................................
+tr4h:	mov	#v.tr4h,r0	;
+	br	int4		;
+;................................
+hlt:	;bit	#10, ppib	; bit	#i.hlt, ppip
+	bpl	5$		; bne	5$
+	rcpc			;
+	mov	r0,	r5	;
+	sub	#2,  	r5	;
+	mfus			;
+	tst	r0		;
+	bne	exit		;
+				;
+	mov	#v.cpuh,r0	;
+	br	int4		;
+5$: 	mov	#v.but, r0	;
+	bic	#c.hlt,	vrqflg	;
+	br	int4		;
+supr:				;
+     	mov	#v.supr,r0	;
+	mov	(r0)+,	r3	;
+	bne	int5		;
+	jmp	dbg		;
+;................................
+int10:				;
+	bis	p.mask(r3),picmr;
+	bit	#m.run,	p.mask(r3)
+	bne	schedule	;
+	mov	(r0),   p.r2(r3);
+	bis	#1,	p.ps(r3);
+;------------------------------------------------
+put.sche::			;
+	mov	readyq, r1	;
+	call	putpri		;
+schedule::			;
+ 	mov	running,sp	;
+	mov	rdsucc, r1	;
+	add     #p.sp,r1	;
+	cmp	sp,	r1	;
+	beq	exit		;
+				;
+	add	c.tim0,	p.tim0-p.sp(sp)
+	adc		p.tim1-p.sp(sp)
+	add	c.tim1,	p.tim1-p.sp(sp)
+				;
+	sub	c.tim0,	p.tim0-p.sp(r1)
+	sbc		p.tim1-p.sp(r1)
+	sub	c.tim1,	p.tim1-p.sp(r1)
+				;
+	tst	(sp)+		;
+	rcpc			;
+	mov	r0,	(sp)+	;
+        rcps			;
+        mov     r0,     (sp)+	;
+        mov     #ur0,   r2	;
+        mov     (r2)+,  (sp)+   ;ur0
+        mov     (r2)+,  (sp)+	;
+        mov     (r2)+,  (sp)+	;
+        mov     (r2)+,  (sp)+	;
+        mov     (r2)+,  (sp)+	;
+        mov     (r2)+,  (sp)+	;
+        mov     (r2)+,  (sp)+	;
+        mov     (r2),   (sp)    ;ur7
+	mov	r1,	running	;
+	add	#p.mask-p.sp,r1	;
+	bis	(r1),   picmr	;
+	bis	#m.run,	(r1)	;
+     	mov	-(r1),	(r2)	;ur7
+	mov	-(r1),	-(r2)	;
+	mov	-(r1),	-(r2)	;
+	mov	-(r1),	-(r2)	;
+	mov	-(r1),	-(r2)	;
+	mov	-(r1),	-(r2)	;
+	mov	-(r1),	-(r2)	;
+	mov	-(r1),	-(r2)	;ur0
+        mov     -(r1),  r0	;ps
+        wcps			;
+	mov	-(r1),	r0	;pc
+	wcpc			;
+				;
+	mov	-(r1),	sp	;sp
+	mov	r1,	r0	;
+	br	ex10		;
+;------------------------------------------------
+trap4:	mov	@running,r5	;
+	rcps			;
+	mtus			;
+	rcpc			;
+	mtus			;
+	mov	r5,	@running;
+	mov	#4,	r5	;
+	mfus			;
+	wcpc			;
+	mfus			;
+	wcps			;
+;------------------------------------------------
+exit::				;
+      	mov     running,r0	;
+	mov	(r0),	sp	;
+ex10:	mov	-(r0),	r5	;
+	mov	-(r0),	r4	;
+	mov	-(r0),	r3	;
+	mov	-(r0),	r2	;
+	mov	ppic,	r1	;
+	bis	#c.irq+c.hlt,r1	;
+	bic	vrqflg, r1	;
+	tst	p.mask-p.r2(r0)	; m.irq
+	bmi	10$		;
+	bis	#c.irq, r1	;
+10$:				;
+	bit	#20000,p.mask-p.r2(r0)	; m.hlt
+	bne	20$		;
+	bis	#c.hlt,	r1	;
+20$:				;
+	mov	r1,	ppic	;
+	mov	-(r0),	r1	;
+  	mov	-(r0),	r0	;
+	clr	hr0		;
+	clr	hr1		;
+	step			;
+;------------------------------------------------
+$$put1:				;
+	bitb	(r0)+,	(r0)	;
+	beq	99$		;
+	bitb	#p.hlt, (r0)+	;
+	beq	10$		;
+	mov	(r0)+,	pc	; call hlt-process
+10$:				;
+	mov	(r0)+,	r3	;
+	bit	#m.run,	p.mask(r3)
+	bne	99$		;
+	mov	(r0)+,	p.r1(r3);
+	mov	r2,	p.cprc(r3)
+	mov	readyq,	r1	;
+	jmp	putpri		;
+99$:	return			;
+;------------------------------------------------
+
+.end

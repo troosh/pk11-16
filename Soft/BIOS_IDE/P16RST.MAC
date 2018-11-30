@@ -1,0 +1,25 @@
+
+rstini::
+	mov	#pname,	r2
+	call	wname
+	provec	#v.init
+	setpri	#10000
+	mov	pc,	sp
+
+rst::   waitint #m.init
+	mov	#0,	@#177546;system clock
+	nop			;
+	resint	#100		;
+	mov	#l.rda+4000, r5	; from 174000
+	mov	#1700,  r4	; (177600-174000)/2
+10$:	mov	(r5)+,	r0
+	bpl	20$
+	mov	r.reset(r0),r1
+	cmp	#-1,    r1
+	beq	20$
+	mov	r1,	170000-l.rda-2(r5)
+20$:	sob	r4,	10$
+	br	rst
+pname:	.asciz	/Reset process   /
+.even  
+.end

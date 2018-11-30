@@ -1,0 +1,370 @@
+.sbttl	initialization of WINDOW-monitor
+
+.macro	bug	x
+.if df bug$$
+mov	x, val
+DVAL	#val
+.endc
+.endm
+
+.mcall	.exit
+.asect
+
+.=1000
+;------------------------------
+etao:	.blkw	2
+eline:
+eline0:	.blkb elen
+eline1: 
+.rept	elen
+	.byte	-1
+.endr
+;------------------------------
+
+color:
+c0	= 0
+c1	= 0
+c2	= 252	;6*10+7*4+2
+.byte	c0,	0,	0,	0,	0,	0,	0,	c1
+.byte	0,	0,	0,	c1,	0,	c1,	c1,	c2
+
+c0	= ^B00000000	;
+c1	= ^B01001001	;
+c2	= ^B11111010	;
+c3	= ^B00011000	;
+c4	= ^B11111110	;
+
+.byte	c0,	0,	0,	c1,	0,	0,	0,	c2
+.byte	0,	0,	0,	c3,	c1,	c2,	c3,	c4
+
+c0	= ^B00000000	;	Black
+c1	= ^B01010001	;Dark	Red
+c2	= ^B00011100	;	Red
+c3	= ^B10011100	;Ligh	Red
+c4	= ^B10001001	;Dark	Green
+c5	= ^B10100000	;	Green
+c6	= ^B11110000	;Light	Green
+c7	= ^B01110111	;Dark	Blue
+c8	= ^B00000011	;	Blue
+c9	= ^B10100011	;Light	Blue
+c10	= ^B11011100	;       Yellow
+c11	= ^B00011111	;	Violet
+c12	= ^B01011110	;	Magenta
+c13	= ^B11110011	;	Cyan
+c14	= ^B10010010	;	Gray
+c15	= ^B11111111	;	White
+
+.byte	c0,	c1,	c2,	c3,	c4,	c5,	c6,	c7
+.byte	c8,	c9,	c10,	c11,	c12,	c13,	c14,	c15
+
+c0	= ^B00000000	;	Black
+c1	= ^B01010001	;Dark	Red
+c2	= ^B00011100	;	Red
+c3	= ^B10011100	;Ligh	Red
+c4	= ^B10001001	;Dark	Green
+c5	= ^B10100000	;	Green
+c6	= ^B11110000	;Light	Green
+c7	= ^B01110111	;Dark	Blue
+c8	= ^B00000011	;	Blue
+c9	= ^B10100011	;Light	Blue
+c10	= ^B11011100	;       Yellow
+c11	= ^B00011111	;	Violet
+c12	= ^B01011110	;	Magenta
+c13	= ^B11110011	;	Cyan
+c14	= ^B10010010	;	Gray
+c15	= ^B11111111	;	White
+
+.byte	c0,	c1,	c2,	c3,	c4,	c5,	c6,	c7
+.byte	c8,	c9,	c10,	c11,	c12,	c13,	c14,	c15
+
+WIN0:
+..succ:	.word	vwsucc
+..pred:	.word	vwsucc
+..area:	.word	0
+..ary:	.word	0
+..arx:	.word	0
+..sy1:	.word	0
+..sy2:	.word	scrlins-1
+..sx1:	.word	0
+..sx2:	.word	bmax-1
+..den:	.word	1
+..tar:	.word	tas0
+..hd:	.word	400
+..xof:	.word	0
+..vd:	.word	20	;*200000  
+..yof:	.word	0
+..dy1:	.word	-4
+..dy2:	.word	-4
+..dy3:	.word	-4
+
+promap:	.blkw	10	;storage for caller's mapping
+
+val:	.word	0
+	.byte	6*16.+4, 8.
+twcsr:	.word	wcsr,	0,	0,	2000,	0,	-1
+twmaph:	.word	wmaph,	-1,	0,	0,	0,	-1
+twmapl:	.word	wmapl,	-1,	0,	0,	0,	-1
+
+
+start:
+	.exit
+stk:	mov	pc, sp		;set stack
+;STACK starts here ===========================
+	GET4K	#hinum*2+lonum	;allocate hi-RAM for data
+10$:
+	mov	r0, twmaph+4	;for r/o reg !!!!!!!!
+	mov	#40, r2		;a const for map !!!
+	mov	#ur1, r1	;map it to  w#1,2
+	mov	r0, (r1)+	;1
+	add	r2, r0		;
+	mov	r0, (r1)+	;2
+	add	r2, r0		;
+;	GET4K	#lonum		;allocate lo-RAM for TAS,...
+;	bcs	7$		;no memory
+	mov	r0, twmapl+4	;for r/o reg !!!!!!!!
+	mov	r0,	(r1)+	;map it to w#3
+	mov	r0,	-(sp)	;save ur3
+	mov	r0,	r4	;save it for later?????????????
+.if ne $ROM$
+	UNPREG	#wmaph
+	UNPREG	#wmapl
+.endc
+	PROREG	#twmaph
+	PROREG	#twmapl
+
+	mov	#3,	r0
+20$:	mov	(sp),	(r1)	;
+	add	r2,	(r1)	; map it to W#4,5,6
+	mov	(r1)+, -(sp)	; save ur4,5,6
+	sob	r0,	20$
+			;clear RAM
+	mov	#wheap, r5	;start here ...
+	mov	r5, r2		;
+	mov	#hinum*2+lonum*4*<1024./4>, r3 ;counter
+22$:	mov	r0,	(r2)+	;
+	mov	r0,	(r2)+	;
+	sob	r3,	22$	;
+			;init static area
+	mov	#wtop, (r5)+	;WHEAP
+	mov	#vwsucc, (r5)+	;SCREEN
+	mov	#win0, r0	;
+	mov	#vwlen/2, r2	;
+23$:			;copy WIN0
+	mov	(r0)+, (r5)+	;
+	sob	r2, 23$		;
+	cmp	(r5)+,	(r5)+	;VWFREE, ARFREE
+	mov	r5,	(r5)	;FNSUCC
+	cmp	(r5)+,	(r5)+	;FNFREE
+			;set r4 for base of v-pointer
+	ash	#6, r4		;
+	bic	#1777, r4	;
+;--------------------------------
+SETPAL:				;setpal:  r5 -> paltbl
+	GET4K	#1
+	mov	r0,	PLPAR	;
+	mov	ur3,	-(sp)	;
+	mov	r0,	ur3	;
+	mov	#ptlen,	r0
+10$:
+	clr	(r5)+
+	sob	r0,	10$
+	mov	r5,	paltbl	;
+	mov	r5,	paltbl+<8.*2>;
+	mov	r5,	paltbl+<16.*2>;
+	mov	r5,	paltbl+<24.*2>;
+	mov	r5,	paltbl+<28.*2>;
+;................................
+			;init PAL
+	mov	#PAL,	r2	;
+	mov	#4, r0		;
+	mov	#color, r3	;
+20$:
+	mov	#16./2, r1	;num of words in one pal
+30$:
+	mov	(r3)+, (r2)+	;
+	sob	r1, 30$		;
+	add	#16.*3, r2	;
+	sob	r0, 20$		;
+
+	clr	r0
+40$:
+	movb	r0,PAL+2000(r0)
+	inc	r0
+	cmp	r0,	#256.
+	blo	40$
+
+	.pop	ur3
+;--------------------------------
+	mov	#BVIEW+<vw.tar-vw.succ>, (r5)+			;*********
+				;store win0 descr in index table WDTBL
+	com	spatzz		;
+;--------------------------------
+SETTAS:				;settas:
+
+	clr	r0
+	mov	ur0,	r1
+	ashc	#6,	r0
+	mov	#<eline/4>&3777, etao ;
+	add	r1,	etao
+	mov	r0,	etao+2
+
+	mov	#tas, r5	;
+	mov	#<tao/4>&3777, r3 ;
+	add	r4, r3		;
+
+	mov	#2,	r2	;line 1..2
+7$:
+	mov	#<etao/4>&3777, (r5) ;
+	add	r1,	(r5)+	;
+	mov	r0,	(r5)+	;
+	sob	r2,	7$	;
+
+	mov	#scrlins, r2	;set scr-lines
+10$:
+	mov	r3, (r5)+	;
+	clr	(r5)+		;
+	add	#bmax, r3	;num of "otrezkow"
+	sob	r2, 10$		;
+;--------------------------------
+	movb	11.,	r2	;line 303..313
+11$:
+	mov	#<etao/4>&3777, (r5) ;
+	add	r1,	(r5)+	;
+	mov	r0,	(r5)+		;
+	sob	r2,	11$	;
+;--------------------------------
+;--------------------------------
+			;init empty window - WIN0
+	mov	#tas0d, r5	;
+	mov	r5,	ARTBL	;;;;;
+	mov	#tas0d,	(r5)+	;ar.succ ??
+	inc	(r5)+		;ar.len
+	inc	(r5)+		;ar.lins
+	mov	#elen, (r5)+	;ar.slen
+	mov	#eline & ..addr, (r5)+ ; log.tas, w1
+	mov	@#ur0, (r5)+	;log.tas, w2
+			;set CTAO - for cursor	!!!!!!!!!!!!!!!!!!!!!!!
+	mov	#ctao,	r3	;
+	mov	#<eline1/4>&3777, (r3) ;
+	add	r1,	(r3)+	;
+	bis	#vd52,	r0
+	mov	r0,	(r3)
+			;set CTAS - for cursor	!!!!!!!!!!!!!!!!!!!!!!!
+	mov	#<ctao/4>&3777, (r5) ;
+	add	r4,	(r5)+	;
+
+			;set palreg and tasreg
+	mov	#ur6,	r1	;set mapping to regs
+	clr	(r1)		; ur6
+	mov	@#hr5,	-(r1)	; ur5
+	mov	@#hr4,	-(r1)	; ur4
+	mov	#palreg, r0	;
+	mov	plpar,	r3
+	ash	#6,	r3
+	bic	#1777,	r3
+	add	#<pal/4>&3777, r3 ;
+	mov	r3, (r0)+	;@#palreg
+	clr	(r0)+		;@#palreg+2
+	mov	#<tas/4>&3777, r3 ;
+	add	r4, r3		;
+	mov	r3, (r0)+	;@#tasreg
+	clr	(r0)		;@#tasreg+2
+	UNPREG	#wcsr		;
+	PROREG	#twcsr		;
+	SETPRI	#wpri		;
+;	mov	pc, t.rdflg	;set all scr to redraw
+contin:
+	mov	sp,	r0	; rest TAO mapping
+	mov	#ur6,	r1	; on stk - ur6,ur5,ur4,ur3
+	mov	(r0)+,	(r1)	;
+	mov	(r0)+,	-(r1)	;
+	mov	(r0)+,	-(r1)	;
+	mov	(r0)+,	-(r1)	;
+
+	tst	t.rdflg		; redraw ?
+	beq	cont		; no
+	tstb	t.rdflg+1
+	bmi	17$		; 
+	BNE	15$
+	call	windo1		; 
+	br	20$
+15$:
+	call	winpat		;
+	clr	t.rdy1
+	mov	#loglins-1,t.rdy2
+	call	windo		;;;;; form new T A O  ! ! !
+	br	20$
+17$:	call	windo2
+
+20$:	mov	vwsucc,	r3
+	mov	vw.sy1(r3),r1
+	clr	r4
+22$:
+	mul	#bmax*4,r1
+	add	#tao,	r1
+	mov	vw.sx1(r3),r2
+	mov	r2,	r5
+	beq	27$
+24$:
+	tst	(r1)+
+	mov	(r1)+,	r0
+	swab	r0
+	bis	#200,	r0
+	asrb	r0
+	asrb	r0
+	add	r0,	r2
+	tstb	r2
+	bmi	cont
+	bne	24$
+27$:	
+	mov	ctao,	(r1)
+	asr	r5
+	add	r5,	(r1)+
+	bic	#101777,(r1)
+	bis	#400,	(r1)
+	movb	ctao+2,	(r1)
+	com	r4
+	beq	cont
+	mov	vw.sy2(r3), r1
+	br	22$
+cont:
+	WAITINT	#0		;
+	mov	#ur6, r3	;
+	clr	(r3)		;
+	mov	@#hr5,	-(r3)	;
+	mov	@#hr4,	-(r3)	;
+	mov	@#xwcsr, r1	;get user addr pointer
+	clr	r0		;
+	GETPAR	#promap
+	ashc	#3, r0		;
+	asl	r0		;
+	ror	r1		;
+	ror	r1		;
+	sec			;this is for w#4
+	ror	r1		;
+;	mov	@proadr, r2	;save it for processing
+;	add	r2, r0		;
+;	mov	p.ur0+2(r0), r4	;
+;	mov	p.ur0(r0), (r3)+;ur4
+;	mov	r4, (r3)	;ur5
+	mov	promap  (r0), (r3)+ ;ur4
+	mov	promap+2(r0), (r3)  ;ur5
+
+;start processing here:
+; r1 - user's pointer
+; r2 - user's descriptor
+	mov	(r1)+, r0	;
+	cmp	r0, #cmdmax	; ?
+	blo	10$		;
+	mov	#-1, -(r1)	;
+	br	cont		;
+10$:
+	mov	#t.rdy1,r5	; 
+	clr	(r5)+		;t.rdy1
+	mov	#loglins-1,(r5)+;t.rdy2
+	clr	(r5)+		;t.rdx1
+	mov	#bmax-1,(r5)+	;t.rdx2
+	clr	(r5)		;init redraw flag
+	call	@cmdtbl(r0)	;do CMD processing !!!!!!!!!!!!!!!!!!!!
+	br	contin
+

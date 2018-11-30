@@ -1,0 +1,305 @@
+;====================================================
+.sbttl	initialization and interface
+
+csr	= 177564
+vec	= 64
+cc	= 80.+4		;chars on line
+ll	= 25.		;lines on screen
+vmode	= vm1		;video-mode bits
+cb	= 0		;background color
+cf	= 1		;foreground color
+lhigh	= 10.		;high of char in v-lines
+
+c10	= ^B00000010	; c o
+c11	= ^B00000010	;    l o
+c12	= ^B11111111	;        r s
+
+$$csr	= 60		;halt subr for CSR processing
+xcsr	= <csr & 7777> + l.reg
+xbuf	= <<csr+2> & 7777> + l.reg
+
+COL80   = 80.           ; MAX COLS IN 80-MODE
+COL132  = 132.          ; MAX COLS IN 132-MODE
+LINMAX  = ll-1          ; MAX LINS OF TEXT 
+COLMAX  = 160.          ; MAX COLS FOR TABS
+ESCMAX  = 20            ; MAX CHARS IN ESC-SEQ
+
+; CTRL CODES:
+
+C.DEL   = 177           ;
+C.SP    = 040           ;
+C.ESC   = 033           ; FOR THOSE WHO DON'T KNOW HIM
+
+;---------------------------------------- VT-100 shape table (window #0)
+	DSECT	0
+dw SYM$TB,	256.	; addresses of shapes for each of 0..255. chars
+dw SYM$HI		; hight of char in lines
+dw SYM$WI		; width of char in bits (in shapes it is
+			;	rounded to byte boundary)
+dw SYM$ID		; .ascii "PC" ; identifier for testing
+dw SYM$LB,	7.	; .asciz "name of font"
+dw SYM$ST		; start of area for shapes ...
+
+;---------------------------------------- VT-100 code area   (window #1)
+	DSECT	20000
+dw COD$BE,	0	; begin addr for code area
+
+;---------------------------------------- VT-100 main table  (window #2)
+	DSECT	40000
+;dw V.CSR	;p	; addr of CSR-reg
+;dw V.BUF	;p	; addr of BUF-reg
+;dw V.VEC	;p	; addr of vector
+
+;dw V.CMAX	;p	; max cols on the text plane
+;dw V.LMAX	;p	; max lins on the text plane
+
+dw V.MODE	;p	; CURRENT VIDEO-MODE
+dw I15			; state of display (i15 <>0  or vt52 =0)
+
+;dw V.MAP	;i	; par value to map start of BIT-map
+dw UR4c		;i	; par to win#4
+dw UR5c		;i	; par to win#5
+dw CUR.M	;i	; CURS SAVE AREA:  .word	; start addr
+
+;---------------------------------------- VT-100 LEVEL 1 RAM
+
+dw ES.PTR	;i	; POINTER TO ESC-BUFFER
+db ESCAPE	;i	; ONLY FOR "ESC" - REPORTS
+db ES.BUF,	<ESCMAX+1>	; ESC-BUFFER
+;.even
+dw SAVE.C,	4	; SAVE AREA FOR CURSOR
+
+;********************************************
+;** DO NOT CHANGE THE ORDER WITHOUT V1$INI **
+;********************************************
+dw ESC.J	;i	; STATE OF VT:
+                        ;  0 - NORMAL
+                        ;  2 - ENTERING 2-ND CHAR OF ESC
+                        ;  4 - ENTERING ESC-LONG (TYPE "[")
+                        ;  6 - ENTERING ESC-SHORT (ALL - 3 BYTES) 
+                        ; 10 - ESC-Y
+                        ; 12 - ESC-Y
+
+dw V1.MOD	;i	; MODES OF VT100
+    M.NL    = 1             ; NEW LINE / LINE FEED
+    M.APL   = 2             ;-APPLICATION (CURSOR)
+    M.ANSI  = 4             ; ANSI / VT52
+    M.132   = 10            ;-132 / 80
+    M.SMOT  = 20            ;-SMOOTH / JUMP
+    M.RVRS  = 40            ; REVERSE / NORMAL
+    M.REL   = 100           ; RELATIVE / ABSOLUTE
+    M.WRAP  = 200           ; WRAPAROUND ON / OFF
+    M.AUTO  = 400           ;-AUTOREPEAT ON / OFF
+    M.INTE  = 1000          ;-INTERLACE ON / OFF
+    M.KEYP  = 2000          ; KEYPAD APPLICATION / NUMERIC
+    M.40    = 4000          ;-40 COLS
+    C.BOLD  = 10000         ;-BOLD ON/OFF
+    C.UNDS  = 20000         ; UNDERSCOPE ON/OFF
+    C.BLNK  = 40000         ;-BLINK ON/OFF
+    C.RVRS  = 100000        ; REVERSE VIDEO ON/OFF
+
+dw CURS.Y	;i	; LIN NUMBER
+dw CURS.X	;i	; COL NUMBER
+dw CURS.T	;i	; CURSOR STATUS WORD (0-OK, 1-NO)
+
+dw LIN.S	;i	; =1  - NUM OF 1ST LINE
+dw LIN.E	;i	; =24 - NUM OF LAST LINE
+dw LIN.N	;i	; =24 - NUM OF LINES
+       
+dw COL.S	;i	; =1      - NUM OF 1ST COL
+dw COL.E	;i	; =80/132 - NUM OF LAST COL
+dw COL.N	;i	; =80/132 - NUM OF COLS
+
+dw TOP.L	;i	; TOP LINE OF SCROLLING REGION (ABSOLUTE)
+dw BOT.L	;i	; BOT LINE OF SCROLLING REGION (ABSOLUTE)
+
+db V1.TAB,	COLMAX ;i	; TAB-PATTERN TABLE
+;        .EVEN
+
+dw V.GMOD		; constant for GR-mode
+
+dw V.TAL,ll	;i	; start of table of lines' pointers
+
+	$$ = <$$+3>&177774
+
+dw TAS,ll*lhigh+2*2+4	;start of TAS
+
+dw MAP$			; start of bit-map
+
+;=======================================================
+; EXTERNAL ENTRIES:
+; ----------------
+;               NOTES:  1. NO REGS CHANGED, EXEPT MENTIONED
+;                       2. LIN = 1..24; COL = 1..80/132
+;
+; ->    SC$SYM  - OUTPUT A CHAR         ;
+;               R0 - CODE               ;
+;               R1 - COL                ;
+;               R2 - LIN                ;
+;                                       ;
+; ->    SC$SCU  - SCROLL UP             ;-> SC$INI - INITIALIZATION
+; ->    SC$SCD  - SCROLL DOWN           ;
+; ->    SC$CLS  - CLEAR SCREEN          ;-> SAVE$R - SAV/RES R0-R5 
+;               R1 - TOP LINE           ;
+;               R2 - BOTTOM LINE        ;
+;                                       ;
+; ->    SC$CUR  - DRAW CURSOR           ;
+;               CURS.Y                  ;
+;               CURS.X                  ;
+;                                       ;
+; ->    SC$CER  - ERASE CURSOR (PREV.SET)
+;
+; ->    SC$REV  - REVERSE SCREEN+BORDER
+;
+; GLOBAL ENTRIES:
+; --------------
+;
+; ->    V1$INI  - START UP, POWER UP OR RESTART
+;
+; ->    V1$SYM  - ACCEPTS A CHAR FROM R0
+
+;=======================================================
+
+; ESC-SEQUENCES:
+
+;    ESC-[      FORMAT
+;       PN A    - CURSOR UP
+;       PN B    - CURSOR DOWN
+;       PN C    - CURSOR FORWARD
+;       PN D    - CURSOR BACK
+;       PL;PC H - DIRECT CUR ADDR
+;       PL;PC f - DIRECT CUR ADDR
+;       PS;PS;..PS m (SMALL) - CHAR ATTRIBS 
+;         PS=0  - ALL OFF
+;            1  - BOLD ON
+;            4  - UNDERSCOPE
+;            5  - BLINK ON
+;            7  - REVERSE VIDEO ON
+;       K OR 0K - ERASE LINE FROM CUR TO END
+;       1K      - ERASE LINE FROM BEG TO CUR
+;       2K      - ERASE LINE FROM BEG TO END
+;       J OR 0J - ERASE SCREEN FROM CUR TO END
+;       1J      - ERASE SCREEN FROM BEG TO CUR
+;       2J      - ERASE SCREEN FROM BEG TO END
+;       PS;PS;...PS q (SMALL) - LEDS 
+;         PS=0  - ALL OFF
+;            1  - L1 ON
+;            2  - L2 ON
+;            3  - L3 ON
+;            4  - L4 ON
+;       PT;PB r (SMALL) - SET SCROLLING REGION (PB>PT)
+;       g OR 0g (SMALL) - CLEAR TAB AT CURRENT COL
+;       3g      (SMALL) - CLEAR ALL TABS
+;
+;*****  PF;PB X - SET SCREEN'S F-COLOR AND B-COLOR
+;*****	PC Y	- set border's color
+;          ---------------------- MODES -----------------------
+;               S E T               ;       R E S E T
+;          ----------------------------------------------------
+;       20h (SMALL)  - NEW LINE     ; 20l (SMALL)  - LINE FEED
+;****   ?1h (SMALL)  - APPLICATION  ; ?1l (SMALL)  - CURSOR TYP
+;                    - ANSI (N/A)   ; ?2l (SMALL)  - VT52
+;       ?3h (SMALL)  - 132 COL      ; ?3l (SMALL)  - 80 COL
+;       ?4h (SMALL)  - SMOOTH       ; ?4l (SMALL)  - JUMP
+;       ?5h (SMALL)  - REVERSE      ; ?5l (SMALL)  - NORMAL
+;       ?6h (SMALL)  - RELATIVE     ; ?6l (SMALL)  - ABSOLUTE
+;       ?7h (SMALL)  - WRAPAROUND   ; ?7l (SMALL)  - OFF
+;       ?8h (SMALL)  - AUTO REPEAT  ; ?8l (SMALL)  - OFF
+;       ?9h (SMALL)  - INTERLACE    ; ?9l (SMALL)  - OFF
+;****  ?10h (SMALL)  - 40 COLS      ;?10l (SMALL)  - 40 COLS
+;       ========================================================
+;       REQUEST         REPORT                  TOPIC
+;       --------------------------------------------------------
+;       6n (SMALL)      PL;PC R                 - CURSOR POSITION
+;       5n (SMALL)      0n (SMALL) - OK OR      - VT100 STATUS
+;                       3n (SMALL) - NOT OK
+;       0c (SMALL) OR   ?l (SMALL); 0c (SMALL)  - WHAT ? - BASE VT100
+;          ESC Z
+;****	9n (small)	abcde z			- VT100 state
+;		a=0 - underscope	off
+;		 =1 -			on
+;		b=0 - reverse chars	off
+;		 =1 -			on
+;		c=0 - line feed
+;		 =1 - new line
+;		d=0 - wraparound	off
+;		 =1 -			on
+;		e=0 - cursor		on
+;		 =1 -			off
+;               ------------------------------------------------
+
+;    ESC-#   FORMAT
+;       3    - CHANGE LINE TO 2*H TOP/2
+;       4    -                2*H BOT/2
+;       5    -                1*W,1*H
+;       6    -                2*W,1*H
+;       8    - DO TEST "E"
+
+;    ESC-(   FORMAT                ; ESC-)   FORMAT
+;       A    - G0 U.K.             ;    A    - G0 U.K.
+;       B    - G0 U.S.ASCII        ;    B    - G0 U.S.ASCII
+;       0    - G0 SPEC.GR.CHARS    ;    0    - G0 SPEC.GR.CHARS
+;       1    - G0 ALT-ROM          ;    1    - G0 ALT-ROM
+;       2    - G0 ALT-ROM-GR.CHARS ;    2    - G0 ALT-ROM-GR.CHARS
+
+;    ESC-X      FORMAT:
+;       D       - INDEX
+;       E       - NEW LINE
+;       M       - REVERSE INDEX
+;       7       - SAVE CURS AND ATTRS
+;       8       - RESTORE CURS AND ATTRS
+;       H       - SET TAB AT CUR POS
+;       c       - RESET VT100 (AS ON POWER-UP)
+;       =       - APPLICATION KEYPAD
+;       >       - NUMERIC KEYPAD
+;****   W       - SWITCH CURSOR ON/OFF
+
+;       ========================================================
+;               VT52 COMPATIBLE MODE
+;       --------------------------------------------------------
+;   ESC A       - CURSOR UP
+;   ESC B       - CURSOR DOWN
+;   ESC C       - CURSOR RIGHT
+;   ESC D       - CURSOL REFT
+;   ESC F       - SELECT SPECIAL GR-CHAR-SET
+;   ESC G       - SELECT ASCII CHAR-SET
+;   ESC H       - CURSOR TO HOME
+;   ESC I       - REVERSE LINE FEED
+;   ESC J       - ERASE TO END OF SCREEN
+;   ESC K       - ERASE TO END OF LINE
+;   ESC Y l c   - DIRECT CURSOR ADDRESS (LIN,COL=N-37)
+;   ESC Z       - IDENTIFY      : RESPONSE = "ESC / Z"
+;   ESC =       - ENTER ALTERNATE KEYPAD MODE
+;   ESC >       - EXIT ALTERNATE KEYPAD MODE
+;   ESC <       - ENTER ANSI MODE
+;===============================================================
+;             KEYBORD SIMULATION ESC-SEQUENCES FROM KEYPAD
+;---------------------------------------------------------------
+; VT100-KEY     PC11-KEY/CODE    VT100-MODE      VT52-MODE
+;---------------------------------------------------------------
+;   0               F00 / 200    ESC O p          ESC ? p
+;   1               F01 / 201    ESC O q          ESC ? q
+;   2               F02 / 202    ESC O r          ESC ? r
+;   3               F03 / 203    ESC O s          ESC ? s
+;   4               F04 / 204    ESC O t          ESC ? t
+;   5               F05 / 205    ESC O u          ESC ? u
+;   6               F06 / 206    ESC O v          ESC ? v
+;   7               F07 / 207    ESC O w          ESC ? w
+;   8               F08 / 210    ESC O x          ESC ? x
+;   9               F09 / 211    ESC O y          ESC ? y
+
+;   -               F10 / 212    ESC O m            -
+;   ,               F11 / 213    ESC O l            ,
+;   .               F12 / 214    ESC O n          ESC ? N
+; ENTER             F13 / 215    ESC O M          ESC ? M
+
+;  CUP              CUP / 031    ESC [ A          ESC A
+;  CUD              CUD / 032    ESC [ B          ESC B
+;  CUR              CUR / 030    ESC [ C          ESC C
+;  CUL              CUL / 010    ESC [ D          ESC D
+
+;  PF1              DL  / 036    ESC O P          ESC P
+;  PF2              IL  / 013    ESC O Q          ESC Q
+;  PF3              DC  / 035    ESC O R          ESC R
+;  PF4              IC  / 034    ESC O S          ESC S
+;---------------------------------------------------------------

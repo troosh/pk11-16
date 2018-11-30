@@ -1,0 +1,266 @@
+.sbttl P12FIS
+;Come to this routine after a FIS instruction trap with the
+;PC and PS still on the RCPC & RCPS.
+;------------------------------------------------
+FIS::	mov	sp,	hstack-2;
+	mov	#hstack-2,sp	;
+	.push	<r5,r4,r3,r2,r1,r0>
+	rcpc			;
+	mov	r0,	r5	;
+	sub	#2,	r5	;
+	mfus			; FIS instruction
+	movb	r0,	r1	;
+	bic	#^C7,	r0	; register
+	bic	r0,	r1	;
+      	asl	r0		;
+	add	sp,	r0	;
+	mov	r0,	r4	;
+	mov	(r0),	r5	;
+;................................
+	mfus			;
+	mov	r0,	r2	;x.h
+	mfus			;
+	mov	r0,	r3	;x.l
+	mov	r5,	(r4)	; reg :=^result
+	mfus			;
+	mov	r0,	r4	;y.h
+	mfus			;
+	.push	r5		;
+	mov	r0,	r5	;y.l
+;------------------------------------------------
+	add	r1,	pc	;***** jmp simulator routine
+;------------------------------------------------
+$$FADD:				; floating addition
+	jmp	xfadd		;
+	.word 	0, 0
+;------------------------------------------------
+$$FSUB:				; floating subtraction
+	add	#100000,r2	;
+	jmp	xfadd		;
+;------------------------------------------------
+$$FMUL:				;
+	asl	r2		; x
+	mov	r2,	r0	;
+	rol	r4		;
+	br	xfmul		;
+;------------------------------------------------
+$$FDIV:				; floating divide
+;set up sign of result and get exponents
+	asl	r2		; 
+	mov	r2,	r0	;
+	rol	r4		; 
+	mov	r4,	r1	;
+	adcb	r1		;
+	mov	r1,	-(sp)	;
+	clrb	r0		;
+	bic	r0,	r2	;
+	sec			;
+	rorb	r2		;
+	clrb	r1		;
+	bic	r1,	r4	;
+	sec			;
+	rorb	r4		;
+	swab	r0		; exp(x)
+	beq 	ex02		; result = 0.0
+	swab	r1		; exp(y)
+	beq 	ex02		; y=0:  attempted divide by zero
+
+	sub 	r0,	r1	;get resultant exponent
+	add	#200,	r1 	; convert exponent to excess 200 notat
+	.push 	r1 		;save result exp
+;................................................
+	ashc	#7,	r2	; c
+	ror	r3		; d/2
+	div	r2,	r4	; r4:ah/c, r5:s
+	mov	r4,	r0	;
+	asl	r0		; 2*ah/c
+	mul	r3,	r0	; r0,r1:d*ah/c
+
+	sub	r5,	r0	;	
+	asr	r0
+	ror	r1
+	neg	r2
+	div	r2,	r0	; 
+	sxt	r2		; r2,r0,r1
+
+	mov	r0,	r3	; r2,r3,r1
+	asl	r1
+	rol	r3
+;	rol	r2
+	add	r4,	r2
+	br	exn1p		;
+;------------------------------------------------------------------------
+xfmul:				; multiply <r4,r5> by <r2,r3>
+;set up sign of result and get exponents
+;	asl	r2		; x
+;	mov	r2,	r0	;
+;	rol	r4		;
+	mov	r4,	r1	;
+	adcb	r1		;
+	.push	r1		; sign saved on stack
+
+	clrb	r0		;
+	ror	r3		;
+	bic	r0,	r2	;
+	sec			;
+	rorb	r2		; mant
+	swab	r0		; exp
+	beq	ex02		;
+
+	clrb	r1		;
+	ror	r5		;
+	bic	r1,	r4	;
+	sec			;
+	rorb	r4		;
+	swab	r1		;
+	beq	ex02		;
+
+	add 	r1,	r0	;get resultant exponent
+	sub	#201,	r0
+	.push 	r0	        ;save result exponent
+;------------------------------------------------
+	mov	r5,	r0	;
+	mov	r3,	r5	; r5 = xl
+	mov	r0,	r3	; r3 = yl
+	mul	r5,	r0	; yl * xl
+;................................
+	mov	r4,	r1	;
+	mul	r2,	r1	; xh*yh
+	asl	r0		;
+	asl	r0		;
+	ror	r1		; r1,r0: xh*yh/2 + xl*yl*2
+	ror	r0		;
+;................................
+	mul	r3,	r2	; yl*xh
+	mul	r5,	r4	; xl*yh
+;................................
+	add	r5,	r3	;
+	adc	r2		;
+	add	r4,	r2	;
+	add	r0,	r3	;
+	adc	r2		;
+	add	r1,	r2	;
+;-------------------------------- finish up and exit
+	ashc	#-5,	r2	;
+exn1p:	.pop	r0		; exp
+exn1:	asr	r2		;
+	ror	r3		;
+	bit	#400,	r2	;
+	beq	e11x		;
+exn2:	inc	r0		;
+	asr	r2		;
+	ror	r3		;
+e11x:				;
+	adc	r3		;
+	adcb	r2		;
+	bcs	exn2		;	
+;------------------------------------------------
+exn0:
+	swab	r0		; move exponent to upper byte
+	bne	ex02		; bad exp.
+	aslb	r2		; kill "hidden" bit in mantissa
+	bis	r0,	r2	;
+	ror	(sp)+		; get result sign bit
+	ror	r2		; fill in sign and adjust to create re
+;----------------------------------------
+fexit:	.pop	r5		; exit
+	mov	r3,	r0	;
+	mtus			; result to stack
+	mov	r2,	r0	;
+	mfps	r1		;
+	mtus			;
+	rcps			; ps bits --> r0
+	xor	r0,	r1	;
+	bic	#^C17,	r1	;
+	xor	r1,	r0	;
+   	wcps                    ; mtps r0
+	.pop	<r0,r1,r2,r3,r4,r5>
+	mov	(sp)+,	sp	;
+	GO			;
+;------------------------------------------------------------
+ex02:	tst	(sp)+		;
+ex00:	clr	r2		; return zero
+	clr	r3		;
+	br	fexit		; take fast exit
+;------------------------------------------------
+xfadd:				;
+;set up sign of result and get exponents
+	asl	r5		; x.l
+	rol	r4		; x.h
+	rol	r1		;
+	.push	r1		; sign
+
+	asl	r3		; y.l
+	rol	r2		; y.h
+	adc	r1		; sx+sy
+
+	swab	r2		;
+	mov	r2,	r0	;
+	clrb	r2		;
+	bic	r2,	r0	; exp(y)
+	inc	r2		;
+	swab	r2		; 
+
+	ror	r1		;
+	bcc	10$		;
+	neg	r3		;% negate y
+	adc	r2		;%
+	neg	r2		;%
+10$:
+	swab	r4		;
+	mov	r4,	r1	;
+	clrb	r4		;
+	bic	r4,	r1	; exp(x)
+	inc	r4		;
+	swab	r4		;
+;----------------------------------------
+	sub 	r0,	r1	; determine relative sizes of result
+	bmi	20$		; ey > ex
+	add	r1,	r0	; exp
+	cmp	#26.,	r1	;
+	bcs	18$		;
+	neg	r1		;
+	ashc	r1,	r2	; shift y to align mantissa's
+	adc	r5		;
+	br	29$
+18$:
+	mov	r5,	r3	;
+	mov	r4,	r2	;
+	br	$$norm		;
+;----------------------------------------
+20$:				;
+	cmp	r1,	#-26.	;
+	bcs	30$		;
+	ashc	r1,	r4	; shift x to align mantissa's
+	adc	r2		;
+;----------------------------------------
+29$:				; do the addition
+	add 	r5,	r3	; add low  words
+	adc 	r2
+	add 	r4,	r2	; add high words
+30$:
+	tst	r2		;
+	bpl 	$$norm 		; positive result
+	neg	r3		;% negate low word
+	adc	r2		;%
+	neg	r2		;%
+	com 	(sp)		;set floating sign to show negative
+;------------------------------------------------
+$$norm:				;
+	bit	#1400,	r2	;
+	bne	exn1		;
+
+	dec	r0		;
+	tstb	r2		;
+	bmi	exn0		;
+	bne	20$		;
+	tst	r3		;
+	beq	ex02		;
+20$:				;
+	dec	r0		;
+	asl	r3		;
+	rolb	r2		;
+	bpl	20$		;
+	br	exn0		;
+;------------------------------------------------
+.end

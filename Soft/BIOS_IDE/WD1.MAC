@@ -1,0 +1,635 @@
+;================================
+; set whole screen's pattern
+WINPAT::
+	mov	screen, r3	;
+10$:
+	movb	vw.num(r3), r0	;
+	mov	r0,	r5
+	swab	r0
+	bisb	r5,	r0
+	mov	r3, -(sp)	;
+	add	#vw.sx2, r3
+	mov	#t.rdx2, r5
+
+	mov	(r3),	r2	;vw.sx2
+	cmp	(r5),	r2
+	bcc	11$
+	mov	(r5),	r2	;t.rdx2
+11$:
+	mov	-(r3),	r1	;vw.sx1
+	cmp	-(r5),	r1
+	bcs	13$
+	mov	(r5),	r1	;t.rdx1
+13$:
+	mov	-(r3),	r4	;vw.sy2
+	asr	r4
+	asr	r4
+	cmp	-(r5),	r4
+	bcc	15$
+	mov	(r5),	r4	;t.rdy2
+15$:
+	mov	-(r3),	r3	;vw.sy1
+	asr	r3
+	asr	r3
+	cmp	-(r5),	r3
+	bcs	17$
+	mov	(r5),	r3	;t.rdy1
+17$:
+	cmp	r2,	r1
+	bcs	33$
+	cmp	r4,	r3
+	bcs	33$
+	call	WINP		;
+33$:
+	mov	(sp)+, r3	;
+	mov	vw.pred(r3), r3	;take next view
+	cmp	screen, r3	;any more ?
+	bne	10$		;yes
+
+99$:
+	call	com0		;
+	return			;
+;================================
+; draws window on scr-pattern
+;
+; r0	- .byte Wn,Wn	;window number
+; r1	- X0 on screen [0..25]
+; r2	- X1 number of last band on scr [0..25]
+; r3	- Y0 [0..74] num of 1st l-line
+; r4	- Y1 [0..74]num of last l-line
+; r5	- destroyed !!!!
+
+WINP:
+
+	SUB	R3,	R4	; LY-1
+	MOV	#BMAX,	R5
+	MUL	R5,	R3	;
+	ADD	R1,	R3
+	ADD	#SPAT,	R3	; MA
+
+	SUB	R2,	R1	; -(LX-1)
+	ADD	R5,	R1	; BMAX-(LX-1)
+	CLRB	S.BR3		;
+	BIT	#1,	R3	; ???
+	BEQ	10$		; .even
+	INC	R1		; BMAX-(LX-1-1)
+	CLRB	S.BR1		;
+	ASR	R1		;form BR  (C-.even/.odd)
+	MOVB	R1,	S.BR2	;
+	BR	15$		;
+10$:			;.even
+	ADD	#4,	R1	;skip 2 instr (br, movb)
+	ASR	R1		;
+	MOVB	R1,	S.BR1	;
+15$:
+	ADC	S.BR3		;
+
+S10:	MOV	R3,	R1
+	ADD	R5,	R3
+
+S.BR1:	BR	.
+	MOVB	R0,	(R1)+
+S.BR2:	BR	.
+.REPT	bmax/2
+	MOV	R0,	(R1)+
+.ENDR
+S.BR3:	BR	.
+
+	MOVB	R0,	(R1)+
+	DEC	R4		;all lines filled ?
+	BPL	S10		;no
+	RETURN
+
+;================================
+;form TAO due to screen pattern
+; T.RDY1	- Y0	[0..74]
+; T.RDY2	- Y1	[0..74]
+WINDO::
+.enabl	lsb
+
+	MOV	SP,	T.SP
+	mov	t.rdy1,	r1	;
+	mov	r1,	LI
+	MOV	R1,	R3
+	MUL	#BMAX,	R1
+	ADD	#SPAT,	R1	;^SPAT
+	MUL	#BMAX*4*NVLL,	R3
+	ADD	#TAO,	R3	;^TAO
+	MOV	R3,	TI	;
+	MOV	R1,	R5	;CI	(r5 - start of cur otrez)
+	MOVB	(R1)+,	R0
+T6:			;start on new line
+	COM	R0		;
+	MOV	R1,	.C0	;store addr of str-pattern
+	MOV	(PC)+,	R3	;TAO pointer
+TI:	.BLKW	1
+T7:			;start of new otrez
+10$:	CMPB	(R1)+,R0	;
+	BEQ	10$		;
+	MOV	WDTBL(R0),R4	;^WD
+	MOV	(R4)+,	sp	;^W.TAS
+	mov	r5,	14$	;
+	TSTB	-(R1)		;is it last band ?
+	BMI	13$		;yes
+	MOV	R5,	R0	;calc length of otrez in r0
+	SUB	R1,	R0	;
+	ASL	R0		;
+	ASL	R0		;
+	SWAB	R0		;
+13$:			;ar.x = ar.x0+(sc.x-sc.x0)*k	;k=1,2,4
+			;ar.x = sc.x*k-w.x		;ar.x... - in words
+			; w.x = sc.x0*k-ar.x0
+	bis	(r4), r0	;HorD (VD52, VD104, VD208)
+	SUB	(PC)+,	R5	;sc.x
+.C0:	.BLKW	1
+	inc	r5		;;;;;
+	ash	(r4)+, r5	;sc.x*k		(shift= 0,1,2 !!!)
+	sub	(r4)+, r5	;sc.x*k-w.x
+	asr	r5		;convert to V-words
+	bit	#vd104, r0	;
+	bne	15$		;
+	adc	(pc)+		;
+14$:	.word	0		;
+	ror	14$		;
+	bcc	15$		;
+.print
+	bic	#400, r0	;
+15$:
+
+	MOV	(PC)+,	r2	;sc.y
+LI:	.blkw	1		;
+	ASH	(R4)+,	r2	;sc.y*k
+	sub	(r4)+,	r2	;sc.y*k-w.y
+	ASL	r2		;
+	ASL	r2		;convert to V-lines
+	ADD	r2,	sp	;
+	mov	r1,	(pc)+	;save r1
+44$:	.blkw	1
+
+	mov	(sp)+,	r2	;addr
+	mov	(sp)+,	r1	;par & vmode
+	swab	r1
+	ror	r1
+	ror	r2
+	asr	r1
+	ror	r2
+
+	asl	r0
+	swab	r1
+	asr	r1
+	ror	r0
+	asl	r1
+	swab	r1
+
+	clrb	r0
+	bisb	r1,	r0
+	clrb	r1
+	bis	r1,	r2
+	ADD	R5,	r2
+	adc	r0
+	MOV	r2,	(R3)+	;TAO-lo
+	MOV	R0,	(R3)+	;TAO-hi
+	ADD	(R4)+,	sp
+
+	mov	(sp)+,	r2	;addr
+	mov	(sp)+,	r1	;par & vmode
+	swab	r1
+	ror	r1
+	ror	r2
+	asr	r1
+	ror	r2
+
+	asl	r0
+	swab	r1
+	asr	r1
+	ror	r0
+	asl	r1
+	swab	r1
+
+	clrb	r0
+	bisb	r1,	r0
+	clrb	r1
+	bis	r1,	r2
+
+	add	r5,	r2
+	adc	r0
+	MOV	r2,	BMAX*4-4(R3)
+	MOV	R0,	BMAX*4-2(R3)
+	ADD	(R4)+,	sp
+
+	mov	(sp)+,	r2	;addr
+	mov	(sp)+,	r1	;par & vmode
+	swab	r1
+	ror	r1
+	ror	r2
+	asr	r1
+	ror	r2
+
+	asl	r0
+	swab	r1
+	asr	r1
+	ror	r0
+	asl	r1
+	swab	r1
+
+	clrb	r0
+	bisb	r1,	r0
+	clrb	r1
+	bis	r1,	r2
+	ADD	R5,	r2
+	adc	r0
+	MOV	r2,	2*BMAX*4-4(R3)
+	MOV	R0,	2*BMAX*4-2(R3)
+	ADD	(R4)+,	sp
+
+	mov	(sp)+,	r2	;addr
+	mov	(sp)+,	r1	;par & vmode
+	swab	r1
+	ror	r1
+	ror	r2
+	asr	r1
+	ror	r2
+
+	asl	r0
+	swab	r1
+	asr	r1
+	ror	r0
+	asl	r1
+	swab	r1
+
+	clrb	r0
+	bisb	r1,	r0
+	clrb	r1
+	bis	r1,	r2
+	ADD	R5,	r2
+	adc	r0
+	MOV	r2,	3*BMAX*4-4(R3)
+	MOV	R0,	3*BMAX*4-2(R3)
+
+	mov	44$,	r1
+	MOV	R1,	R5	;CI
+	MOVB	(R1)+,	R0	;end of line ?
+	Bmi	321$
+	jmp	T7		;no
+321$:
+	ADD	#BMAX*NVLL*4,TI	;correct TAO pointer
+	INC	LI		;correct cur L-line num
+	CMP	t.rdy2,	LI	;is it the last ?
+
+	BCs	322$
+	jmp	T6		;no
+322$:
+	MOV	(PC)+,	SP
+T.SP:	.BLKW	1
+	RETURN
+.dsabl	lsb
+;===============================
+;set flags in first cols
+
+COM0:
+	MOV	#LOGLINS,R5
+	MOV	#SPAT,	R0
+30$:	COMB	(R0)
+	BPL	30$
+40$:	ADD	#BMAX,	R0
+	SOB	R5,	30$
+	RETURN
+
+;--------------------------------
+; VWREM		- removes el-P from its queue
+; P	- r3	- pointer to el-P
+; destroyed	- r0
+
+VWREM::
+	mov	(r3)+, r0	;
+	mov	r0, @(r3)+	; p^.pred^.succ:=p^.succ
+	mov	-(r3), 2(r0)	; p^.succ^.pred:=p^.pred
+	clr	-(r3)		; p^.succ :=0
+	return
+
+;--------------------------------
+; VWPUT		- inserts el-P before Q in its queue
+; P	- r3	- pointer to el-P
+; Q	- r1	- pointer to el-Q
+; destroyed	- none
+
+VWPUT::
+	mov	r1, (r3)	; p^.succ:=q
+	mov	2(r1), 2(r3)	; p^.pred:=q^.pred
+	mov	r3, @2(r1)	; p^.pred^.succ:=p
+	mov	r3, 2(r1)	; q^.pred:=p
+	return
+;--------------------------------
+redraw::
+	mov	#t.rdy1,r5
+	mov	r3,	r0
+	add	#vw.sy1,r0
+	mov	(r0)+,	(r5)	; vw.sy1(r3) --> t.rdy1
+	asr	(r5)		;
+	asr	(r5)+		; loglins
+	mov	(r0)+,	(r5)	; vw.sy2(r3) --> t.rdy2
+	asr	(r5)		;
+	asr	(r5)+		; t.rdy2
+	mov	(r0)+,	(r5)+	; vw.sx1(r3) --> t.rdx1	
+	mov	(r0)+,	(r5)+	; vw.sx2(r3) --> t.rdx2	
+	mov	pc,	(r5)+	; t.rdflg > +400		
+	return			;
+;--------------------------------
+
+;================================
+;form TAO due to screen pattern
+; T.RDY1	- Y0	[0..74]
+; T.RDY2	- Y1	[0..74]
+; T.NUM		- W.NUM	
+WINDO1::
+.enabl	lsb
+
+	MOV	SP,	T1.SP
+	mov	t.rdy1,	r1	;
+	mov	r1,	LI1
+	MOV	R1,	R3
+	MUL	#BMAX,	R1
+	ADD	#SPAT,	R1	;^SPAT
+	MUL	#BMAX*4*NVLL,	R3
+	ADD	#TAO,	R3	;^TAO
+	MOV	R3,	TI1	;
+	MOV	R1,	R5	;CI	(r5 - start of cur otrez)
+	MOVB	(R1)+,	R0
+T61:			;start on new line
+	COM	R0		;
+	MOV	R1,	.C01	;store addr of str-pattern
+	MOV	(PC)+,	R3	;TAO pointer
+TI1:	.BLKW	1
+T71:			;start of new otrez
+10$:	CMPB	(R1)+,R0	;
+	BEQ	10$		;
+	dec	r1
+	cmpb	r0,	t.num
+	beq	11$
+	add	#4,	r3
+	br	39$
+11$:
+	MOV	WDTBL(R0),R4	;^WD
+	MOV	(R4)+,	sp	;^W.TAS
+	SUB	(PC)+,	R5	;sc.x
+.C01:	.BLKW	1
+	inc	r5		;;;;;
+	ash	(r4)+, r5	;sc.x*k		(shift= 0,1,2 !!!)
+	sub	(r4)+, r5	;sc.x*k-w.x
+	asr	r5		;convert to V-words
+
+	MOV	(PC)+,	r2	;sc.y
+LI1:	.blkw	1		;
+	ASH	(R4)+,	r2	;sc.y*k
+	sub	(r4)+,	r2	;sc.y*k-w.y
+	ASL	r2		;
+	ASL	r2		;convert to V-words
+	ADD	r2,	sp	;
+
+	mov	(sp)+,	r2	;addr
+	mov	(sp)+,	r0	;par & vmode
+	swab	r0
+	ror	r0
+	ror	r2
+	asr	r0
+	ror	r2
+	movb	r0,	2(r3)	;TAO-hi
+
+	bicb	#200,	3(r3)
+	clrb	r0
+	asr	r0
+	bisb	r0,	3(r3)
+	clrb	r0
+	asl	r0
+
+	bis	r0,	r2
+	ADD	R5,	r2
+	adc	2(r3)		;TAO-hi
+	MOV	r2,	(R3)+	;TAO-lo
+	tst	(r3)+
+	ADD	(R4)+,	sp
+
+	mov	(sp)+,	r2	;addr
+	mov	(sp)+,	r0	;par & vmode
+	swab	r0
+	ror	r0
+	ror	r2
+	asr	r0
+	ror	r2
+	movb	r0,	bmax*4-2(r3)	;TAO-hi
+
+	bicb	#200,	bmax*4-1(r3)
+	clrb	r0
+	asr	r0
+	bisb	r0,	bmax*4-1(r3)
+	clrb	r0
+	asl	r0
+
+	bis	r0,	r2
+	ADD	R5,	r2
+	adc	bmax*4-2(r3)	;TAO-hi
+	
+	MOV	r2,	BMAX*4-4(R3)
+	ADD	(R4)+,	sp
+
+	mov	(sp)+,	r2	;addr
+	mov	(sp)+,	r0	;par & vmode
+	swab	r0
+	ror	r0
+	ror	r2
+	asr	r0
+	ror	r2
+	movb	r0,	2*bmax*4-2(r3)	;TAO-hi
+
+	bicb	#200,	2*bmax*4-1(r3)
+	clrb	r0
+	asr	r0
+	bisb	r0,	2*bmax*4-1(r3)
+	clrb	r0
+	asl	r0
+
+	bis	r0,	r2
+	ADD	R5,	r2
+	adc	2*bmax*4-2(r3)	;TAO-hi
+	MOV	r2,	2*BMAX*4-4(R3)
+	ADD	(R4)+,	sp
+
+	mov	(sp)+,	r2	;addr
+	mov	(sp)+,	r0	;par & vmode
+	swab	r0
+	ror	r0
+	ror	r2
+	asr	r0
+	ror	r2
+	movb	r0,	3*bmax*4-2(r3)	;TAO-hi
+
+	bicb	#200,	3*bmax*4-1(r3)
+	clrb	r0
+	asr	r0
+	bisb	r0,	3*bmax*4-1(r3)
+	clrb	r0
+	asl	r0
+
+	bis	r0,	r2
+	ADD	R5,	r2
+	adc	3*bmax*4-2(r3)	;TAO-hi
+	MOV	r2,	3*BMAX*4-4(R3)
+
+39$:
+	MOV	R1,	R5	;CI
+	MOVB	(R1)+,	R0	;end of line ?
+	BPL	T71		;no
+	ADD	#BMAX*NVLL*4,TI1;correct TAO pointer
+	INC	LI1		;correct cur L-line num
+	CMP	t.rdy2,	LI1	;is it the last ?
+	bcs	391$
+	jmp	T61		;no
+391$:	MOV	(PC)+,	SP
+T1.SP:	.BLKW	1
+	RETURN
+.dsabl	lsb
+
+;================================
+;form TAO due to screen pattern
+; T.RDY1	- Y0	[0..74]
+; T.RDY2	- Y1	[0..74]
+; T.TAR		- W.TAR	
+WINDO2::
+.enabl	lsb
+
+	MOV	SP,	T2.SP
+	mov	t.rdy1,	r1	;
+	mov	r1,	LI2
+	MOV	R1,	R3
+	MUL	#BMAX,	R1
+	ADD	#SPAT,	R1	;^SPAT
+	MUL	#BMAX*4*NVLL,	R3
+	ADD	#TAO,	R3	;^TAO
+	MOV	R3,	TI2	;
+	MOV	R1,	R5	;CI	(r5 - start of cur otrez)
+	MOVB	(R1)+,	R0
+T62:			;start on new line
+	COM	R0		;
+	MOV	R1,	.C02	;store addr of str-pattern
+	MOV	(PC)+,	R3	;TAO pointer
+TI2:	.BLKW	1
+T72:			;start of new otrez
+10$:	CMPB	(R1)+,R0	;
+	BEQ	10$		;
+	dec	r1
+	MOV	WDTBL(R0),R4	;^WD
+	MOV	(R4)+,	sp	;^W.TAS
+	cmp	sp,	(PC)+
+T.TAR:	.BLKW	1
+	beq	11$
+	add	#4,	r3
+	br	39$
+11$:
+	SUB	(PC)+,	R5	;sc.x
+.C02:	.BLKW	1
+	inc	r5		;;;;;
+	ash	(r4)+, r5	;sc.x*k		(shift= 0,1,2 !!!)
+	sub	(r4)+, r5	;sc.x*k-w.x
+	asr	r5		;convert to V-words
+
+	MOV	(PC)+,	r2	;sc.y
+LI2:	.blkw	1		;
+	ASH	(R4)+,	r2	;sc.y*k
+	sub	(r4)+,	r2	;sc.y*k-w.y
+	ASL	r2		;
+	ASL	r2		;convert to V-words
+	ADD	r2,	sp	;
+
+	mov	(sp)+,	r2	;addr
+	mov	(sp)+,	r0	;par & vmode
+	swab	r0
+	ror	r0
+	ror	r2
+	asr	r0
+	ror	r2
+	movb	r0,	2(r3)	;TAO-hi
+	bicb	#200,	3(r3)
+	clrb	r0
+	asr	r0
+	bisb	r0,	3(r3)
+	clrb	r0
+	asl	r0
+	bis	r0,	r2
+	ADD	R5,	r2
+	adc	2(r3)	;TAO-hi
+	MOV	r2,	(R3)+	;TAO-lo
+	tst	(r3)+
+	ADD	(R4)+,	sp
+
+	mov	(sp)+,	r2	;addr
+	mov	(sp)+,	r0	;par & vmode
+	swab	r0
+	ror	r0
+	ror	r2
+	asr	r0
+	ror	r2
+	movb	r0,	bmax*4-2(r3)	;TAO-hi
+	bicb	#200,	bmax*4-1(r3)
+	clrb	r0
+	asr	r0
+	bisb	r0,	bmax*4-1(r3)
+	clrb	r0
+	asl	r0
+	bis	r0,	r2
+	ADD	R5,	r2
+	adc	bmax*4-2(r3)	;TAO-hi
+	MOV	r2,	BMAX*4-4(R3)
+	ADD	(R4)+,	sp
+nop
+	mov	(sp)+,	r2	;addr
+	mov	(sp)+,	r0	;par & vmode
+	swab	r0
+	ror	r0
+	ror	r2
+	asr	r0
+	ror	r2
+	movb	r0,	2*bmax*4-2(r3)	;TAO-hi
+	bicb	#200,	2*bmax*4-1(r3)
+	clrb	r0
+	asr	r0
+	bisb	r0,	2*bmax*4-1(r3)
+	clrb	r0
+	asl	r0
+	bis	r0,	r2
+	ADD	R5,	r2
+	adc	2*bmax*4-2(r3)	;TAO-hi
+	MOV	r2,	2*BMAX*4-4(R3)
+	ADD	(R4)+,	sp
+
+	mov	(sp)+,	r2	;addr
+	mov	(sp)+,	r0	;par & vmode
+	swab	r0
+	ror	r0
+	ror	r2
+	asr	r0
+	ror	r2
+	movb	r0,	3*bmax*4-2(r3)	;TAO-hi
+	bicb	#200,	3*bmax*4-1(r3)
+	clrb	r0
+	asr	r0
+	bisb	r0,	3*bmax*4-1(r3)
+	clrb	r0
+	asl	r0
+	bis	r0,	r2
+	ADD	R5,	r2
+	adc	3*bmax*4-2(r3)	;TAO-hi
+	MOV	r2,	3*BMAX*4-4(R3)
+
+39$:
+	MOV	R1,	R5	;CI
+	MOVB	(R1)+,	R0	;end of line ?
+	BPL	T72		;no
+	ADD	#BMAX*NVLL*4,TI2;correct TAO pointer
+	INC	LI2		;correct cur L-line num
+	CMP	t.rdy2,	LI2	;is it the last ?
+	bcs	392$
+	jmp	T62		;no
+392$:	MOV	(PC)+,	SP
+T2.SP:	.BLKW	1
+	RETURN
+.dsabl	lsb

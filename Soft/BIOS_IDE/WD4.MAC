@@ -1,0 +1,347 @@
+fnwind  = 140000
+fnpar	= ur6
+arwind	= 60000
+arpar	= ur3
+hf=10.
+hfmax	=20.
+
+ccerr:
+	com	-(r1)		;
+	return			;
+w$prin:
+	mov	fnsucc,	r0	;
+	beq	ccerr		;
+	mov	fn.par(r0), @#fnpar ;
+	mov	(r1),	r3	; num of area-desc.
+	beq	ccerr		;
+	bit	#^c176,	r3	;
+	bne	ccerr		;
+	mov	artbl(r3),r3
+	beq	ccerr		;
+	tst	(r1)+		;
+	add	#ar.lins,r3
+
+	mov	(r3)+,	(pc)+	; lins
+ymax:	.blkw	1		;
+	mov	(r3)+,	(pc)+	; slen
+xmax:	.blkw	1		;
+	mov	r3,	(pc)+	;
+c.tas:	.blkw	1		;
+	movb	2(r3),	r0	; V.MOD
+	bic	#177774,r0
+	cmp	#2,	r0	;vm40 ?
+	bne	10$
+	inc	r0		;--> vm40
+10$:
+	mov	r0,	r5
+	asl	r0
+	asl	r0
+	mov	r0,	(pc)+	;
+c.mod:	.blkw	1
+	inc	r5
+	mov	r5,	(pc)+
+c.slen:	.blkw	1	
+	mov	(r1),	(pc)+	; y0
+y0:	.blkw	1		;
+	mov	(r1)+,	(pc)+	;
+yi:	.blkw	1		;
+	mov	(r1),	(pc)+	; x0
+x0:	.blkw	1		;
+	mov	(r1)+,	(pc)+	;
+xi:	.blkw	1		;
+				;
+	mov	(r1),	r1	; str addr /user/
+;	mov	@#hr4,	@#ur4	;
+;	mov	@#hr5,	@#ur5	;
+	clr	r0		; 
+	GETPAR	#promap
+	ashc	#3,	r0	;
+	asl	r0		; 
+	ror	r1		;
+	ror	r1		;
+	sec			;
+	ror	r1		; r1 - str.addr /wd/
+;	add	@proadr,r0	;
+;	mov	p.ur0(r0),r3	;
+;	mov	p.ur0+2(r0),@#ur5
+;	mov	r3,	@#ur4	;
+	mov	promap  (r0), @#ur4 ;
+	mov	promap+2(r0), @#ur5 ;
+	mov	#mapstk,r2	;
+	mov	#hf,	r5
+	call	cmap
+	clr	(pc)+
+c.xor:	.blkw	1
+
+;============================================================
+ccc:				;
+	mov	#ccc,	-(sp)	; for RETURN
+	mov	#mapstk,r2	;
+	mov	#hf,	r5	;
+cret:
+	mov	#fnwind/2,r0	;
+	bisb	(r1)+,	r0	;
+	asl	r0		;
+	bit	#340*2,	r0	; cmd ?
+	bne	10$		;
+	jmp	@ccmd-fnwind(r0); 
+10$:				;
+	mov	(r0),	r0	;
+	add	#fnwind,r0	;
+c.ccc:	add	c.slen,	xi
+	cmp	xmax,	xi	;
+	bcs	cret		;
+	mov	c.xor,	r4
+	mov	c.mod,	r3
+	jmp	@c.jmp(r3)
+
+c.ufnt:
+	mov	r1,	r0
+	add	r5,	r1
+	br	c.ccc
+;----------------------------------------
+.print
+.iif ne <. & 2> nop
+.print c.jmp
+c.jmp:	.word	C1A,C1B,C2A,C2B,ETX,ETX,C4A,C4B
+
+;----------------------------------------
+ccmd: 
+	.word	etx,	c.font,	c.x,	c.y,	c.neg,	c.bis,	c.mov,	c.col
+	.word	c.000,	c.377,	c.cx,	c.cy,	c.ufnt,	cret,	cret,	cret
+	.word	cret,	cret,	cret,	cret,	cret,	cret,	cret,	cret
+	.word	cret,	cret,	cret,	cret,	cret,	cret,	cret,	cret
+
+;----------------------------------------
+C2A:
+	clr	c.m4
+	br	c2ab
+C2B:
+	mov	#1,	c.m4
+c2ab:
+.ENABL	LSB
+	mov	r1,	-(sp)
+1$:
+	movb	(r0)+,	r4	;
+	mov	c.xor,	r1
+	xor	r1,	r4	
+	mov	-(r2),	@#arpar	;
+	bis	c.m4,	@#arpar
+	mov	-(r2),	r3
+
+.rept	8.
+	ror	r4
+	ror	r1
+	asr	r1
+.endr
+	mov	(pc)+,	r4
+col2b:	.blkw	1
+	bic	r1,	r4
+	bic	(pc)+,	r1
+col2f:	.blkw	1
+	bis	r4,	r1
+	movb	r1,	(r3)+
+	swab	r1
+	movb	r1,	(r3)+
+	mov	r3,	(r2)
+	sob	r5,	1$
+	mov	(sp)+,	r1
+	RETURN	
+
+.DSABL	LSB
+;-------------------------------
+
+C4A:
+	clr	(pc)+
+c.m4:	.blkw	1
+	br	c4ab
+C4B:	mov	#2,	c.m4
+c4ab:
+.ENABL	LSB
+	mov	r1,	-(sp)
+1$:
+	movb	(r0)+,	r4	;
+	mov	c.xor,	r1
+	xor	r1,	r4	
+	mov	-(r2),	@#arpar	;
+	bis	c.m4,	@#arpar
+	mov	-(r2),	r3
+	mov	#4,	10$
+4$:
+	mov	(pc)+,	r1
+col40:	.blkw	1
+	ror	r4
+	bcc	5$
+	bic	#17,	r1
+	bis	(pc)+,	r1
+col4l:	.blkw	1
+5$:	ror	r4
+	bcc	6$
+	bic	#360,	r1
+	bis	(pc)+,	r1
+col4h:	.blkw	1
+6$:	movb	r1,	(r3)+	;
+	dec	(pc)+
+10$:	.blkw	1
+	bne	4$
+
+	mov	r3,	(r2)
+	sob	r5,	1$	
+	mov	(sp)+,	r1
+	RETURN
+.DSABL	LSB
+;-------------------------------
+
+C1A:	
+10$:	
+	movb	(r0)+,	r3	;
+	xor	r4,	r3
+	mov	-(r2),	@#arpar	;
+	movb	r3,	@-(r2)	;
+	inc	(r2)		;
+	sob	r5,	10$	;
+	RETURN
+
+;-------------------------------
+C1B:
+10$:	
+	movb	(r0)+,	r3	;
+	xor	r4,	r3
+	mov	-(r2),	@#arpar	;
+	bisb	r3,	@-(r2)	;
+	inc	(r2)		;
+	sob	r5,	10$	;
+	RETURN
+
+;-------------------------------
+cmap:				;
+	mov	yi,	r3	;r2 = mapstk
+	add	r5,	r3	;r5 = hf
+	cmp	ymax,	r3	;
+	bcc	5$		;
+	mov	ymax,	r3	;
+5$:				;
+	sub	r5,	r3	;
+	asl	r3		;
+	asl	r3		;
+	add	c.tas,	r3	;	
+	mov	xi,	r0	;
+10$:				;
+	mov	(r3)+,	r4	; tas.addr
+	bis	#arwind,r4	; virt addr
+	add	r0,	r4	; + sx
+	mov	(r3)+,	-(r2)	; save par
+	bic	#3,	(r2)	; clr	mask bits
+	mov	r4,	-(r2)	; save virt addr
+	sob	r5,	10$	;
+	return			;
+				;
+.blkw	2*hfmax			;
+mapstk:				;
+;-------------------------------
+etx:	tst	(sp)+	
+	return			;
+;-------------------------------
+c.font:				;
+	movb	(r1)+,	r0	;
+	mov	#fnsucc,r2	;
+10$:
+	mov	(r2),	r2	;
+	beq	20$		;
+	dec	r0		;
+	bge	10$		;
+	mov	fn.par(r2),fnpar	;
+20$:
+	RETURN
+;-------------------------------
+c.cx:
+	movb	(r1)+,	r3
+	beq	c.x00
+	mul	c.slen,	r3
+c.xxx:	add	r3,	xi
+	cmp	xi,	x0
+	bcs	c.x00	 
+14$:
+	tst	-(r2)		;r2 = mapstk
+	add	r3,	-(r2)	;
+	sob	r5,	14$	;r5 = hf
+	RETURN
+c.x:				;
+	movb	(r1)+,	r3	;
+	bne	c.xxx		;
+c.x00:	mov	x0,	xi	;
+	br	c.y999		;
+;-------------------------------
+c.cy:
+	movb	(r1)+,	r3
+	mul	r5,	r3	; r5 = hf
+	beq	c.y00
+c.yyy:	add	r3,	yi
+	cmp	yi,	y0
+	bcs	c.y00
+	br	c.y999
+c.y:				;
+	movb	(r1)+,	r3	;
+	bne	c.yyy		;
+c.y00:				;
+	mov	y0,	yi	;
+c.y999:	jmp	cmap		;
+
+;-------------------------------
+c.neg:
+	movb	(r1),	c.xor
+	movb	(r1)+,	c.xor+1
+	RETURN
+
+c.bis:	bis	#2,	c.mod
+	RETURN
+
+c.mov:	bic	#2,	c.mod
+	RETURN
+
+c.col:
+	clr	r0
+	bisb	(r1)+,	r0	;0 0 f b
+	bit	#4,	c.slen
+	beq	20$
+
+	mov	r0,	r5
+	mov	r0,	r4
+	ash	#4,	r0	;0 f b 0
+	bic	#^C17,	r5	;0 0 0 b
+	bis	r5,	r0	;0 f b b
+	mov	r0,	col40	;
+	swab	r0		;b b 0 f
+	mov	r0,	col4l
+	bic	r5,	r4	;0 0 f 0
+	mov	r4,	col4h
+	RETURN
+20$:
+	mov	#^B0101010101010101,	r3
+	mov	r3,	r4
+	mov	r3,	r5
+	com	r3
+	asr	r0
+	bcs	22$
+	clr	r5
+22$:	asr	r0
+	bcc	24$
+	bis	r3,	r5
+24$:	mov	r5,	col2b
+	ash	#-3,	r0
+	bcs	26$
+	clr	r4
+26$:	asr	r0
+	bcc	28$
+	bis	r3,	r4
+28$:	com	r4
+	mov	r4,	col2f
+	RETURN
+
+c.000:
+	clr	c.xor
+	RETURN
+c.377:
+	mov	#-1,	c.xor
+	RETURN
+

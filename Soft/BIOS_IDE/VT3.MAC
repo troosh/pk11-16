@@ -1,0 +1,242 @@
+;*******************************
+VL$FON::		; set new font
+	call	getnum		;
+	mov	r3,	@#ur0	;set par to new font
+	jmp	hellow		;
+;*******************************
+VL$BOD::                ; SET border COLOR FOR SCREEN
+        CALL    GETNUM          ;
+	movb	r3, lap		;
+	br	mopal		;
+VL$COL::		; set F-color and B-color for screen
+	call	getnum		;
+	movb	r3, lap+15.	;
+	call	getnum		;
+	movb	r3, lap+07.	;
+	movb	r3, lap+11.	;
+	movb	r3, lap+13.	;
+	movb	r3, lap+14.	;
+mopal:
+	PLMOD	#parea		;
+        RETURN
+.DSABL  LSB     ;>>>>>>>>>>>>>>>>
+;*******************************
+VX$SWC::                ; SWITCH CURSOR
+        MOV     #1, R0          ;
+        XOR     R0, CURS.T      ;
+        RETURN
+.ENABL  LSB     ;<<<<<<<<<<<<<<<<
+;******************* ************
+VL$REP::                ; REQUEST REPORT
+        CALL    GETNUM          ; 
+	cmp	#9.,	r3	;is it state-report ?
+	bne	19$		;no
+	mov	#vtstate+2, r3	;pointer to report buffer
+	mov	#'0,	r0	;
+	mov	r0,	r1	;
+	mov	v1.mod,	r2	;
+	bit	#c.unds, r2	;
+	beq	10$		;
+	inc	r0		;
+10$:	movb	r0,	(r3)+	;
+	mov	r1,	r0	;
+;	bit	#c.rvrs, v1.mod	;
+	tst	r2		;
+	bpl	11$		;
+	inc	r0		;
+11$:	movb	r0,	(r3)+	;
+	mov	r1,	r0	;
+	bit	#m.nl,	r2	;
+	beq	12$		;
+	inc	r0		;
+12$:	movb	r0,	(r3)+	;
+	mov	r1,	r0	;
+	bit	#m.wrap,r2	;
+	beq	13$		;
+	inc	r0		;
+13$:	movb	r0,	(r3)+	;
+	mov	r1,	r0	;;;
+	tst	curs.t		;
+	beq	14$		;
+	inc	r0		;
+14$:	movb	r0,	(r3)+	;
+	mov	#vtstate,r3	;
+	br	reporc		;
+19$:
+        SUB     #6, R3          ;
+        BEQ     100$            ;
+        INC     R3              ;
+        BNE     999$            ;
+                        ; TERMINAL STATUS (ALWAYS OK !)
+        MOV     #ES.BUF+1, R3   ;
+        MOVB    #'0, (R3)+      ;
+        MOVB    #'n, (R3)+      ;
+        CLRB    (R3)+           ;
+        BR      REPORT          ;
+
+100$:                   ; REPORT CURSOR POSITION
+        MOV     #ES.BUF+1, R2   ;
+        MOV     CURS.Y, R1      ; THIS IS CURS.Y
+        BIT     #M.REL, V1.MOD  ;
+        BEQ     1$              ;
+        ADD     TOP.L, R1       ;
+        DEC     R1              ;
+1$:
+        CALL    DECOUT          ;
+        MOVB    #';, (R2)+      ;
+        MOV     CURS.X, R1      ; THIS IS CURS.X
+        CALL    DECOUT          ;
+        MOVB    #'R, (R2)+      ; 
+        CLRB    (R2)+           ;
+
+REPORT:
+        MOV     #ESCAPE, R3     ;
+REPORC:
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;string, pointered by R3 should be reported !!!!!!!!
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	RESPON	r3		; it is here ...
+999$:
+        RETURN
+
+DECOUT:
+        CLR     -(SP)           ; MARKER
+20$:
+        CLR     R0              ;
+        DIV     #10., R0        ;
+        ADD     #'0, R1         ;
+        MOV     R1, -(SP)       ;
+        MOV     R0, R1          ;
+        BNE     20$             ;
+21$:
+        MOV     (SP)+, R0       ;
+        BEQ     22$             ;
+        MOVB    R0, (R2)+       ;
+        BR      21$             ;
+22$:
+        RETURN
+;*******************************
+VL$CNF::                ; REQUEST CONFIGURATION
+        CALL    GETNUM          ;
+        BNE     22$             ;
+V1$CNF::
+        MOV     #VTBASE, R3     ;
+        BIT     #M.ANSI, V1.MOD ;
+        BNE     REPORC          ;
+        MOV     #VT52, R3       ;
+        BR      REPORC          ;
+.DSABL  LSB     ;>>>>>>>>>>>>>>>>
+;*******************************
+VT52EN::                ; END OF VT52 MODE (GOTO VT100)
+	clr	i15		;
+        BIS     #M.ANSI, V1.MOD ;
+	call	hellow		;
+        RETURN
+;*******************************
+V5$EGM::                ; ENTER GR-MODE
+V5$XGM::                ; EXIT  GR-MODE
+        RETURN
+;*******************************
+ESC.G0::                ; SWITCH CHARACTER SET TO "G0"
+ESC.G1::                ; SWITCH CHARACTER SET TO "G1"
+	clrb	v.gmod		;
+	cmpb	R0, #100	;
+	bhi	10$		;
+	movb	#340, v.gmod	;
+10$:
+ESC.LS::                ; LINE-SIZE COMMANDS
+        RETURN
+;*******************************
+V1$BEL::
+        MOV     V1.MOD, -(SP)   ;
+	bis	#c.rvrs+c.unds, v1.mod	;
+	MOV	#60., R2        ;
+        MOV     #ME.bel, R3     ;
+	call	locout		;
+1$:	inc	(pc)+		;
+	.word	0
+	bne	1$		;
+	mov	(sp)+, v1.mod	;
+;*******************************
+HELLOW:                 ; DRAW HELLOW MESSAGE
+	clr	r1		;clear
+	clr	r2		;	line#0
+	call	SC$CLS		;		first of all !!!!!!!!!!!
+	movb	#340, v.gmod	;;;;;
+        MOV     V1.MOD, -(SP)   ;
+	bis	#c.rvrs+c.unds, v1.mod	;
+        MOV     #1, R2          ;
+        MOV     #ME.100, R3     ;
+        BIT     #M.ANSI, V1.MOD ;
+        BNE     1$              ;
+        MOV     #ME.52, R3      ;
+	tst	i15		;
+	beq	1$		;
+	mov	#me.15, r3	;
+1$:
+        CALL    LOCOUT          ;
+	mov	#ME., r3	;
+	call	LOCOUT		;
+	mov	#SYM$LB, r3	;
+	call	LOCOUT		;
+	mov	(sp)+, v1.mod	;
+	clrb	v.gmod		;;;;;
+	return
+LOCOUT:
+        CLR     R1              ;
+10$:
+	clr	r0		;
+        bisB    (R3)+, R0       ;
+        BEQ     20$             ;
+        CALL    SC$SYM          ;
+        INC     R2              ;
+        BR      10$             ;
+20$:
+        RETURN
+
+;*******************************
+; TABLE-JUMP                      
+;       ENTER:  R1 - CODE-TABLE ADR
+;               R2 - JUMP-TABLE ADR
+.ENABLE LSB
+1$:
+        TST     (R2)+           ;
+TB$JMP::
+        MOVB    (R1)+, R3       ;
+        BMI     2$              ;
+        CMPB    R0, R3          ;
+        BNE     1$              ;
+        MOV     @R2, PC         ;
+2$:
+        RETURN
+.DSABL  LSB
+;*******************************
+; CALCULATE DECIMAL ARG FOR ESC-SEQ 
+;       ENTER:  R5 - POINTER TO BUF
+;               R4 - BUF BOUNDARY
+;       EXIT:   R3 - NUMBER
+;               R1,R2,R4 - UNCHANGED
+;               R5 - POINTS TO CHAR <> NUMBER
+;               R0 - ???
+GETNUM:
+        CLR     R3              ; RESULT
+        MOV     #-1, -(SP)      ; MARKER
+1$:
+        CMP     R4, R5          ; END OF BUFFER ?
+        BEQ     2$              ; YES
+        MOVB    -(R5), R0       ; TAKE A CHAR
+        SUB     #'0, R0         ; TRY TO CONVERT IT TO BINARY
+        BLT     2$              ;
+        CMP     R0, #9.         ;
+        BGT     2$              ;
+        MOV     R0, -(SP)       ;
+        BR      1$              ;
+2$:
+        MOV     (SP)+, R0       ;
+        BMI     3$              ; MARKER !
+        MUL     #10., R3        ;
+        ADD     R0, R3          ;
+        BR      2$              ;
+3$:
+        TST     R3              ;SET ZERO-BIT IN PS
+        RETURN

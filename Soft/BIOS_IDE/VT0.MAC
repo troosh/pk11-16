@@ -1,0 +1,274 @@
+        .TITLE  VT100   - LEVEL 0
+;=======================================
+	.ASECT
+. =	COD$BE
+
+;*******************************
+; CLEAR SCREEN
+;       ENTER:  R1 - TOP LINE
+;               R2 - BOT LINE
+
+SC$CLS::
+	mov	r0, -(sp)	;
+	mov	r1, -(sp)	;
+	mov	r2, -(sp)	;
+	mov	r3, -(sp)	;
+	mov	r4, -(sp)	;
+	mov	r2, r3		;
+	sub	r1, r3		;
+	inc	r3		;num of lines to clear
+	asl	r1		;
+	add	#V.TAL, r1	;pointer
+	clr	r2		;
+10$:
+	mov	(r1)+, r0	;
+	mov	#cc/4, r4	;
+20$:
+.rept	lhigh
+	mov	r2, (r0)+	;
+	mov	r2, (r0)+	;
+.endr
+	sob	r4, 20$		;
+	sob	r3, 10$		;
+	mov	(sp)+, r4	;
+	mov	(sp)+, r3	;
+	mov	(sp)+, r2	;
+	mov	(sp)+, r1	;
+	mov	(sp)+, r0	;
+        RETURN                  ;
+;*******************************
+; CLEAR part of line
+;       ENTER:  R1 - current LINE
+;               R2 - start col
+;		R3 - end col
+
+SC$CLL::
+	mov	r0, -(sp)	;
+	mov	r1, -(sp)	;
+	mov	r2, -(sp)	;
+	mov	r3, -(sp)	;
+	mov	r4, -(sp)	;
+	dec	r2		;
+	sub	r2, r3		;num of cols to clear
+	asl	r1		;
+	add	V.TAL(r1), r2	;pointer
+	mov	#lhigh,	r1	;
+10$:
+	mov	r2,	r0	;
+	mov	r3,	r4	;
+20$:
+	clrb	(r0)+		;
+	sob	r4, 20$		;
+	add	#cc,	r2	;
+	sob	r1, 10$		;
+	mov	(sp)+, r4	;
+	mov	(sp)+, r3	;
+	mov	(sp)+, r2	;
+	mov	(sp)+, r1	;
+	mov	(sp)+, r0	;
+        RETURN                  ;
+
+;*******************************
+; REVERSE SCREEN
+
+SC$REV::
+
+; Here we need only to swap col#0 and col#1 in the pallette !!!!!
+
+	call	CSWAP		;
+        RETURN                  ;
+
+;*******************************
+; DRAW SYMBOL ON PHYS-SCREEN
+;       R0      - CODE OF SYMBOL 0..255.
+;       R1      - ABS LIN.ADDR [0..24]
+;       R2      - ABS COL.ADDR [1..40/80/160]
+
+SC$SYM::
+	mov	r0, -(sp)	;
+	mov	r1, -(sp)	;
+	mov	r3, -(sp)	;
+	asl	r1		;
+	mov	V.TAL(r1), r1	; addr of byte in line
+	add	r2, r1		;
+	dec	r1		; make it [0...]
+	asl	r0		;make it word offset
+	mov	SYM$TB(r0), r0	; start of sym's shape
+	bit	#c.rvrs, v1.mod	; is it revers ?
+	bne	20$		; yes
+offs=0
+10$:
+	movb	(r0)+, (r1)	;
+
+.rept	lhigh-1
+offs=offs+cc			; len of V-line in bytes
+	movb	(r0)+,	offs(r1);
+.endr
+	br	30$		;
+20$:
+	movb	(r0)+, r3
+	comb	r3		;
+	movb	r3, (r1)	;
+offs=0
+.rept	lhigh-1
+offs=offs+cc
+	movb	(r0)+, r3
+	comb	r3		;
+	movb	r3, offs(r1)	;
+.endr
+30$:
+	bit	#c.unds, v1.mod	; underscoping on ?
+	beq	40$		; no
+	comb	offs(r1)	; do it
+40$:
+	mov	(sp)+, r3	;
+	mov	(sp)+, r1	;
+	mov	(sp)+, r0	;
+        RETURN
+
+;*******************************
+; DRAW SYMBOL & cursor ON PHYS-SCREEN
+;       R0      - CODE OF SYMBOL 0..255.
+;       R1      - ABS LIN.ADDR [0..24]
+;       R2      - ABS COL.ADDR [1..40/80/160]
+
+SC$SYC::
+	mov	r0, -(sp)	;
+	mov	r1, -(sp)	;
+	mov	r3, -(sp)	;
+	asl	r1		;
+	mov	V.TAL(r1), r1	; addr of byte in line
+	add	r2, r1		;
+	mov	r1,	cur.m	;;
+	dec	r1		; make it [0...]
+	asl	r0		;make it word offset
+	mov	SYM$TB(r0), r0	; start of sym's shape
+	mov	#cc-1,	r3	; len of V-line in bytes
+	bit	#c.rvrs, v1.mod	; is it revers ?
+	bne	20$		; yes
+	
+10$:
+
+.rept	lhigh-1
+	movb	(r0)+,	(r1)+	;
+	comb	(r1)		; 
+	add	r3,	r1	;
+.endr
+	movb	(r0)+,	(r1)+	;
+	comb	(r1)		; 
+	br	30$		;
+
+20$:
+.rept	lhigh-1
+	movb	(r0)+, (r1)	;
+	comb	(r1)+		;
+	comb	(r1)		;
+	add	r3,	r1	;
+.endr
+	movb	(r0)+, (r1)	;
+	comb	(r1)+		;
+	comb	(r1)		;
+
+30$:
+	bit	#c.unds, v1.mod	; underscoping on ?
+	beq	40$		; no
+	comb	-(r1)		; do it
+40$:
+	mov	(sp)+, r3	;
+	mov	(sp)+, r1	;
+	mov	(sp)+, r0	;
+        RETURN
+
+;*******************************
+; SCROLL UP OF SCREEN ZONE
+;       ENTER:  R1 - TOP LINE
+;               R2 - BOT LINE
+
+SC$SCU::
+	mov	r0, -(sp)	;
+	mov	r1, -(sp)	;
+	mov	r2, -(sp)	;
+	mov	r3, -(sp)	;
+	mov	r4, -(sp)	;
+	mov	r5, -(sp)	;
+
+        SUB     R1, R2          ; NUM OF LINES TO SHIFT
+	asl	r1		;
+	add	#V.TAL, r1	; TO-pointer
+	mov	r1, r0		;
+	mov	(r0)+, r3	;save it ;r0 -FROM-pointer
+10$:
+	mov	(r0)+, (r1)+	;
+	sob	r2, 10$		;
+	mov	r3, (r1)+	;... at last
+	br	sc$sce		;
+;*******************************
+; SCROLL DOWN OF SCREEN ZONE
+;       ENTER:  R1 - TOP LINE
+;               R2 - BOT LINE
+
+SC$SCD::
+	mov	r0, -(sp)	;
+	mov	r1, -(sp)	;
+	mov	r2, -(sp)	;
+	mov	r3, -(sp)	;
+	mov	r4, -(sp)	;
+	mov	r5, -(sp)	;
+
+        MOV     R2, R3          ;
+        SUB     R1, R3          ; NUM OF LINES TO SHIFT
+	asl	r2		;
+	add	#V.TAL, r2	;FROM-pointer
+	mov	r2, r1		;
+	mov	(r1)+, r0	;save it ... ;r1 - TO-pointer
+10$:
+	mov	-(r2), -(r1)	;
+	sob	r3, 10$		;
+	mov	r0, -(r1)	;... at last
+
+sc$sce:
+	call	SETTAS		;
+	mov	(sp)+, r5	;
+	mov	(sp)+, r4	;
+	mov	(sp)+, r3	;
+	mov	(sp)+, r2	;
+	mov	(sp)+, r1	;
+	mov	(sp)+, r0	;
+        RETURN
+
+.ENABL  LSB
+;*******************************
+; SET/RESET CURSOR
+;       ENTER:  CURS.Y - LIN.NUM [0..24]
+;               CURS.X - COL.NUM [1..NN]
+
+SC$CUR::		; set cursor
+        BIT     #1, CURS.T      ; is there any cursor (in this state) ?
+        BNE     30$		; no
+	mov	r0, -(sp)	;
+        MOV     CURS.Y, r0      ;
+	asl	r0		;
+	mov	V.TAL(r0), r0	; this will be the pointer
+	add	curs.x, r0	;
+	dec	r0		;
+	mov	r0, cur.m	;
+	br	20$		;
+
+SC$CER::		; reset cursor
+	mov	r0, -(sp)	;
+	mov	cur.m, r0	;
+	beq	25$		;
+	clr	cur.m		;
+20$:
+	comb	(r0)		;
+offs=0
+.rept	lhigh-1
+offs=offs+cc
+	comb	offs(r0)	;
+.endr
+25$:
+	mov	(sp)+, r0	;
+30$:
+        RETURN
+.DSABLE LSB
+;=======================================

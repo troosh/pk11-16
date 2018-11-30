@@ -1,0 +1,664 @@
+;=======
+initsem::       ;174142
+        mov     freesem, r1     ; take pointer to free list
+        bne     10$             ; use sem being in use
+	mov	#heap,	(r2)	;
+        mov     (r2),    r1     ; take sem from heap
+	add	#semlen, (r2)	; correct heap-pointer
+	cmp	(r2), top$$	; ok ?
+        blo     20$             ; yes
+	mov	r1, (r2)	; restore heap pointer
+        br      30$             ; and exit
+10$:
+        mov     (r1), freesem   ; correct pointer to free sems
+20$:
+        mov     r5, (r1)        ; put ival in sem counter
+        mov     r1, p.r0(r3)    ; returned pointer to sem in r0
+        mov     r1, r2          ; init sem queue
+        add     #s.succ, r1     ; init sem's queue
+        mov     r1, r2          ;
+        tst     -(r2)           ;
+        mov     r1, (r2)+       ;
+        mov     r1, (r2)+       ;
+        mov     r1, (r2)+       ;
+30$:
+        br	$exit           ; set/clear c-bit
+
+;=======
+relsem::        ;174144
+        mov     freesem, (r5)   ; link sem to
+        mov     r5, freesem     ;  free list
+        br      exit$
+
+;=======
+waitsem::       ;174146
+        tst     (r5)            ; if counter<=0
+        bpl     10$             ; then begin
+        call    remove          ; remove(running)
+        mov     s.frst(r5), r1  ;
+        call    putpri          ; putpriority (running, waiting)
+        jmp     schedule        ; schedule end
+10$:                            ; else
+        dec     (r5)            ; counter:=counter-1
+        br      exit$           ;
+
+;=======
+sigsem::        ;174150
+        cmp     s.frst(r5), s.succ(r5) ; if sem^.waiting<>waiting then
+        beq     10$             ; <> waiting then
+                                ; begin [put first waiting in readyqueue]
+        mov     s.succ(r5), r3  ; p:=waiting^.succ
+;;;;	call	remove		; remove (p)
+	br	setp
+10$:                            ; else
+        inc     (r5)            ; counter:=counter+1
+        br      exit$            ;
+
+;=======
+setpri::        ;174152
+        mov     p.pri(r3), r1   ; save process's priority
+        mov     r5, p.pri(r3)   ; set it's new priority
+        cmp     r1, r5          ; priold<=prinew ?
+        bgt     10$             ;
+        br      exit$           ; yes
+10$:
+setp:
+        call    remove          ; no, then remove process
+	jmp	put.sched
+
+;=======
+provec::        ;174154
+	mov	p.r0(r3),r1
+        clr     p.r0(r3)        ;
+        cmp     r5,#v.cpuh      ; test for legal vector
+        bcs     20$             ; invalid
+        cmp     #v.cpuh+veclen,r5       ;
+        bcs     20$             ; invalid
+        mov     (r5), p.r0(r3)  ; vector busy ?
+        beq     10$             ; yes
+        sec                     ;
+        br      20$             ;
+10$:
+        mov     r3, (r5)+       ; set vector !!!
+        mov     r1, (r5)
+20$:
+        br	$exit           ;set/clear c-bit
+
+;=======
+unpvec::        ;174156
+        cmp     r5,#v.cpuh      ; test for legal vector
+        bcs     10$             ; invalid
+        cmp     #v.cpuh+veclen,r5       ;
+        bcs     10$             ; invalid
+        clr     (r5)            ;
+10$:
+        br	$exit           ;
+
+;=======
+proreg::        ;174160
+        mfus                    ; take 1-st word (reg-addr)
+	mov	#heap,	r4
+        bic     #170000, r0     ;
+        mov     l.rda(r0), r2   ;
+        bne     30$             ; reg is busy !!!
+        mov     freereg, r1     ; create reg-descriptor
+        bne     10$             ; take spare one
+	mov	(r4), r1	;
+	add	#reglen, (r4)	;
+	cmp	(r4), top$$	;
+        blo     20$             ; ok
+	mov	r1, (r4)	; restore heap
+        clr     r2              ;
+        br      32$             ;
+10$:
+        mov     (r1), freereg   ; correct pointer
+20$:
+        mov     r1, l.rda(r0)   ; set pointer to reg-descriptor
+        mov     r0, r4          ;
+        mfus                    ;
+        mov     r0, (r1)+       ; r.mask
+        mov     r1, r2          ; r2 := ^r.copy
+        mfus                    ;
+        mov     r0, l.reg(r4)   ;
+        mov     r0, (r1)+       ; r.copy
+        mfus                    ;
+        mov     r0, (r1)+       ; r.stat+r.rqst
+	bit	#400,	r0	; p.hlt*400 ?
+	beq	22$
+	mfus
+	cmp	r0,     #40000
+	bcc	21$
+	mov	(r0),	r0
+21$:	mov	r0,	(r1)+
+	br	24$
+22$:    mov     r3, (r1)+       ; r.proc  set link to current process
+24$:    mfus                    ;
+        mov     r0, (r1)+       ; r.strt
+        mfus
+        mov     r0, (r1)
+        br      40$             ;  and exit
+30$:
+        mov     r.proc(r2),r2
+32$:
+        rcps
+        inc     r0              ; set c=1
+        wcps
+40$:
+        mov     r2, p.r0(r3)    ; returned r0
+;       br      exit$           ;
+;--------------------------------
+$exit:  rcps			;
+        adc     r0              ;
+        wcps                    ;
+exit$:  jmp     exit            ;
+;--------------------------------
+
+;=======
+unpreg::        ;174162
+        bic     #170000, r5     ;
+        mov     l.rda(r5), r0   ;
+        beq     10$             ; reg is free !!!
+        clr     l.rda(r5)       ; make it free
+        mov     freereg, (r0)   ; link descriptor
+        mov     r0, freereg     ;  to free list
+10$:
+        br      exit$           ;
+
+;=======
+waitint::       ;174164
+	bic	#^C20000,p.mask(r3) ; m.hlt
+        bis     r5, p.mask(r3)  ; save mask for later (disable ints)
+        bic     r5, picmr       ; enable ints
+        call    remove          ; take process out of readyqueue
+        bit     #m.tio, r5      ; does he need time-out (tio) ?
+        beq     30$             ; no
+	bic	#m.scrn, picmr	;
+        mov     p.r3(r3), r5    ; take interval
+        mov     tmsucc, r1      ; take pointer to the first waiting
+10$:
+        cmp     r5, p.tim(r1)   ; is he to wake up later ?
+        blos    20$             ; yes, its our place
+        cmp     r1, timeque     ; at end of queue ?
+        beq     20$             ; yes, its our place
+        sub     p.tim(r1), r5   ; our time is relative to previous...
+        mov     (r1), r1        ; take the next sleepping process
+        br      10$             ;and go on...
+20$:
+        mov     r5, p.tim(r3)   ; store our's relative time
+        call    put             ; and seat before proc (r1)
+        cmp     r1, timeque     ; is it end of queue
+        beq     30$             ; yes, exit
+        sub     r5, p.tim(r1)   ; correct the relative timer for next proc
+30$:
+        jmp     schedule
+
+;=======
+newromp::       ;174166
+        call    prdadr          ; create proc's descriptor (exit on no mem)
+        bcc     10$             ;
+        br	$exit
+10$:                        ;and now r3 points to new process
+                        ; r2 - old process
+        mov     #p.r0, r1       ;
+        add     r1, r2          ; r2 = ^p.r0 old
+        add     r3, r1          ; r1 = ^p.r0 new
+        mov     r3, (r1)+       ; p.r0
+        mov     r3, (r2)+       ; p.r0 - old process
+        mov     #6, r0          ;
+30$:
+        mov     (r2)+, (r1)+    ; p.r1-p.r6
+        sob     r0, 30$         ;
+        mov     r5,(r1)+        ; pc
+        clr     (r1)+           ; ps
+        mov     #ur0,r2
+        mov     #8., r0         ;
+40$:
+        mov     (r2)+, (r1)+    ; p.ur0-p.ur7
+        sob     r0, 40$         ;
+        clr     (r1)+           ; p.mask
+        clr     (r1)+           ; p.cprc
+        clr     (r1)+           ; p.tim
+        mov     #77777,(r1)+    ; p.pri
+        clr     (r1)            ; p.mem
+        jmp     put.sched       ; put process in readyqueue
+
+;=======
+setint::
+        call    set.int
+	br	exit$
+;=======
+resint::
+        call    res.int         ;
+        br      exit$           ;
+;=======
+get4k::
+        .push   r5
+        .push   r3
+        mov     memuse, r1      ; take ptr to system map
+        mov     maplen, r0      ; len of map in bytes
+        add     r1, r0          ;
+        mov     #1,r4           ; initial mask
+        dec     r5              ;
+        bmi     19$             ; illegal len...
+        ash     r5, r4          ; shift mask to proper place
+        beq     19$             ; illegal len...
+        mov     r4, r5
+10$:
+        cmp     r0, r1          ; end of map ?
+        bcs     90$             ; yes ...
+        clr     r2              ;
+        mov     (r1)+,r3        ; take next map-word
+        beq     10$             ; no free blocks
+        sec
+        br      25$
+19$:
+        sec                     ; set for error exit
+        br      90$             ; go to common part
+20$:
+        mov     r4, r5
+25$:
+        ror     r3              ; end of word ?
+        beq     10$             ; yes, try to take the next one
+        inc     r2
+        bcc     20$
+        ror     r5              ; end of search ?
+        bcc     25$             ; no
+        clr     r4              ; ok
+90$:
+        .pop    r3
+        bcs     99$             ; return with c-set
+        ashc    r2, r4          ; mask in r4-r5
+        sub     r2,     (sp)
+        bic     r4,-(r1)        ; set busy bits in currend word of sys-map
+        mov     r1, r2
+        bic     r5,-(r1)        ; set busy bits in prev word of sys-map
+        call    mapadr          ; returns addr of user map in r0
+        bcs     99$             ; cannot allocate map !!!
+        sub     memuse,r2
+        add     r2, r1
+        bic     r4, (r1)        ; the same for proc's map
+        bic     r5, -(r1)
+        ash     #3,r2           ; convert block number
+        sub     (sp),r2         ;  to
+        ash     #4, r2          ;   mmu-reg
+        mov     r2,p.r0(r3)     ; return it to proc in r0
+99$:
+        .pop    r5
+	br	$$exit           ;
+
+;=======
+get8k::
+        clr     p.r0(r3)        ;
+        call    mapadr          ;
+        bcs     99$             ;
+        asl     r5              ; needed blocks 4k
+        mov     maplen, r1      ;
+        add     memuse, r1      ; points to end of sys-map
+        mov     r3, -(sp)       ; save pointer to current process
+        clr     r3              ; counter of free blocks
+        clr     r4              ; max value for r3
+10$:
+        mov     -(r1), r0       ; take next word from map
+        mov     #16., r2        ; num of blocks in word of map
+20$:
+        rol     r0              ;
+        bcc     30$             ; busy block
+        inc     r3              ; free block
+        cmp     r3, r5          ; is it enouph
+        beq     50$             ; ok
+        sob     r2, 20$         ;
+        br      45$             ;
+30$:
+        cmp     r3, r4          ; store max free zone ?
+        blo     40$             ;
+        mov     r3, r4          ; yes
+40$:
+        clr     r3              ; reset free block counter
+        sob     r2, 20$         ;
+45$:
+        cmp     r1, memuse      ; end of map ?
+        bne     10$             ; no
+        mov     (sp)+, r3       ; restore process pointer
+        asr     r4              ; length of max free  zone in 8k blocks
+        mov     r4, p.r0(r3)    ; store it for return
+        sec                     ;
+        br      99$             ;
+50$:            ; it is found at last
+        mov     (sp)+, r3       ; restore process pointer
+        mov     r1, r0          ; calculate block# of the first one
+        sub     memuse, r0      ;
+        mov     r0, r4          ; pointer to process's map
+        add     p.mem(r3), r4   ;  in r4 (for later)
+        ash     #3, r0          ;
+        dec     r2              ; rel blk [1..16] => [0..15]
+        add     r2, r0          ;
+        ash     #4, r0          ; got it at last !!!
+        mov     r0, p.r0(r3)    ;
+                ; set bits in system and process's map
+        mov     #1, r0          ;
+        ash     r2, r0          ; move it to the proper position
+60$:
+        bic     r0, (r4)        ;
+        dec     r5              ; all blocks marked ?
+        beq     70$             ; yes
+        rol     r0              ; shift the mask; end of word ?
+        bcc     60$             ; not end of word
+        rol     r0              ; shift the block mask in the first position
+70$:
+        mov     (r4)+, r2       ; get process's map-word
+        com     r2              ;
+        bic     r2, (r1)+       ; set the system map-word
+        tst     r5              ; all blocks ?
+        bne     60$             ; not yet !!!
+80$:
+        clc                     ; normal exit
+99$:
+$$exit:	jmp	$exit
+
+;=======
+fremem::
+        asl     r5              ; blocks 4k to free
+free4k::
+        tst     p.mem(r3)       ; proc has any mem ?
+        beq     40$             ; no ...
+        mov     p.r0(r3), r4    ;
+        ash     #-4, r4         ; starting block num (in 4k)
+        mov     maplen, r0      ; boundary check...
+        ash     #3, r0          ;
+        cmp     r4, r0          ;
+        bhis    40$             ; starting block is out of ram !!!
+        mov     r4, r1          ;
+        bic     #177760, r4     ; block num in word
+        ash     #-3, r1         ; offset in map for the first word
+        mov     r1, r2          ;
+        add     p.mem(r3), r1   ; pointer to user map
+        mov     maplen, r3      ;
+        mov     memuse, r0      ;
+        add     r0, r3          ; high limit...
+        add     r0, r2          ; pointer to system map
+        mov     #1, r0          ; mask
+        ash     r4, r0          ;  ...for the first block
+20$:
+        bit     r0, (r1)        ;
+        bne     30$             ;
+        bis     r0, (r1)        ; mark in user map
+        bis     r0, (r2)        ; mark in system map
+        dec     r5              ; all blocks done ?
+        ble     40$             ; yes
+30$:
+        rol     r0              ;
+        bcc     20$             ;
+        bit     (r1)+, (r2)+    ;
+        cmp     r2, r3          ;
+        blo     30$             ;
+40$:
+	br	exit$$
+;=======
+putbmap::
+        call    mapadr          ;
+        bcs     putb1           ;
+        mov     maplen, r2      ;
+        asr     r2
+10$:
+        mfus                    ;
+        mov     r0, (r1)+       ;
+        sob     r2, 10$         ;
+        br      putb1           ;
+
+;=======
+getbmap::
+        mov     p.mem(r3), r1   ;
+        bne     getmap          ; mem-map exists !!!
+        sec                     ;
+        br      putb1           ;
+
+;=======
+getsmap::
+        mov     memuse, r1      ;
+getmap:
+        mov     maplen, r2      ;
+        mov     r2, p.r0(r3)    ;
+        add     r2, r5          ;
+        add     r2, r1          ;
+        asr     r2
+10$:
+        mov     -(r1), r0       ;
+        mtus                    ;
+        sob     r2, 10$         ;
+        clc                     ;
+putb1:
+        br	$$exit           ;
+
+;=======
+himpri::
+        mov     p.r0(r3), r3    ; new process
+        mov     r5, p.pri(r3)   ; set him new priority
+        mov     readyque, r1    ;
+        mov     r1, r2          ;
+10$:                    ; is he in readyqueue
+        mov     (r2), r2        ; next process
+        cmp     r1, r2          ; end of queue ?
+        bne     20$             ; no
+        br      exit$$          ; he is not ready, nothing to do
+20$:
+        cmp     r2, r3          ; is it he ?
+        bne     10$             ; no
+        jmp     setp            ; goto setpri common part
+
+;=======
+newproc::
+        call    prdadr          ; create new descriptor
+        bcs     40$             ; cannot allocate mem !!!
+                        ; r2 - pointer to old proc
+                        ; r3 - pointer to new proc
+        mov     r3, r1          ;
+        mov     #prolen/2-3, r4   ;
+10$:                    ; copy descriptor from user (excl p.tim..p.dsucc)
+        mfus                    ;
+        mov     r0, (r1)+       ;
+        sob     r4, 10$         ;
+	mov	r3,	p.r0(r3); r0/new := desc.addr
+        call    mapadr          ;
+        bcs     30$             ; error exit
+        mov     p.r0(r2), r5    ;
+        mov     maplen, r4      ;
+        asr     r4              ;
+20$:                    ; copy map from user
+        mfus                    ;
+        mov     r0, (r1)+       ;
+        sob     r4, 20$         ;
+        jmp     put.sched       ;
+30$:                    ; failure.......................
+        mov     freepr, (r3)    ; free proc's descriptor
+40$:
+        br	$$exit           ;
+
+;--------------------------------------------------
+mthlt::
+	mov	p.r0(r3),(r5)
+	br	exit$$
+;--------------------------------------------------
+mfhlt::
+	mov	(r5),	p.r0(r3)
+exit$$:	jmp      exit           ;
+;--------------------------------------------------
+kilproc::
+	mov	pdptr,	r3
+	dec	r5
+	beq	4$
+3$:
+	mov	p.dsucc(r3),	r3
+	beq	99$
+	sob	r5,	3$
+4$:
+	mov	freepr,	r0
+	beq	7$
+5$:
+	cmp	r0,	r3
+	beq	99$
+	mov	(r0),	r0
+	bne	5$
+7$:
+	mov	(r3),	r0		;
+	beq	10$			;
+	bit	#m.tio,	p.mask(r3)	;
+	beq	8$			;
+	cmp	r0,	timeque		;
+	beq	8$			;
+	add	p.tim(r3),p.tim(r0)	;
+8$:					;
+	call	remove			;
+10$:
+	mov	freepr,	(r3)		;
+	mov	r3,	freepr		;
+
+	mov	p.mem(r3),r0		;freemem
+	beq	27$			;
+	mov	r0,	r2		;
+	mov	memuse,	r1		;
+	mov	maplen,	r5		;
+20$:					;	
+	comb	(r0)			;
+	bisb	(r0)+,	(r1)+		;
+	sob	r5,	20$		;
+	mov	freemap,(r2)		;
+	mov	r2,	freemap		;
+
+27$:
+	bis	p.mask(r3),@#picmr	;disable ints
+	mov	#v.cpuh,r0		;
+	mov	#veclen/4,	r5	;
+30$:					;unpvec
+	cmp	r3,	(r0)		;
+	bne	33$			;
+	clr	(r0)			;
+33$:					;
+	cmp	(r0)+,	(r0)+		;next vector
+	sob	r5,	30$		;
+
+	mov	#l.rda+4000,	r0	;unpreg
+	mov	#2000,	r5		;
+40$:					;
+	mov	(r0)+,	r1		;
+	beq	46$			;
+	cmp	r3,	r.proc(r1)	;
+	bne	46$			;
+	clr	-2(r0)			;
+	mov	freereg,	(r1)
+	mov	r1,	freereg
+46$:
+	sob	r5,	40$
+99$:
+	br	exit$$
+
+getpds::
+	mov	p.r0(r3),  r2
+	bne	1$
+	mov	p.cprc(r3),r2
+1$:
+	cmp	r2,	#heap$$
+	blo	99$
+	cmp	sp,	r2
+	blo	99$
+	mov	#prolen, r4
+	add	r4,	r5
+	add	r4,	r2
+	asr	r4
+2$:
+	mov	-(r2),	r0
+	mtus
+	sob	r4,	2$
+	clc
+99$:
+	br	$$$exit	
+
+putpds::
+	mov	p.r0(r3),  r2
+	bne	1$
+	mov	p.cprc(r3),r2
+1$:
+	cmp	r2,	#heap$$
+	blo	99$
+	cmp	sp,	r2
+	blo	99$
+	mov	#prolen/2, r4
+2$:
+	mfus
+	mov	r0,	(r2)+
+	sob	r4,	2$
+	clc
+99$:	br	$$$exit	
+
+getrds::
+	mov	p.r0(r3),  r2
+	cmp	r2,	#170000
+	blo	99$
+	sec
+	mov	-20000(r2), r2
+	beq	99$
+	mov	#reglen, r4
+	add	r4,	r5
+	add	r4,	r2
+	asr	r4
+2$:
+	mov	-(r2),	r0
+	mtus
+	sob	r4,	2$
+	clc
+99$:
+$$$exi:	jmp	$exit	
+
+putrds::
+	mov	p.r0(r3),  r2
+	cmp	r2,	#170000
+	blo	99$
+	sec
+	mov	-20000(r2), r2
+	beq	99$
+	mov	#reglen/2, r4
+2$:
+	mfus
+	mov	r0,	(r2)+
+	sob	r4,	2$
+	clc
+99$:	br	$$$exit	
+
+getpar::
+	mov	p.r0(r3),  r2
+	bne	1$
+	mov	p.cprc(r3),r2
+1$:
+	cmp	r2,	#heap$$
+	blo	99$
+	cmp	sp,	r2
+	blo	99$
+	mov	#10,	r4
+	add	#20,	r5
+	add	#p.ur7+2,r2
+2$:
+	mov	-(r2),	r0
+	mtus
+	sob	r4,	2$
+	clc
+99$:
+	br	$$$exit	
+
+putpar::
+	mov	p.r0(r3),  r2
+	bne	1$
+	mov	p.cprc(r3),r2
+1$:
+	cmp	r2,	#heap$$
+	blo	99$
+	cmp	sp,	r2
+	blo	99$
+	mov	#10,	r4
+	add	#p.ur0,	r2
+2$:
+	mfus
+	mov	r0,	(r2)+
+	sob	r4,	2$
+	clc
+99$:	br	$$$exit	
+
+.end

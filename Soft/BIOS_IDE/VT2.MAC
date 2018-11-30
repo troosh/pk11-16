@@ -1,0 +1,393 @@
+;*******************************
+V1$ELN::                ; ERASE THE LINE
+        MOV     CURS.Y, R1      ;
+V1$CR1:
+        MOV     R1, R2          ;
+        CALL    SC$CLS          ;
+        RETURN
+V1$SOL::                ; ERASE LINE FROM START TO CUR
+        MOV     COL.S, R2       ;
+        MOV     CURS.X, R3      ;
+        BR      1$              ;
+V1$EOL::                ; ERASE LINE FROM CUR TO END
+        MOV     CURS.X, R2      ;
+        MOV     COL.E, R3       ;
+1$:
+        MOV     CURS.Y, R1      ;
+        CALL    SC$CLL          ;
+        RETURN
+.DSABL  LSB     ;>>>>>>>>>>>>>>>>
+VL$ERL::                ; LINE ERASE DISPATCHER
+        CALL    GETNUM          ;
+        BEQ     V1$EOL          ;
+        DEC     R3              ;
+        BEQ     V1$SOL          ;
+        DEC     R3              ;
+        BEQ     V1$ELN          ;
+        RETURN
+;*******************************
+.ENABL  LSB     ;<<<<<<<<<<<<<<<<
+VL$ERS::                ; ERASE SCREEN DISPATCHER
+        CALL    GETNUM          ;
+        BEQ     V1$EOS          ;
+        DEC     R3              ;
+        BEQ     V1$SOS          ;
+        DEC     R3              ;
+        BNE     3$              ; ILLEGAL FUNCTION
+V1$ERS::                ; ERASE ALL SCREEN
+        MOV     LIN.S, R1       ;
+        MOV     LIN.E, R2       ;
+        BR      2$              ;
+V1$EOS::                ; ERASE SCREEN FROM CUR TO END
+        CALL    V1$EOL          ;
+        MOV     CURS.Y, R1      ;
+        MOV     LIN.E, R2       ;
+        INC     R1              ;
+        BR      1$              ;
+V1$SOS::                ; ERASE SCREEN FROM START TO CUR
+        CALL    V1$SOL          ;
+        MOV     LIN.S, R1       ;
+        MOV     CURS.Y, R2      ;
+        DEC     R2              ;
+1$:
+        CMP     R1, R2          ;
+        BHI     3$              ;
+2$:
+        CALL    SC$CLS          ;
+3$:
+        RETURN                    
+.DSABL  LSB     ;>>>>>>>>>>>>>>>>
+.ENABL  LSB     ;<<<<<<<<<<<<<<<<
+;*******************************
+; SAVE/RESTORE CURSOR AND ATTRIBUTES
+V1$SAV::
+        MOV     #V1.MOD, R0     ;
+        MOV     #SAVE.C, R1     ;
+        BR      10$             ;
+V1$RES::
+        MOV     #V1.MOD, R1     ;
+        MOV     #SAVE.C, R0     ;
+10$:
+	mov	(r0)+, (r1)+	;
+        MOV     (R0)+, (R1)+    ;
+        MOV     (R0)+, (R1)+    ;
+        MOV     (R0)+, (R1)+    ;
+        RETURN
+.DSABL  LSB     ;>>>>>>>>>>>>>>>>
+;*******************************
+; SET TAB STOP
+V1$STB::
+        MOV     CURS.X, R0      ;
+        SUB     COL.S, R0       ;
+        MOVB    #377, V1.TAB(R0);
+        RETURN
+;*******************************
+; INIT VT100 ON POWER ON
+V1$INI::
+        MOVB    #C.ESC, ESCAPE  ;
+        MOV     #1, R1          ;
+;       MOV     V.LMAX, R2	;
+	mov	#ll-1,	r2	;;;
+;       MOV     V.CMAX, R3	;
+	mov	#cc-4,	r3	;;;
+        MOV     #ESC.J, R5      ;
+
+        CLR     (R5)+           ; ESC.J
+        MOV     #M.ANSI+M.WRAP, (R5)+ ; V1.MOD
+        MOV     R1, (R5)+       ; CURS.Y
+        MOV     R1, (R5)+       ; CURS.X
+        CLR     (R5)+           ; CURS.T
+        MOV     R1, (R5)+       ; LIN.S
+        MOV     R2, (R5)+       ; LIN.E
+        MOV     R2, (R5)+       ; LIN.N
+        MOV     R1, (R5)+       ; COL.S
+        MOV     R3, (R5)+       ; COL.E
+        MOV     R3, (R5)+       ; COL.N
+        MOV     R1, (R5)+       ; TOP.L
+        MOV     R2, (R5)+       ; BOT.L
+
+        CLR     R0              ; V1.TAB
+        MOV     #COLMAX, R4     ;
+1$:
+        BIT     #7, R0          ;
+        BNE     2$              ;
+        MOVB    #377, (R5)+     ;
+        BR      3$              ;
+2$:
+        CLRB    (R5)+           ;
+3$:
+        INC     R0              ;
+        SOB     R4, 1$          ;
+
+	clrb	(r5)+		;v.gmod
+	clr	cur.m		;
+        CLR     R1              ; CLEAR SCREEN
+        MOV     BOT.L, R2       ;
+        CALL    SC$CLS          ;
+        CALL    HELLOW          ;
+        RETURN
+;*******************************
+; SET APPLICATION OR NUMERIC KEYBORD
+V1$KAP::
+        BIS     #M.KEYP, V1.MOD ;
+        RETURN
+V1$KNM::
+        BIC     #M.KEYP, V1.MOD ;
+        RETURN
+;*******************************
+; CURSOR UP PN LINES
+VL$CUU::
+        CALL    GETNUM          ;
+        BNE     1$              ;
+        INC     R3              ;
+1$:
+        CALL    V1$CUP          ;
+        BCC     2$              ;
+        SOB     R3, 1$          ;
+2$:
+        RETURN
+;*******************************
+; CURSOR DOWN PN LINES
+VL$CUD::
+        CALL    GETNUM          ;
+        BNE     1$              ;
+        INC     R3              ;
+1$:
+        CALL    V1$CUD          ;
+        BCC     2$              ;
+        SOB     R3, 1$          ;
+2$:
+        RETURN
+;*******************************
+; CURSOR FORWARD PN LINES
+VL$CUF::
+        CALL    GETNUM          ;
+        BNE     1$              ;
+        INC     R3              ;
+1$:
+        CALL    V1$CUR          ;
+        BCC     2$              ;
+        SOB     R3, 1$          ;
+2$:
+        RETURN
+;*******************************
+; CURSOR BACKWARD PN LINES
+VL$CUB::
+        CALL    GETNUM          ;
+        BNE     1$              ;
+        INC     R3              ;
+1$:
+        CALL    V1$CUL          ;
+        BCC     2$              ;
+        SOB     R3, 1$          ;
+2$:
+        RETURN
+;*******************************
+VL$POS::                ; DIRECT ADDR CURSOR
+        CALL    GETNUM          ; CURS.X
+	cmp	r4, r5		;
+	bne	10$
+	cmpb	#';, (r4)	;???
+	beq	10$		;!!!
+	tst	r3		;set z in ps
+	call	sety		;
+	clr	r3		;
+	call	setx		;
+	return
+10$:
+	mov	r3, r2		;save it
+	call	getnum		;
+	call	sety		;
+	mov	r2, r3		;
+	call	setx		;
+	return
+
+SETY:
+        BNE     1$              ;
+        INC     R3              ;
+1$:
+        MOV     LIN.E, R1       ;
+        BIT     #M.REL, V1.MOD  ;
+        BEQ     2$              ;
+        ADD     TOP.L, R3       ;
+        DEC     R3              ;
+        MOV     BOT.L, R1       ;
+2$:                               
+        CMP     R3, R1          ;
+        BLOS    3$              ;
+        MOV     R1, R3          ;
+3$:
+        MOV     R3, CURS.Y      ;
+        RETURN
+SETX:
+        BNE     1$              ;
+        INC     R3              ;
+1$:
+        CMP     R3, COL.E       ;
+        BLOS    2$              ;
+        MOV     COL.E, R3       ;
+2$:
+        MOV     R3, CURS.X      ;
+        RETURN
+
+;*******************************
+VL$CAT::                ; CHAR ATTRIBUTES
+        CLR     R2              ; COUNTER OF ARGS
+	cmp	r4, r5		;
+	beq	51$		;
+1$:
+        CMP     R4, R5          ;
+        BEQ     4$              ;
+        INC     R2              ;
+        CALL    GETNUM          ;
+        BNE     2$              ;
+        CLR     -(SP)           ;
+        BR      1$              ;
+2$:
+        MOV     #C.BOLD, R0     ;
+        CMP     R3, #1          ;
+        BEQ     3$              ;
+        MOV     #C.UNDS, R0     ;
+        CMP     R3, #4          ;
+        BEQ     3$              ;
+        MOV     #C.BLNK, R0     ;
+        CMP     R3, #5          ;
+        BEQ     3$              ;
+        MOV     #C.RVRS, R0     ;
+        CMP     R3, #7          ;
+        BNE     1$
+3$:
+        MOV     R0, -(SP)       ;
+        BR      1$              ;
+4$:
+5$:
+        DEC     R2              ;
+        BMI     7$              ;
+        MOV     (SP)+, R0       ;
+        BNE     6$              ;
+51$:
+        BIC     #C.BOLD+C.UNDS+C.BLNK+C.RVRS, v1.mod ; ALL OFF
+        BR      5$              ;
+6$:
+        BIS     R0, v1.mod      ;
+        BR      5$              ;
+7$:	
+			;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+			; this is the place to do something at last
+			;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        RETURN
+;*******************************
+VL$LED::                ; SWITCH LEDS ON/OFF
+        RETURN
+.ENABL  LSB     ;<<<<<<<<<<<<<<<<
+;*******************************
+VL$SCR::                ; SET SCROLLING REGION
+        CALL    GETNUM          ;
+	mov	lin.e, r1	;
+	cmp	r4, r5		; 1 arg ?
+	bne	20$		; no, 2 !!!
+	tst	r3		;
+	bne	10$		;
+	inc	r3		;
+10$:
+	mov	r1, r2		;
+	cmp	r3, r1		;
+	blos	37$		;
+	return
+20$:
+	mov	r3, r2		;
+	bne	21$		;
+	mov	r1, r2		;
+21$:
+	call	getnum		;
+	bne	25$		;
+	inc	r3		;
+25$:
+	cmp	r3, r1		;
+	blos	30$		;
+	mov	r1, r3		;
+30$:
+	cmp	r2, r1		;
+	blos	35$		;
+	mov	r1, r2		;
+35$:
+	cmp	r3, r2		;
+	bhis	40$		;
+37$:
+	mov	r3, top.l	;
+	mov	r2, bot.l	;
+	call	curhom		;
+40$:	return			;
+
+.DSABL  LSB     ;>>>>>>>>>>>>>>>>
+;*******************************
+VL$TAB::                ; TABS CONTROL
+        CALL    GETNUM          ;
+        BNE     1$              ;
+        MOV     CURS.X, R0      ; CLEAR TAB AT CUR
+        SUB     COL.S, R0       ;
+        CLRB    V1.TAB(R0)      ;
+        RETURN
+1$:
+        CMP     R3, #3          ;
+        BNE     3$              ; ILLEGAL FUNCTION
+        MOV     #V1.TAB, R0     ; CLEAR ALL TABS
+        MOV     COL.N, R1       ;
+2$:
+        CLRB    (R0)+           ;
+        SOB     R1, 2$          ;
+3$:
+        RETURN
+;*******************************
+CURHOM::                 ; CURSOR TO HOME
+        MOV     COL.S, CURS.X   ;
+        MOV     LIN.S, CURS.Y   ;
+        BIT     #M.REL, V1.MOD  ;
+        BEQ     1$              ;
+        MOV     TOP.L, CURS.Y   ;
+1$:
+        RETURN
+;*******************************
+VL$MOD::                ; SET/RESET VT MODES
+        MOVB    R0, R2          ; SAVE CMD-CHAR
+        CALL    GETNUM          ;
+        BEQ     9999$           ; ILLEGAL
+        CMP     R3, #20.        ;
+        BNE     1$              ;
+        CLR     R3              ;
+1$:
+        CMP     R3, #10.        ;
+        BHI     9999$           ; ILLEGAL
+        MOV     #1, R0          ; A BIT TO SHIFT
+        ASH     R3, R0          ; PREPARE MASK
+        CMP     R2, #'h         ; IS IT SET ? 
+        BNE     2$              ;
+        BIS     R0, V1.MOD      ;
+        BR      3$              ;
+2$:
+        CMP     R2, #'l         ; IS IT RESET ?
+        BNE     9999$           ;
+        BIC     R0, V1.MOD      ;
+3$:
+;----------------------- SPECIAL PROCESSING
+        CMP     #6., R3         ; REL/ABS CHANGE ? 
+        BNE     4$              ;
+        CALL    CURHOM          ;
+        BR      9999$           ;
+4$:
+	cmp	#2., r3		;ansi / vt52 ?
+	bne	6$		;
+	bit	#m.ansi, v1.mod ; ?
+	beq	5$		;
+	clr	i15		;
+5$:
+	call	hellow		;
+	br	9999$		;
+6$:
+        CMP     #5., R3         ;
+        BNE     9999$           ;
+        CALL    SC$REV          ;
+9999$:
+        RETURN
+
+.ENABL  LSB     ;<<<<<<<<<<<<<<<<

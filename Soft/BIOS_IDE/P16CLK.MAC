@@ -1,0 +1,56 @@
+; clock - process
+	clkcsr  = 177546
+	clkvec  = 100
+	clk.csr = <clkcsr & 7777>+l.reg
+	clkcnt	= 157700
+;------------------------------------------------
+clkini::
+	mov	#clkreg,<clkcsr & 7777>+l.rda
+	mov	#clkint,v.scrn
+c.cs0=v.scrn+2
+c.cs1=c.cs0+1
+	clr	c.cs0
+	return
+;------------------------------------------------
+clkreg: bic	#m.scrn,picmr	;
+	bic	#^c100, clk.csr	;
+	movb	clk.csr,r0	;
+	aslb	r0		;
+	cmpb	r0,	c.cs0	;
+	beq	c.exit		;
+	movb	r0,	c.cs0	;
+	bne	c.exit		;
+        mov     #clkvec+vrqtbl-v.low+4, r5
+     	call	res.int		;
+c.exit: jmp	exit		;
+;------------------------------------------------
+clkint:                         ; wait for clock-interrupt
+	add	#50344., clkcnt	;
+	bcc	c.ret		;
+	tstb	c.cs0		;
+	bpl	15$		;
+        mov     #clkvec+vrqtbl-v.low+4, r5
+	call	set.int		;
+15$:				;
+	bis	#200,   clk.csr	;
+	mov	#1,	r2	;
+;................................
+18$:				;
+	mov	tmsucc, r3	;
+	cmp	r3, timeque	; anybody in queue ?
+	beq	29$		; no
+	sub	r2,	p.tim(r3)
+	bne	c.ret 		; still sleepping...
+20$:				;
+	mov	p.r4(r3),p.r2(r3)
+	mov	readyque, r1	;
+	call	putpri		; put him to readyqueue
+	clr	r2		;
+	br	18$		;
+;................................
+29$:	tstb	c.cs0		;
+	bmi	c.ret		;
+	bis	#m.scrn,picmr	;
+c.ret:  return			;
+;------------------------------------------------
+.end

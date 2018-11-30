@@ -1,0 +1,269 @@
+.enabl	ama
+ver$$	= 343*400+263
+ser.No	= 13.
+m$siz	=1740
+.ASECT
+;----------------------------------------
+.=0
+	.word	pw.init,600		;    100
+.=4					;    ===
+	.word	tr4h,	600		;10 I	I 200
+.=10					;   I 2 I
+	.word	fis,	600		;    ===
+.=14 					;   I	I
+	.word	ver$$,	ser.No		;20 I	I 1
+					;    ===   * 4
+.iif gt .-40	.error ; не влазит !	;    40
+;----------------------------------------
+.=60
+htbl:	.word	$$csr,$$kdc3,0,0,0,0,0,0
+;------------------------------------------------
+dctbl:: .byte	371,201,362,343,213,153,173,301
+	.byte	373,353,333,073,170,263,172,132
+;------------------------------------------------
+dvtbl:	;20. max
+	.word	dxtbl
+	.word	ppip,	ppia,	ppic
+	.word	sndcsr,	sndc1r,	dlcs,	kbdcsr,	piccsr,	picmr
+	.word	snlcsr,	ppic,	161412,	161413,	ppic
+	.word	hr6,	hr4,	hr2,	hr3
+
+;----------------------------------------
+.iif gt .-170	.error ; не влазит !
+.=170
+	.word	vhlt,	600	;HLT
+.=174
+	.word	vec.to, 601	;TO2
+;----------------------------------------
+dxtbl:
+	.byte	1,	212
+	.byte	1, 	340
+	.byte	1, 	15
+	.byte	1,	126
+	.byte	1,	13.
+	.byte	6, 	0, 	0, 	0, 	100, 	316, 	5
+	.byte	5,	14, 	40+10, 	^B11010011, 340, 340
+	.byte	1, 	22
+	.byte	2, 	0, 	377 	
+	.byte	3,	64, 	164, 	264			
+	.byte	1, 	14
+	.byte	1,	52
+	.byte	1,	16
+	.byte	1, 	15
+	.byte	1,	0
+	.byte	1,	40
+	.byte	1,	0
+	.byte	1,	0
+.even
+.print
+.iif gt .-274	.error ; не влазит !
+
+;--------------------------------------------------------
+.=274
+	.word	vec.to, 600	;VEC.TO
+;_______________0_______2_______4_______6_______10______12______14______16
+vdtbl:: .word	4,   1020,	4, 125000,    460,    462,    464,    464
+	.word 466,    470,    472,    472,    474
+	.word 500,    512,    524,    536,    550,    562,    574,	0
+.iif gt .-360	.error ; не влазит !
+;----------------------------------------
+.=400
+tblreq: .word		initsem,relsem, waitsem
+	.word	sigsem, setpri, provec, unpvec
+	.word	proreg, unpreg, waitint,newromp
+	.word	setint, resint, free4k ,get4k
+	.word	get8k,	fremem ,putbmap,getbmap
+	.word	getsmap,himpri, newproc,mthlt
+	.word	mfhlt,	kilproc,getpds, putpds
+	.word	getrds, putrds, getpar, putpar
+	.word	0
+;------------------------------------------------
+pw.init:  
+	mov	#dvtbl,	r0
+	mov	(r0)+,	r1
+10$:
+	mov	(r0)+,	r5
+	movb	(r1)+,	r4
+15$:
+	movb	(r1)+,	r2
+	mov	r2,	(r5)
+	sob	r4,	15$
+	tst	(r0)
+	bmi	10$
+;--------------------------------------------------------
+m1tst:				;
+	mov	#prc$$$,r0	;
+	mov	#60000,	r1	;
+	mov	#160000,sp	;
+;--------------------------------
+10$:				;
+	mov	(r0),	(r1)	;
+.rept	8.			;
+	rol	(r1)		;
+.endr				;
+	rolb	(r1)		;
+	swab	(r1)		;
+	sub	(r0)+,	(r1)+	;	
+	bne	99$		;
+	tst	r1		;
+	bpl	10$		;
+	sub	#20000,	r0	;17766,	r0	;
+	sub	#20000,	r1	;
+	tst	(r5)		;
+	bne	20$		;
+	call	vdpini		;	
+20$:				;
+	call	ind		;
+	cmp	#m$siz,	(r5)	; 192kb
+	bcc	10$		;
+	br	m2tst		;
+;--------------------------------
+99$:				;
+	call	dbg00		;
+;--------------------------------
+partbl:	.word	  0,	  0,	140,	200,	240,	300,	0,	0
+	.word	140,	200,	240,	300,	40,	100,	0,	0
+;--------------------------------
+ind:				;
+	.push	r0		;
+	mov	(r5),	r0	;
+	add	#40,	r0	;
+	mov	r0,	(r5)	;
+	ash	#-2,	r0
+	bpl	10$		;
+	sub	#160000+1536.,r0;
+10$:				;
+	jsr	r5,	$$kdc3	;
+	.byte	4.*16.+10., 10.	;
+	.pop	r0		;
+	return			;
+;--------------------------------
+m2tst:				;
+	mov	#m2tr4,	v.tr4h	;
+	mov	#123456,r0	;
+	clr	r2		;
+10$:				;
+	mov	r2,	(r1)+	;
+	mov	r2,	(r1)+	;
+	mov	r2,	(r1)+	;
+	mov	r2,	(r1)+	;
+	tst	r1		;
+	bpl	10$		;
+	sub	#20000,	r1	;
+	mov	(r5),	r4	;
+	call	ind		;
+	bit	#37740,	(r5)	;
+	beq	m2tr4		;
+	mov	r0,	(r1)	;
+	cmp	r0,	(r1)	;
+	bne	m2tr4		;
+	com	r0		;
+	com	(r1)		;
+	cmp	r0,	(r1)	;
+	bne	m2tr4		;
+	com	r0		;
+	bit	#17700,	(r5)	;
+	beq	96$		;
+
+	cmp	vdtbl,	40000	;
+	beq	10$		;
+	mov	#117740,(r5)	;
+	tst	hr2		;
+	beq	10$		;
+;	bis	#40000,r4	;
+	br	m2tr4		;
+96$:
+	mov	#20000,	hr2	;
+	mov	vdtbl,	40000	;
+	br	10$		;
+m2tr4:				;
+	mov	r4,	maplen	;
+;--------------------------------
+unp:				;
+	mov	#partbl,r0	;
+	mov	#hr0,	r1	;
+	mov	#16.,	r2	;
+10$:				;
+	mov	(r0)+,	(r1)+	;
+	sob	r2,	10$	;
+				;
+;call dbg00				;
+	call	unpack		;
+;call dbg00				;
+	mov	40040,	r0	;
+	wcpc			;
+	clr	r0		;
+	wcps			;
+;call dbg00				;
+;--------------------------------
+stinit:				;
+	mov	#hr2,	r1	;
+	clr	(r1)+		;
+	clr	(r1)+		;
+	mov	ur4,	(r1)+	;
+	mov	ur5,	(r1)	;
+;--------------------------------
+	mov	#tblreq,r0	;
+	mov	#l.rda+4142,r1	;
+16$:	mov	(r0)+,	(r1)+	;
+	bne	16$		;
+	mov	#hstack,sp	;
+	mov	#hstack-200,top$$
+				;
+	mov	#vrqtbl, r1	;
+	mov	 r1,	(r1)	;
+	mov	(r1)+,	(r1)	;
+				;
+	mov	#heap$$,r5	;
+	mov	r5,	memuse	;
+
+	mov	maplen,	r4	;
+	bpl	19$		;
+	cmp	#117740,r4	;
+	bne	19$		;
+	mov	#3740,	r4	;
+19$:
+	mov	r4,	r0	;
+	bic	#140000,r4	;
+	ash	#-7,	r4	;
+	inc	r4		;
+	mov	r4,	maplen	;
+
+	add	r4,	r5	;
+	mov	r5,	heap	;
+				;
+	mov	memuse, r1	;
+	mov	r1,	r2	;
+	mov	#^b1111111100000000,(r1)+	; -8*4k
+	tst	-(r4)		;
+20$:	movb	#-1,	(r1)+	;
+	sob	r4,	20$	;
+
+	tst	r0		;
+	bpl	22$		;	
+	add	#16.,	r2	;
+	mov	#48.,	r4	;
+21$:
+	clrb	(r2)+		;
+	sob	r4,	21$	;
+	
+22$:				;
+	mov	#rdsucc,r1	;
+	mov	r1,	readyqu ;READYQU -> RDSUCC
+	mov	r1,	(r1)	;RDSUCC  -> RDSUCC
+	mov	(r1)+,	(r1)	;RDPRED  -> RDSUCC
+	mov	#tmsucc,r1	;
+	mov	r1,	timeque	;
+	mov	r1,	(r1)	;
+	mov	(r1)+,	(r1)	;
+				;
+	add	#p.sp,	r5	;
+	mov	r5,	running	;
+				;
+	call	clkini		;
+;call dbg00				;
+	mov	heap,	r3	;
+	rcpc			;
+	mov	r0,	r5	;
+	jmp	newromp		;
+;--------------------------------

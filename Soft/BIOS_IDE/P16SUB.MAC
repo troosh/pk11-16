@@ -1,0 +1,154 @@
+	.title	bisubr	- internal bios subroutines
+;------------------------------------------------
+; remove	- removes process p from its queue
+; p	- r3	- pointer to process p
+; destroyed	- r0
+;................................
+remove::			;
+	mov	(r3)+, r0	;
+	mov	r0, @(r3)+	; p^.pred^.succ:=p^.succ
+	mov	-(r3), 2(r0)	; p^.succ^.pred:=p^.pred
+	clr	-(r3)		; p^.succ :=0
+	return			;
+;------------------------------------------------
+; putpri	- inserts process p in queue q according to priority
+; p	- r3	- pointer to p
+; q	- r1	- pointer to queue
+; destroyed	- r0,r1
+;................................
+putpri::			;
+	mov	(r1), r0	; p1:=q^.succ
+10$:				; while
+	cmp	r0, r1		; p1<>q and
+	beq	20$		;
+	cmp	p.pri(r3), p.pri(r0) ; p^.pri <= p1^.pri
+	bgt	20$		;
+	mov	(r0), r0	; do p1:=p1^.succ
+	br	10$		;
+20$:				;
+	mov	r0, r1		;
+;	put(p, p1)		;
+;------------------------------------------------
+; put	-	 inserts process p before q in its queue
+; p	- r3	- pointer to process p
+; q	- r1	- pointer to process q
+; destroyed	- none
+;................................
+put::   mov	(r3), r0	; is he in any queue ?
+	beq	10$		; no
+	bit	#m.tio, p.mask(r3) ; is he in time-queue ?
+	beq	99$		; no !!!!!! 
+	cmp	r0, timeque	; is there anybody after him ?
+	beq	2$		; no
+	add	p.tim(r3), p.tim(r0) ;;;;;
+2$:				;
+	call	remove		;
+10$:				;
+	mov	r1, (r3)	; p^.succ:=q
+	mov	2(r1), 2(r3)	; p^.pred:=q^.pred
+	mov	r3, @2(r1)	; p^.pred^.succ:=p
+	mov	r3, 2(r1)	; q^.pred:=p
+99$:	return			;
+;------------------------------------------------
+; mapadr	- returns in r1 pointer to user map (may be creates it)
+; on enter:	r3	- pointer to current proc's descriptor
+;	c=0
+;		r1	- addr of user map
+;	c=1	- no memory to create map
+; destroyed	- r1
+
+mapadr::
+	clc			;
+	mov	p.mem(r3), r1	;
+	bne	40$		; ok
+	mov	freemap, r1	;
+	beq	10$		; no free maps
+	mov	(r1), freemap	; take a free map and correct pointer
+	br	20$		;
+10$:
+	mov	heap, r1	;
+	mov	maplen, r0	; len of map in bytes
+	add	r0, heap	; correct heap-pointer
+	cmp	top$$, heap	;
+	bcc	20$		;
+	mov	r1, heap	; restore heap
+	br	40$		; return with c=1
+20$:
+	mov	r1, p.mem(r3)	; init user map
+	mov	maplen, r0	;
+	add	r0, r1		;
+30$:
+	movb	#-1, -(r1)	;
+	sob	r0, 30$ 	;
+40$:
+	return
+
+; prdadr	- creates proc's descriptor block
+; on enter:	r3	- current proc
+;returned:	r3	- new proc
+;		r2	- current (old) proc
+;	executes $exit on no memory
+
+prdadr::
+	mov	r3, r2		; save cur proc for later
+	mov	freepr, r3	; any old descriptors ?
+	beq	10$		; yes, use it
+	clc			;
+	mov	(r3), freepr	; correct list of free descriptors
+	br	35$		; fin
+10$:
+	mov	heap, r3	; no, to take from heap
+	add	#prolen, heap	;
+	cmp	top$$, heap	; is there enough mem ?
+	bcc	20$		; yes, ok
+	mov	r3, heap	; no, restore heap
+	return  		; and exit with c-set
+20$:
+	mov	pdptr,	r0
+	bne	24$
+	mov	r3,	pdptr
+	br	35$
+22$:
+	mov	p.dsucc(r0),	r0
+24$:
+	tst	p.dsucc(r0)
+	bne	22$
+
+	mov	r3,	p.dsucc(r0)
+	clr	p.dsucc(r3)	; p.dsucc
+35$:
+	clr	p.tim0(r3)	; p.tim0
+	clr	p.tim1(r3)	; p.tim1
+	return	
+
+; set.int               - set request for vectored int
+; on enter:	r5	- vector
+; destroyed:	r0
+
+set.int::
+        bis     #c.irq, vrqflg  ; enable vector request
+	mov	(r5), r0	; request for this vector...
+	bne	10$		;  already exists
+	mov	vrqtbl, r0	;
+	mov	r0, (r5)	;
+	mov	2(r0), 2(r5)	;
+	mov	r5, @2(r0)	;
+	mov	r5, 2(r0)	;
+10$:	return
+
+; res.int		- resets (clears) request for vectored int
+; on enter:	r5	- vector
+; destroyed:	r0
+
+res.int::
+	mov	(r5)+, r0	; this vector's request
+        beq     20$		;   is not set (nothing to reset)
+        cmp     (r5), r0	;
+        bne     10$             ;
+        bic	#c.irq,vrqflg   ;
+10$:
+	mov	r0, @(r5)+	;
+	mov	-(r5), 2(r0)	;
+	clr	-(r5)		;
+20$:	return
+

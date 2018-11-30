@@ -1,0 +1,1114 @@
+
+	.TITLE	EM
+
+; Драйвер-эмулятор FIS/EIS набора команд.
+; Команды SET EM ON/OFF из ТН драйвера Белицкого Е.
+
+.SBTTL MACROS AND DEFINITIONS
+
+.MCALL	.DRDEF, .ADDR, .DSTAT, .PRINT, .EXIT, .WAIT
+
+.DRDEF	EM,  377,  WONLY$!RONLY$,   0,      0,     10
+;	ИМЯ, КОД,  ТИП,             РАЗМЕР, АДРЕС, ВЕКТОР.
+
+JSW=44			; Слово описания
+SYSPTR=54		; Указатель на начало монитора
+EIS$=400		; Бит расширенного набора
+CONFG1=300		; Смещение 1 слова конфигурации
+CONFIG=370		; Смещение 2 слова конфигурации
+SYSGEN=372		; Слово параметров
+;
+EIS=1		; Включить EIS
+; SM3=1		; Включить SOB, XOR
+; FPP=1		; Включить FIS на FPP
+	.IF NDF FPP
+FIS=1		; Включить FIS
+	.ENDC
+
+  .IF DF FPP
+AC0	=R0
+AC1	=R1
+FPPS	=^O1400
+FPP$	=^O100
+  .ENDC
+
+
+; Default SYSGEN options.
+
+.IIF NDF RTE$M,  RTE$M  =: 0
+.IIF NDF MMG$T,  MMG$T  =: 0
+.IIF NDF ERL$G,  ERL$G  =: 0
+.IIF NDF TIM$IT, TIM$IT =: 0
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+.ASect
+
+. = 40
+EMI:	.ASCII	/?EM-I-/<200>
+
+
+	.IIF GT,<.-50>, .ERROR .-50; SYSCOM AREA CODE TOO BIG!
+. = 110
+CONF:	.ASCIZ	/Conflicting SYSGEN options/
+CONFU:	.ASCIZ	/Use: SET EM SYSGEN/
+
+	
+
+	.IIF GT,<.-174>, .ERROR .-174; RESORC AREA CODE TOO BIG!
+. = 200
+	Nop
+	Return
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; Определение состояния драйвера
+
+
+FINDRV:
+	MOV	PC,-(SP)
+	ADD	#AREA-.,(SP)
+	Mov	(SP), R0
+	Tst	-(R0)			; R0 -> DEVNAM
+	.DSTATUS
+	MOV	AREA+4, R1
+O.GOOD:
+	TST	(PC)+
+O.BAD:
+	SEC
+	RETURN
+
+L1$:
+	Mov	#EMON, R1
+;
+;   EMPR выводит строку со смещением в R1
+;   EMIP выводит строку со смещением в R1 с префиксом "?EM-I-"
+;
+EMIP:	.ADDR	#EMI, R0
+	.PRINT
+EMPR:
+	Mov	PC, R0
+	Sub	#<.>, R1
+	Add	R1, R0
+PEX:	.PRINT
+	BR	O.GOOD
+
+EMON:	.ASCIZ	/Already running../
+IMSG:	.ASCII	/EM v1.4 by I.NYS, MX/<15><12>
+	.ASCII	/Options:/
+	.IIF DF EIS	.ASCII	/ EIS/
+	.IIF DF FPP	.ASCII	/ FIS(for FPP)/
+	.IIF DF FIS	.ASCII	/ FIS/
+	.IIF DF	SM3	.ASCII	/ SOB XOR/
+	.BYTE	0
+	.EVEN
+
+	.IIF GT,<.-360>, .ERROR .-360; INSTALL CODE TOO BIG!
+.=360
+
+DEVNAM:	.RAD50	/EM/
+AREA:	0, 0, 1, 0
+
+L3$:
+	Dec	R1
+	BNE	L1$
+	Br	L4$
+
+
+.SBTTL SET OPTION PARAMETR TABLE
+	.IIF GT,<.-400>, .ERROR .-400; SET CODE OVERLAPPED!
+
+	.DRSET	INFORM, -1, O.INF			; Параметры генерации
+	.DRSET	ON,-1,O.ON				; Включить
+	.DRSET	OFF,-1,O.OFF				; Выключить
+	.DRSET	SYSGEN,NOP,O.SYSG			; SYSGEN
+
+.SBTTL SET OPTION PROCESSING ROUTINES
+
+O.SYSG:
+	Mov	@#SYSPTR,R0	; Не знаю, будет ли работать с диспетчером
+	MovB	SYSGEN(R0), R3
+	BIT	#2, R3		; MMG$T
+	BNE	O.BAD
+
+	MovB	R3, 60
+GOOD2:	BR	O.GOOD
+
+L2$:
+	CmpB	SYSGEN(R0), 60
+	BEQ	L3$
+	Mov	#CONF, R1
+	Call	EMIP
+	Mov	#CONFU, R1
+	Br	EMIP
+
+L4$:
+	BIS	#EIS$,CONFIG(R0)	; включить EIS
+	JSR	R1, SETCMD
+	.ASCIZ	/$INS EM/
+	.ASCIZ	/$LO EM/
+	.BYTE	200
+	.EVEN
+
+O.ON:
+	CALL	FINDRV
+	MOV	@#SYSPTR, R0
+	TST	R1			; Если драйвер уже загружен,
+	BNE	L2$			; напечатать об этом
+  .IF DF FPP
+	BIT	#FPP$,CONFG1(R0)	; Ошибка, если нет FPP.
+	BNE	2$
+	JSR	R0,3$
+	.ASCIZ	/?EM-F-Use FPP/
+	.EVEN
+3$:	.PRINT
+	MOV	(SP)+,R0;
+	BR	O.BAD
+2$:
+  .ENDC
+	BIS	#EIS$,CONFIG(R0)	; включить EIS
+	JSR	R1, SETCMD
+	.ASCIZ	/$LO EM/
+	.BYTE	200
+	.EVEN
+
+O.INF:
+	Mov	#IMSG, R1
+	BR	EMPR
+
+O.OFF:	CALL	FINDRV
+	TST	R1			; Драйвер загружен?
+	BEQ	N.OFF			; Уже нет
+	JSR	R1, SETCMD
+	.ASCIZ	/$UNL EM/
+	.ASCIZ	/$SE EM OFF/
+	.BYTE	200
+	.EVEN
+
+N.OFF:
+	MOV	PC, R0
+	ADD	#NOEIS-., R0
+	MOV	R0, @#10
+	MUL	R0, R0			; Интересно, есть EIS?
+	MOV	@#4, @#10		; Вектор
+	MOV	@#6, @#12		; Статус
+	BIS	#1,  @#12		; С установленным C - разрядом
+	BR	GOOD2
+
+
+NOEIS:	MOV	@#SYSPTR, R0
+	BIC	#EIS$,CONFIG(R0)	; Выключить EIS
+	RTI
+
+; Передача команд монитору
+
+SETCMD:
+	MOV	#512, R0
+	CLR	R2
+
+1$:	INC	R2
+	MOVB	(R1)+, (R0)+
+	BPL	1$
+
+	DEC	R2
+	MOV	R2, @#510
+	BIS	#4040, @#JSW
+	CLR	R0
+	.EXIT
+
+	.IIF GT,<.-1000>, .ERROR .-1000; SET CODE TOO BIG!
+
+.SBTTL DRIVER ENTRY
+
+	.DRBEG   EM
+
+
+.SBTTL	EMULATION SERVICE
+
+; Выход по несуществующей команде
+
+$ILCOD:
+	Mov	$SP, SP		; Восстановим SP
+	MOV	@#6, -(SP)	; PSW
+	BIS	#1, (SP)	; С установленным C-разрядом
+	MOV	@#4, -(SP)	; Адрес
+	RTI
+
+
+; Ныс И.Д.
+; Московский
+; Инженерно-Физический 
+; Институт
+; каф. 17
+
+;  6 Марта 1985 г. - начало работы.
+; 25 марта 1985 г. - конец работы.
+; 17 апреля 	   - изменена установка признаков DIV.
+; 23 апреля 	   - изменен алгоритм команды MUL.
+; 10 мая 	   - прогонка FIS/EIS тестов, коррекция особых ситуаций.
+;  2 ноября	   - переходы по таблице - PIC код, добавлена шапка драйвера
+;01 31 окт. 1988  - эмулятор FIS для машины с FPP.
+
+; При работе над эмулятором использовались
+; - эмулятор Паскаля
+; - подпрограммы Фортран-библиотеки
+; - описание процессора M2
+; - эмулятор FIS(FPP) из Модулы-2
+
+
+; Модуль эмулирует наборы команд
+; EIS:	MUL 	070RSS   0.35- 0.5 MS
+;	DIV	O71RSS   0.6
+;	ASH	072RSS   0.3 - 0.35(вправо)
+;			     - 0.4 (влево)
+;	ASHC	073RSS   0.3 - 0.5 (вправо)
+;			     - 0.61(влево)
+; FIS:	FADD	07500R   0.9 - 1.3 MS
+;	FSUB	07501R     - " " -
+;	FMUL	07502R   1.0 -1.6
+;	FDIV	07503R   1.6
+;
+; Времена для процессора с быстродействием
+; около 250000 команд регистр - регистр в
+; секунду, цикл памяти - 500 наносекунд
+
+; После прерывания по резервной команде, дол-
+; жна осуществляться передача управления
+; в точку    $EMUL.
+; Управление передается в точку   $ILCOD,
+; Если эммулятор не способен обработать преры-
+; вание ( вызванное командой, не входящей в
+; FIS или EIS)
+
+
+; Для исключения FIS или EIS набора из эмуля-
+; тора, поставьте ";" перед определениями со-
+; ответствующих символов в следующих строках
+
+; Эмулятор FIS для процессора с отдельным процессором
+; плавающей запятой включен Мухамеджановым Алексеем
+; 01 ноября 1988 г., (C) фирма "МИГ" кооп. <1988>
+; Команды XOR, SOB включены Яковлевым Михаилом
+; 12-декабря-86 г. МИФИ, каф. 25
+;
+; XOR - 0.3 MS
+; SOB - 30-50 MKS (в зависимости от вложенности)
+
+
+FLG1$=0
+.IF DF FPP
+  .IF NDF EIS
+    .IF NDF SM3
+	FLG1$	= 1	;ЕСЛИ НИЧЕГО НЕТ, ТО ОСТАВИМ МИНИМУМ.
+    .ENDC
+  .ENDC
+.ENDC
+
+C=1
+V=2
+Z=4
+N=10
+.IF DF SM3
+
+.MACRO	SOB	REG, OP
+	DEC	REG
+	BNE	OP
+.ENDM
+
+.ENDC
+
+
+; Диспетчер прерываний по резервной команде
+
+OLDPC:	0
+OFFSET:	0
+
+EMINT::
+$EMUL:
+	Mov	SP, Bad1
+	Mov	SP, Bad2
+	Add	#2, Bad2
+
+.IF DF FPP
+	BCS	2$
+	BR	$ILCOD
+
+2$:	MOV	R0,-(SP)
+	MOV	R1,-(SP)
+	MOV	4(SP),R0
+	MOV	-(R0),R1
+	MOV	R1,R0
+	BIC	#30,R1
+	CMP	#075006,R1
+	BNE	OTHER45
+	MOV	(SP)+,R1
+	BIC	#177747,R0
+	ASH	#-2,R0
+	LDF	12(SP),AC0
+	ADD	R0,PC
+	BR	11$
+	BR	12$
+	BR	13$
+	BR	14$
+11$:	ADDF	6(SP),AC0
+	BR	16$
+12$:	SUBF	6(SP),AC0
+	BR	16$
+13$:	MULF	6(SP),AC0
+	BR	16$
+14$:	DIVF	6(SP),AC0
+16$:	MOV	(SP)+,R0
+	MOV	2(SP),6(SP)
+	MOV	(SP),4(SP)
+	MOV	(SP)+,(SP)+
+	STF	AC0,4(SP)
+	RTI
+OTHER45:
+	MOV	(SP)+,R1
+	MOV	(SP)+,R0
+
+.IIF NE FLG1$	BR	$ILCOD
+
+.ENDC			;FPP
+
+.IF EQ FLG1$
+
+.IFNDF	EIS
+EISSET=TOOSML
+.ENDC
+.IFNDF	FIS
+FLTSET=TOOBIG
+.ENDC
+
+.IF DF SM3
+
+	CMP	(SP), OLDPC
+	BEQ	OLDR		; ЭТОТ SOB ТОЛЬКО ЧТО ОБРАБАТЫВАЛИ?
+.ENDC
+
+	MOV	#6, -(SP)
+	ADD	SP, (SP)
+	MOV	R5, -(SP)
+	MOV	R4, -(SP)
+	MOV	6(SP), R5	; КООП
+	MOV	-(R5), R4
+
+.IF DF SM3
+	MOV	R4, R5		; R4, R5 - КОД ИНСТРУКЦИИ
+	BIC	#777, R5	; R5=КОДУ КОМАНДЫ
+	CMP	#77000, R5
+	BNE	NOSOB		; ЭТО НЕ SOB
+
+	MOV	6(SP), OLDPC	; АДРЕС SOB'A
+	ASL	R4
+	MOV	R4, R5
+	BIC	#177600, R4	; R4=СМЕЩЕНИЕ
+	MOV	R4, OFFSET	; ЗАПОМНИМ ЕГО НА БУДУЩЕЕ
+
+	ROL	R5
+	SWAB	R5
+	BIC	#177770, R5	; НОМЕР РЕГИСТРА
+	BIC	#7, OLDR
+	BIS	R5, OLDR	; ЗДЕСЬ DEC
+	MOV	(SP)+, R4
+	MOV	(SP)+, R5	; ВОССТАНОВИМ РЕГИСТРЫ
+	TST	(SP)+		; И ВОССТАНОВИМ СТЕК
+
+OLDR:	DEC	R0
+	BEQ	ENDSOB		; ВСЕ, ВЫЙТИ
+	SUB	OFFSET, (SP)	; СКОРРЕКТИРОВАТЬ ОДРЕС ВЫХОДА
+ENDSOB:
+	RTI
+NOSOB:
+.ENDC
+
+	MOV	R3, -(SP)
+	MOV	R2, -(SP)
+	MOV	R1, -(SP)
+	MOV	R0, -(SP)	; ТЕПЕРЬ В СТЕКЕ ВСЕ РЕГИСТРЫ,
+				;  ЗНАЧЕНИЯ - ДО ВХОДА В ПРЕРЫВАНИЕ
+
+	MOV	R4, R0
+	MOV	R0, R1		; В R0 И R1 КООП
+
+
+	CMP	R0, #75000
+	BHIS	FLTSET		; FIS
+	JMP	EISSET		; EIS
+
+TOOSML:
+TOOBIG:
+	JSR	PC, RESTR1
+JmpIL:
+	JMP	$ILCOD		; ЭТО ПРЕРЫВАНИЕ 
+				; НЕ МОЕ
+
+RESTR:	BIC	#17, 22(SP)	; ОЧИСТИТЬ УСЛОВИЯ В PSW
+	BIS	R5, 22(SP)	; УСТАНОВИТЬ НОВЫЕ
+RESTR1:	MOV	(SP)+,14(SP)	; АДРЕС ВОЗВРАТА
+	MOV	(SP)+, R0
+	MOV	(SP)+, R1
+	MOV	(SP)+, R2
+	MOV	(SP)+, R3
+	MOV	(SP)+, R4
+	MOV	(SP)+, R5
+	RTS	PC
+
+
+; Подпрограмма умножает беззнаковые целые
+; в R5 и R3..R4, результат - R0, R1
+; Классический алгоритм умножения 
+
+IMUL:	CLR	R1
+	CLR	R0		
+	ROR	R5
+	BR	IMTST
+
+IMULLOOP:
+	ASR	R5
+IMTST:	BCS	AD1
+	BNE	SFT
+	BR	IMEX
+
+AD1:	ADD	R4, R1
+	ADC	R0
+	ADD	R3,R0
+SFT:	ASL	R4
+	ROL	R3
+	BR	IMULLOOP
+
+IMEX:	RTS	PC
+
+.ENDC
+.IFDF	FIS
+
+; Диспетчер команд плавающей запятой
+
+FLTSET:
+	CMP	R0,#75040
+	BLO	OPEXTR
+	JMP	TOOBIG		; КОД СЛИШКОМ ВЕЛИК
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;
+;  Проверка попадания адреса в "зону затирания" при входе в прерывание.
+;
+;  Адрес для проверки лежит в стеке. 
+;
+
+ChkAdr:
+	Mov	(SP)+, $Ret
+	Cmp	(SP), (PC)+
+$SP:
+Bad1:	0			; Этот адрес был затерт при входе в прерывание.
+	BEq	JmpIL
+	Cmp	(SP), (PC)+
+Bad2:	0			; Этот адрес был затерт при входе в прерывание.
+	BEq	JmpIL
+	Mov	(PC)+, (SP)
+$Ret:	0
+	Return
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+OPEXTR:	BIC	#177747, R0
+	ASR	R0
+	ASR	R0		; R0 - ТИП КОМАНДЫ
+	BIC	#177770, R1
+	ASL	R1
+	ADD	SP, R1		; R1 => НА КОПИЮ РЕГ-РА
+
+	MOV	R1, -(SP)
+	MOV	(R1), R1	; R1 => НА ОПЕРАНДЫ
+
+	Mov	R1, -(SP)
+	Call	ChkAdr
+
+	MOV	(R1)+, R2
+	MOV	(R1)+, R3
+
+	Mov	R1, -(SP)
+	Call	ChkAdr
+
+	MOV	(R1)+, R4
+	MOV	(R1)+, R5
+
+	MOV	R1, -(SP)
+
+; Операнд 1: ст. часть в R2, мл. - В R3
+;   -"-   2:     -"-     R4,  -"-    R5
+
+	ADD	PC, R0
+	ADD	#FPUTBL-., R0	; R0 => ЭЛЕМЕНТ ТАБЛИЦЫ
+	ADD	(R0), PC
+
+FPUTBL:	.WORD	$FADD-FPUTBL
+	.WORD	$FSUB-FPUTBL
+	.WORD	$FMUL-FPUTBL
+	.WORD	$FDIV-FPUTBL
+
+$FDIV:  
+	CLR	-(SP)		; ЗНАК
+	MOV	R2,R0
+	BGT	FDFPOS		; ДЕЛИТЕЛЬ > 0
+	BLT	FDNEG		;   -"-    < 0
+	JMP	DIVZER		; НЕ ДЕЛИ НА "0"
+
+FDNEG:	INC	(SP)		; ЗНАК
+FDFPOS:	MOV	R4, R1
+	BEQ	FLZERO		; ДЕЛИМОЕ = 0
+	BPL	SDPOS		;   -"-   > 0
+	INC	(SP)		; ЗНАК
+
+SDPOS:	JSR	PC,MANEXP
+
+	SUB	R0, R1
+	ADD	#37600, R1	; EXP ЧАСТНОГО
+	MOV	R1, -(SP)	; В СТЕК
+	MOV	#100, R1	; ЗДЕСЬ БУДЕТ
+	CLR	R0		; РЕЗУЛЬТАТ
+	BR	DIVF
+
+; Деление без восстановления
+FDIVSU:	ASL	R5
+	ROL	R4
+DIVF:	SUB	R3,R5
+	SBC	R4
+	SUB	R2,R4
+	BMI	CLRADD
+SETSUB:	SEC			; ОЧЕРЕДНОЙ РАЗРЯД
+	ROL	R1		; ЧАСТНОГО = 1
+	ROL	R0
+	BCC	FDIVSU
+	BR	DNORM
+FDIVAD:	ASL	R5
+	ROL	R4
+	ADD	R3, R5
+	ADC	R4
+	ADD	R2, R4
+	BPL	SETSUB
+CLRADD:	CLC			; ОЧЕРЕДНОЙ РАЗРЯД 
+	ROL	R1		; ЧАСТНОГО = 0
+	ROL	R0
+	BCC	FDIVAD		; ПОВТОРИТЬ ЦИКЛ
+
+DNORM:	MOV	R0, R2
+	MOV	R1, R3
+	JMP	NORM
+
+FLZERO:	TST	(SP)+
+	CLR	R2
+	CLR	R3
+	JMP	FPUEX
+
+$FMUL:	  
+	CLR	-(SP)
+	MOV	R2,R0
+	BEQ	FLZERO		; 0, УЙТИ
+	BPL	FMPOS
+	INC	(SP)		; ЗНАК
+FMPOS:	MOV	R4, R1
+	BEQ	FLZERO
+	BPL	SMUPOS
+	INC	(SP)		; ЗНАК
+SMUPOS:	JSR	PC, MANEXP
+
+	ADD	R0, R1
+	SUB	#40000, R1	; ПОРЯДОК РЕЗУЛЬТАТА
+	MOV	R1, -(SP)	; В СТЕК
+
+	MOV	R5, -(SP)
+	MOV	R4, -(SP)
+	MOV	R3, -(SP)
+	
+	MOV	R4, R3
+	MOV	R5, R4
+	MOV	R2, R5
+	JSR	PC, IMUL	; СТ.А * B
+	MOV	R1, -(SP)
+	MOV	R0, -(SP)
+
+	MOV	4(SP),R5
+	BEQ	FMLEX		; МЛ.А = 0
+	MOV	6(SP), R4
+	CLR	R3
+	JSR	PC, IMUL	; МЛ.A * СТ.B
+	ADD	R1, 2(SP)
+	ADC	(SP)
+	ADD	R0, (SP)
+
+	MOV	10(SP), R4
+	BEQ	FMLEX		; ml.B = 0
+	MOV	4(SP), R5
+	CLR	R3
+	JSR	PC, IMUL	; ml.A * МЛ.B
+	ADD	R0, 2(SP)
+	ADC	(SP)
+
+FMLEX:	CLR	R2		; БЫСТРЫЙ СДВИГ НА 8 ВПРАВО
+	BISB	1(SP), R2	;  НЕ "MOV", РАСШИРИТСЯ ЗНАК !
+	MOV	2(SP), R1
+	SWAB	R1
+	MOVB	(SP)+, (SP)
+	MOV	(SP)+, R3
+	SWAB	R3
+	ADD	#6, SP
+	JMP	LEFT		; НОРМАЛИЗАЦИЯ ТОЛЬКО ВЛЕВО
+
+MANEXP:	BIC	#100177, R0
+	BIC	#100177, R1	; ВЫДЕЛИТЬ ПОРЯДОК
+	BIC	#177600, R2
+	BIC	#177600, R4
+	BIS	#200, R2	
+	BIS	#200, R4	; И МАНТИССУ
+	RTS	PC
+
+
+$FSUB:	  
+	TST	R2
+	BEQ	$FADD
+	ADD	#100000, R2
+
+$FADD:  
+	MOV	R2, R0
+	BNE	NONZER
+	MOV	R4, R2
+	MOV	R5, R3
+	BR	FPUEX
+NONZER: MOV	R4, R1
+	BEQ	FPUEX
+	BIC	#177600,R2
+	BIS	#200,R2
+	TST	R0
+	BPL	FAPOS
+	NEG	R3		; ИЗ ПРЯМОГО - ОБРАТНЫЙ
+	ADC	R2
+	NEG	R2
+FAPOS:	BIC	#177600, R4
+	BIS	#200, R4
+	TST	R1
+	BPL	SAPOS
+	NEG	R5		; ИЗ ПРЯМОГО - ОБРАТНЫЙ
+	ADC	R4
+	NEG	R4
+SAPOS:	BIC	#100177,R0
+	BIC	#100177,R1
+	CLR	-(SP)			; ЗНАК
+	MOV	R0, -(SP)		; ПОРЯДОК НАУГАД
+	SUB	R1, R0
+	BHI	SFTYES			; СДВИГ
+	BLO	SWREG
+	CLR	R1
+	BR	IADD			; СДВИГАТЬ НЕ НАДО
+SWREG: 	MOV	R1, (SP)		; ПОМЕНЯТЬ ОПЕРАНДЫ
+	NEG	R0
+	MOV	R2, R1
+	MOV	R4, R2
+	MOV	R1, R4
+	MOV	R3, R1
+	MOV	R5, R3
+	MOV	R1, R5	
+SFTYES:	CLR	R1
+	CMP	R0, #6000		; СДВИГ < 30 ?
+	BLE	SFT45
+	CLR	R4
+	CLR	R5
+	BR	IADD
+
+SFT45:	ASL	R0
+	SWAB	R0
+S45LOOP:ASR	R4
+	ROR	R5
+	ROR	R1
+	SOB	R0, S45LOOP
+
+
+IADD:	ADD	R5, R3		; СЛОЖЕНИЕ ЦЕЛЫХ
+	ADC	R2		; ( 2  СЛОВА )
+	ADD	R4, R2
+	BPL	POSARES		 
+	NEG	R1		; ИЗ ОБРАТНОГО - ПРЯМОЙ
+	ADC	R3		; ( 3 СЛОВА )
+	ADC	R2
+	NEG	R3
+	ADC	R2
+	NEG	R2
+	INC	2(SP)		; ЗНАК
+POSARES:MOV	R3, R4
+	BIS	R1, R4
+	BIS	R2, R4
+	BNE	NORM		; РЕЗУЛЬТАТ <> 0?
+	CMP	(SP)+, (SP)+
+	BR	FPUEX
+
+; Нормализация чисел П.З.
+; Число для норм. - R2,R3,R1 
+NORM:	CMP	R2, #400	; НУЖНА НОРМ. ВПРАВО?
+	BLO	LEFT
+NORM1:	ASR	R2
+	ROR	R3
+	ROR	R1
+	ADD	#200, (SP)
+	BR	NORM
+LEFT:	TSTB	R2		; НОРМАЛИЗАЦИЯ ВЛЕВО
+	BMI	ROUND
+LEFT1:	SUB	#200, (SP)
+	ASL	R1
+	ROL	R3
+	ROLB	R2
+	BPL 	LEFT1
+
+ROUND:	ASL	R1		; ОКРУГЛЕНИЕ
+	ADC	R3	
+	ADCB	R2	
+	BCC	NOOV
+	ADD	#200, (SP)	; R2=R3=0
+
+NOOV: 	MOV	(SP)+, R4
+	BPL	NONOVF		; НЕТ ПЕРЕПОЛНЕНИЯ
+	CLR	R5
+	ROL	R4
+	BPL	OFLOW
+	BR	UFLOW
+NONOVF:	ROR	(SP)+		; ЗНАК?
+	BCC	NORMPOS
+	BIS	#100000, R2	; ЗНАК
+NORMPOS:BIC	#200, R2	 
+	BIS	R4, R2		; УСТАНОВИТЬ EXP
+FPUEX:	CLR	R5
+	TST	R2
+	BNE	NONNZERO
+	BIS	#Z, R5
+NONNZERO:
+	BPL	FEX1
+	BIS	#N, R5
+
+; Результат: R2 - ст. часть, R3 - мл. часть
+
+FEX1:	MOV	(SP)+, R1	; R1 => НА ОПЕРАНДЫ
+	MOV	(SP)+, R0	; R0 => НА КОПИЮ Р-РА
+	MOV	R3, -(R1)
+	MOV	R2, -(R1)
+	MOV	R1, (R0)	; СКОРРЕКТИРОВАТЬ 
+				; ИСХОДНЫЙ РЕГ-Р
+	SUB	SP,R0
+	CMP	R0,#12.		; КАКОЙ РЕГИСТР?
+	BLO	EXIT		; R0 .. R5
+	BEQ	SPEXIT		; SP
+	ADD	#4, 16(SP)	; PC
+EXIT:	JSR	PC, RESTR
+	RTI
+
+SPEXIT:	JSR	PC, RESTR
+	MOV	(SP)+, 2(SP)
+	MOV	(SP)+, 2(SP)
+	RTI
+
+DIVZER:	BIS	#C, R5
+UFLOW:	BIS	#N, R5
+OFLOW:	BIS	#V, R5
+	CMP	(SP)+,(SP)+	; SP = SP+4 (ЗНАК И УКАЗАТЕЛЬ НА ОПЕРАНДЫ)
+	MOV	(SP)+, R0	; R0 => НА КОПИЮ Р-А
+	SUB	SP,R0
+	CMP	R0, #14.	; КАКОЙ РЕГИСТР?
+	BNE	EREX		; РОН
+	ADD	#8., 16(SP)	; PC
+
+EREX:	JSR	PC, RESTR
+	MOV	@#246, -(SP)
+	MOV	@#244, -(SP)
+	RTI
+
+.ENDC
+.IFDF	EIS
+
+; Обработка команд EIS
+
+EISSET: CMP	R0,#70000
+	BHIS	EISO.K
+ILLe:
+	JMP	TOOSML		; ОШИБОЧНЫЙ КОД
+
+EISO.K: BIC	#170777,R0
+	SWAB	R0		; R0 - КОД ОП.
+
+	MOV	R1, R2
+	BIC	#177770,R1	; R1 - # РЕГ. ПРИЕМНИКА
+	ROL	R1		; R1 - # РЕГ. ПРИЕМНИКА * 2
+
+	ASR	R2
+	ASR	R2
+	MOV	R2, R3
+	BIC	#177761, R2	; R2 - # СПОСОБА АДРЕС.* 2
+
+	ASR	R3
+	ASR	R3
+	ASR	R3
+	BIC	#177761, R3	; R3 - # РЕГИСТРА ИСТОЧНИКА * 2
+
+	MOV	#2, R4
+	BIS	R3, R4
+	ADD	SP, R3
+	ADD	SP, R4
+	MOV	R1, -(SP)
+	ADD	SP,R1
+	ADD	#2,R1
+
+
+	MOV	R2, -(SP)
+	ADD	PC, (SP)
+	ADD	#MODTBL-.,(SP)	; (SP) => ЭЛЕМЕНТ ТАБЛИЦЫ
+	ADD	@(SP)+, PC
+
+
+MODTBL:	.WORD	MODE0-MODTBL, MODE1-MODTBL, MODE2-MODTBL, MODE3-MODTBL
+	.WORD	MODE4-MODTBL, MODE5-MODTBL, MODE6-MODTBL, MODE7-MODTBL
+
+MODE2:
+MODE3:	INC	(SP)		; ПОМЕТИМ, ЧТОБЫ УЗНАТЬ ...(SP)+...
+	MOV	(R1),R5
+	ADD	#2,(R1)		; АВТОИНКРЕМЕНТНЫЙ
+	BR	MODEX
+
+MODE4:
+MODE5:	SUB	#2, (R1)	; АВТОДЕКРЕМЕНТНЫЙ
+	MOV	(R1), R5
+	BR	MODEX
+MODE6:
+MODE7:	MOV	@20(SP), R5	; R4 =>  ИНДЕКС 
+	ADD	#2, 20(SP)
+	ADD	(R1), R5
+	BR	MODEX
+
+MODE0:
+MODE1:	
+	MOV	R1, R5
+	
+MODEX:	BIT	#2, R2		; ЧЕТ - ПРЯМОЙ, НЕЧЕТ - КОСВ.
+	BEQ	EVMOD
+	MOV	(R5), R5
+	
+EVMOD:	MOV	R4, -(SP)
+	MOV	R3, -(SP)
+
+
+	ADD	PC, R0
+	ADD	#EISTBL-., R0	; R0 => ЭЛЕМЕНТ ТАБЛИЦЫ
+	ADD	(R0), PC
+
+EISTBL:
+	.WORD	$MUL-EISTBL,$DIV-EISTBL,$ASH-EISTBL,$ASHC-EISTBL
+.IF DF SM3
+	.Word	$XOR-EISTBL
+.IFF
+	.Word	$ILCOD-EISTBL
+.EndC
+;								
+
+; R5 => источник, R3 => на копию четного р-ра приемника
+;		  R4 =>   -"-   нечетного    -"-
+
+$MUL:	MOV	(R3), R4	; ПЕРВЫЙ СОМНОЖИТЕЛЬ
+	BEQ	MLZERO
+	MOV	(R5), R5
+	BEQ	MLZERO
+	BPL	FIMPOS
+	NEG	R4
+	NEG	R5
+	BPL	FIMPOS
+	MOV	R4, R3
+	MOV	R5, R4
+	MOV	R3, R5
+	BPL	FIMPOS
+	NEG	R5
+	BMI	MOSNEG		; ОБА АРГУМЕНТА = 100000
+
+FIMPOS:	TST	R4
+	SXT	R3
+	JSR	PC, IMUL
+
+	TST	R1
+	SXT	R2
+	CMP	R0, R2
+	BEQ	MULEX
+	BIS	#C, R5
+
+MULEX:	JMP	DWTST		; УСТАНОВИТЬ NVZ (ДВОЙНОЕ СЛОВО)
+
+MLZERO:	CLR	R0
+	CLR	R1
+	CLR	R5
+	JMP	DWTST
+
+
+MOSNEG: MOV	#40000,R0
+	CLR	R1
+	CLR	R5
+	BR	MULEX
+
+
+$DIV:	CLR	-(SP)		; ЗНАК
+	MOV	(R3), R0
+	MOV	(R4), R1	; R0, R1 - ДЕЛИМОЕ
+	MOV	R0, -(SP)	; ЗНАК ДЕЛИМОГО
+	BPL	FDIPOS
+	INC	2(SP)		; ЗНАК
+	NEG	R1
+	ADC	R0
+	NEG	R0
+	BMI	OUTRE		; ДЕЛИМОЕ = 100000
+FDIPOS:	MOV	(R5), R4	; ДЕЛИТЕЛЬ
+	BEQ	SZERO		; НЕ ДЕЛИ НА "0"
+	BPL	SDIPOS
+	INC	2(SP)		; ЗНАК
+	NEG	R4
+	BMI	OUTRE		; ЭТО 100000
+SDIPOS:	CLR	R5
+ 	CMP	R0,R4
+	BGT	OUTRE		; ДЕЛИМОЕ/ДЕЛИТЕЛЬ > 2**16
+	BLT	CONT
+	CMP	R1, R4
+	BHIS	OUTRE
+CONT:	CLR	R2
+	MOV	#16.,R3		; СЧЕТЧИК СДВИГОВ
+
+DIVSUB:	ASR	R4
+	ROR	R5
+	SUB	R5, R1
+	SBC	R0
+	SUB	R4, R0
+	BMI	DIVCLR
+DIVSET:	SEC
+	ROL	R2
+	SOB	R3, DIVSUB
+	BR	DIVEX
+
+DIVADD:	ASR	R4
+	ROR	R5
+	ADD	R5, R1
+	ADC	R0
+	ADD	R4, R0
+	BPL	DIVSET
+DIVCLR:	CLC
+	ROL	R2
+	SOB	R3, DIVADD
+	ADD	R5, R1		; ВОССТАНОВИТЬ ОСТАТОК
+DIVEX:
+	TST	(SP)+
+	BPL	DELPOS
+	NEG	R1		; ЗНАК ОСТАТКА - КАК У ДЕЛИМОГО
+DELPOS:	ASR	(SP)+
+	BCC	RESDPOS		; ЗНАК ЧАСТНОГО?
+	NEG	R2
+RESDPOS:CLR	R5		; УСТАНОВИТЬ КОДЫ УСЛОВИЙ
+	MOV	R2, R0
+	BPL	NOTN
+	BIS	#N, R5
+NOTN:	BNE	DIIEX
+	BIS	#Z, R5
+
+DIIEX:	JMP	EISEX	
+
+SZERO:	MOV	#V!C,R5
+	BR	SZEX
+OUTRE:	MOV	#V, R5
+SZEX:	ADD	#10, SP
+	JMP	EISABO
+
+OPSHIFT:CLR	R2
+	MOV	(R3), R0
+	MOV	(R5),R5
+	BIT	#40, R5
+	BEQ	SHLEFT
+	BIS	#177700, R5
+	NEG	R5
+	RTS	PC
+SHLEFT:	BIC	#177700, R5
+	RTS	PC
+
+$ASH:	MOV	R3, 2(SP)
+	JSR	PC, OPSHIFT
+	BEQ	ASHEX
+	BCS	ASHR
+ASHL:	ASL	R0
+	BVC	ASHVC
+	INC	R2
+ASHVC:	SOB	R5, ASHL
+	BR	ASHEX
+ASHR:	ASR	R0
+	SOB	R5, ASHR
+ASHEX:	MOV	R0, R1
+	BR	SHDONE
+
+$ASHC:	MOV	(R4),R1
+	JSR	PC, OPSHIFT
+	BEQ	SHDONE
+	BCS	ASHCR
+ASHCL:	ASL	R1
+	ROL	R0
+	BVC	ASHCVC
+	INC	R2
+ASHCVC:	SOB	R5, ASHCL
+	BR	SHDONE
+ASHCR:	ASR	R0
+	ROR	R1
+	SOB	R5, ASHCR
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+.IF DF SM3
+	BR	SHDONE
+
+$XOR:
+	MOV	(R3), R4
+	BIC	(R5), R4
+	BIC	(R3), (R5)
+	BIS	R4, (R5)
+	BNE	NXTST		
+	BIS	#Z, R5
+	BR	XORABO
+NXTST:	BPL	XORABO
+	BIS	#N, R5
+XORABO:
+	BIC	#177760, R5
+	CMP	(SP)+, (SP)+
+	BR	EISABO
+.ENDC
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+SHDONE:	ADC	R5		; УСТАНОВИТЬ C - РАЗРЯД
+	TST	R2
+	BEQ	DWTST
+	BIS	#V, R5
+
+DWTST:	TST	R0
+	BPL	ARGPOS
+	BIS	#N, R5
+ARGPOS:	BNE	EISEX
+	TST	R1
+	BNE	EISEX
+	BIS	#Z, R5
+EISEX:	MOV	R0, @(SP)+
+	MOV	R1, @(SP)+
+EISABO:	CMP	(SP)+, #13.
+	BEQ	SPEIS
+;;;	JSR	PC, RESTR
+;;;	RTI
+	Jmp	EXIT
+
+
+SPEIS:	JSR	PC, RESTR
+	MOV	2(SP), 4(SP)
+	MOV	(SP)+, (SP)
+	RTI
+
+.ENDC
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+.IIF EQ ERL$G  .BlkW 1
+.IIF EQ TIM$IT .BlkW 1
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	.DREND EM
+
+	.END

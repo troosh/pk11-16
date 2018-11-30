@@ -1,0 +1,8 @@
+.enabl  lc
+.enabl	ama
+.enabl  gbl
+.mcall	.push,.pop
+.nlist
+.nlist sym
+	.include 	/p16mac/
+	

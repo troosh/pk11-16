@@ -1,0 +1,290 @@
+;==============================================================
+;	r1	- ptr to USER_TBL+2
+e999$:
+	mov	(pc)+,	r1
+e998$:	.blkw	1
+	com	-(r1)
+	sec
+	return
+
+WCHECK::
+	mov	r1,	e998$
+	mov	#T.ADDR,r3		;
+	mov	(r1)+,	r0		; check ptr to vw.desc
+	mov	wdtbl(r0),(r3)		; ptr to view desc
+	sub	#vw.tar,(r3)+
+
+	mov	(r1)+,	r0		; vw.anum
+	beq	e999$
+	mov	r0,	(r3)+		; T.ANUM
+	bit	#^C176,	r0		; check ptr to area
+	bne	e999$
+	mov	artbl(r0),r0		; r0 - ptr to area desc
+	beq	e999$
+
+;----------------------------------------------------
+	add	#ar.lins, r0		; update pointer to area descr
+
+	mov	(r1)+,	r5		; check VW.ARY
+	bpl	2$
+	clr	r5
+2$:	mov	(r0)+,	r4		; r4 - ar.lins
+	beq	e999$
+	cmp	r5,	r4		;
+	bcs	4$
+	mov	r4,	r5
+	dec	r5
+4$:	mov	r5,	(r3)+		; T.ARY
+	mov	r4,	T.LINS
+
+	mov	(r1)+,	r5		; check VW.ARX
+	bpl	10$
+	clr	r5
+10$:	mov	(r0)+,	r4		; r4 - slen
+	mov	r0,	t.tar
+	bic	#3,	r4
+	beq	e999$
+	cmp	r5,	r4		;
+	bcs	12$
+	mov	r4,	r5
+	dec	r5
+12$:
+	bic	#1,	r5
+	mov	r5,	(r3)+		; T.ARX
+	mov	r4,	T.SLEN
+
+	mov	#scrlins-1,r4
+	mov	(r1)+,	r5		; check VW.SY1
+	bpl	14$
+	clr	r5
+14$:	cmp	r4,	r5
+	bcc	16$
+	mov	r4,	r5
+16$:	bic	#3,	r5
+	mov	r5,	(r3)+		; T.SY1
+
+	mov	(r1)+,	r2		; check VW.SY2
+	bpl	20$
+	mov	r5,	r2
+20$:	cmp	r4,	r2
+	bcc	22$
+	mov	r4,	r2
+22$:	cmp	r2,	r5
+	bcc	24$
+	mov	r5,	r2
+24$:	bis	#3,	r2
+	mov	r2,	(r3)+		; T.SY2
+
+	mov	#bmax-1,r4
+	mov	(r1)+,	r5		; check VW.SX1
+	bpl	26$
+	clr	r5
+26$:	cmp	r4,	r5
+	bcc	30$
+	mov	r4,	r5
+30$:	mov	r5,	(r3)+		; T.SX1
+
+	mov	(r1)+,	r2		; check VW.SX2
+	bpl	32$
+	clr	r2
+32$:	cmp	r4,	r2
+	bcc	34$
+	mov	r4,	r2
+34$:	cmp	r2,	r5
+	bcc	36$
+	mov	r5,	r2
+36$:	mov	r2,	(r3)+		; T.SX2
+
+	mov	(r1)+,	r5		;check VW.DEN (HD)
+	cmpb	#2,	r5
+	bne	40$
+	bit	#VM2+VM40,2(r0)		;r0 - ^TAS
+	bne	40$
+	decb	r5
+40$:	bcc	42$
+	clrb	r5
+42$:
+	tstb	r5
+	beq	43$
+	bic	#3,	t.arx		;
+43$:
+	cmp	r5,	#3*400
+	bcs	44$
+	bic	#177400,	r5
+44$:	mov	r5,	(r3)+		; T.DEN
+;------------------------------------------------
+	comb	r5			; r5 = -( HD+1 )
+	mov	(r3)+,	r0		; T.SLEN
+	ash	r5,	r0		; r0 = SLEN shr (HD+1)
+	negb	r5			; r5 = HD+1
+
+	mov	T.SX1,	r2
+	add	r0,	r2
+	dec	r2		;
+	cmp	r2,	T.SX2		; SX2 <= SX1 + SLEN shr (HD+1) ?
+	bcc	50$
+	mov	r2,	T.SX2
+50$:
+	sub	T.SX2,	r2	;
+	ash	r5,	r2	;r2={SX1+(SLEN shr (HD+1))-SX2} shl (HD+1)
+	cmp	r2,	T.ARX
+	bcc	54$
+	mov	r2,	T.ARX
+54$:
+
+	mov	(r3)+,	r1		; T.LINS
+	dec	r1			;;;
+	asl	r1
+	asl	r1			; t.lins*4
+	swab	r5
+	negb	r5
+	ash	r5,	r1		; r1 - LINS*4 shr VD
+				;r1 - high of area in v-lines due to V-dens
+
+	mov	T.SY1,	r4
+	add	r1,	r4
+	cmp	r4,	T.SY2		; SY2 <= SY1 + ( LINS*4 shr VD )  ?
+	bcc	60$
+	mov	r4,	T.SY2		; SY2 := ^^^^^
+60$:
+	sub	T.SY2,	r4
+	asr	r4
+	asr	r4
+	negb	r5
+	ash	r5,	r4
+	cmp	r4,	T.ARY ; ARY <= (SY1 + (LINS*4 shr VD) - SY2)/4 shl VD ?
+	bcc	64$
+	mov	r4,	T.ARY
+64$:
+;--------------------------------------------
+	mov	#T.ADDR,r0
+	clr	r4			; redraw flg
+	mov	(r0)+,	r1		; r1 - ptr to vw.desc
+	cmp	(r1)+,	(r1)+		; vw.succ,vw.pred
+	cmp	(r0),	(r1)		; VW.ANUM
+	beq	70$
+	inc	r4
+70$:	mov	(r0)+,	(r1)+
+
+	cmp	(r0),	(r1)		; VW.ARY
+	beq	74$
+	inc	r4
+74$:	mov	(r0)+,	(r1)+
+
+	cmp	(r0),	(r1)		; VW.ARX
+	beq	80$
+	inc	r4
+80$:	mov	(r0)+,	(r1)+
+
+	swab	r4
+	cmp	(r0),	(r1)		; VW.SY1
+	beq	82$
+	inc	r4
+	bcs	82$
+	mov	(r1),	(r3)		; T.RDY1
+	br	84$
+82$:	mov	(r0),	(r3)
+84$:	asr	(r3)
+	asr	(r3)+
+	mov	(r0)+,	(r1)+
+
+	cmp	(r0),	(r1)		; VW.SY2
+	beq	92$
+	inc	r4
+	bcc	92$
+	mov	(r1),	(r3)		; T.RDY2
+	br	94$
+92$:	mov	(r0),	(r3)
+94$:	asr	(r3)
+	asr	(r3)+
+	mov	(r0)+,	(r1)+
+
+	cmp	(r0),	(r1)		; VW.SX1
+	beq	102$
+	inc	r4
+	bcs	102$
+	mov	(r1),	(r3)+		; T.RDX1
+	br	104$
+102$:	mov	(r0),	(r3)+
+104$:	mov	(r0)+,	(r1)+
+
+	cmp	(r0),	(r1)		; VW.SX2
+	beq	112$
+	inc	r4
+	bcc	112$
+	mov	(r1),	(r3)+		; T.RDX2
+	br	114$
+112$:	mov	(r0),	(r3)+
+114$:	mov	(r0)+,	(r1)+
+
+					; VW.DEN
+	cmp	(r0),	(r1)
+	beq	120$
+	inc	r4
+120$:	mov	(r0)+,	(r1)+
+	swab	r4
+	mov	r4,	(r3)		; T.RDFLG
+;----------------------------------------
+	mov	t.tar,	(r1)+			;VW.TAR
+
+	mov	t.den,	r4		;
+	movb	r4,	r0		;
+	inc	r0			; vd52 or vd104 or vd208
+	swab	r0			;
+	bisb	r4,	r0		; vd - 0,1,2
+	mov	r0,	(r1)+		;VW.HD
+
+	mov	T.SX1,	r0
+	ash	r4,	r0
+	asr	T.ARX
+	SUB	T.ARX,	r0
+	mov	r0,	(r1)+		;VW.XOF:= (SX1 shl HD) - ARX/2
+
+	swab	r4			;
+	movb	r4,	(r1)+		; VW.YD
+	movb	(r1)+,	t.num		; VW.NUM
+
+	mov	T.SY1,	r0		; VW.YOF
+	ash	r4,	r0		;
+	asr	r0
+	asr	r0
+	SUB	T.ARY,	r0
+	mov	r0,	(r1)+		;VW.YOF:= (SY1 shl VD) - ARY
+
+	mov	#-4,	r4
+	movb	t.den+1,r0
+	ash	#3,	r0
+	add	r0,	PC
+	mov	r4,	(r1)+
+	mov	r4,	(r1)+
+	mov	r4,	(r1)+
+	br	300$
+	mov	r4,	(r1)+
+	clr	(r1)+
+	mov	r4,	(r1)+
+	br	300$
+	clr	(r1)+
+	clr	(r1)+
+	clr	(r1)+
+300$:
+	return
+
+T.ADDR:	.blkw	1
+T.AREA:	.blkw	1
+T.ARY:	.blkw	1
+T.ARX:	.blkw	1
+T.SY1:	.blkw	1
+T.SY2:	.blkw	1
+T.SX1:	.blkw	1
+T.SX2:	.blkw	1
+T.DEN:	.blkw	1
+
+T.SLEN:	.blkw	1
+T.LINS:	.blkw	1
+
+T.RDY1:	.word	0
+T.RDY2:	.word	loglins-1
+T.RDX1:	.word	0
+T.RDX2:	.word	bmax-1
+T.RDFLG:.word	401
+t.num:	.word	0

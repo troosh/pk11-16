@@ -1,0 +1,55 @@
+	.title	WINDOW	- monitor process
+$ROM$	= 0	;rom
+.enabl	ama
+.nlist	sym
+	.asect
+.	= 0
+.ascii	"PC"
+.word	0,1, 0		; window#0	- program (HIGH-ram)
+			; window#1-2	- data    ..........
+			; windor#3-6	- TAS+PAL+TAO
+.asciz	"Window-system"
+.nlist
+	.include	"p16mac.mac"
+.list
+	.include	"wdc.mac"
+	.include	"wd0.mac"
+	.include	"wd1.mac"
+	.include	"wd2.mac"
+	.include	"wd4.mac"
+	.include	"wd3.mac"
+	.include	"wd5.mac"
+
+.end	START
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
