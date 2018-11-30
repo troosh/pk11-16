@@ -5,4 +5,5 @@
 .nlist
 .nlist sym
 	.include 	/p16mac/
-	
+.list
+
