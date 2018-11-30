@@ -8,8 +8,8 @@ mac p16+p16bot/obj/list
 mac p16+p16rst/obj/list
 ! From P16KBE.COM
 mac p16+p16kbe/obj/list
-! From P16HDC.COM
-mac p16+p16hdc/obj/list
+!
+mac p16+ide/obj/list
 
 ! From ??
 mac wd/list
@@ -47,7 +47,7 @@ lin/map:p16p/exe:p16p/prompt
 p16bot
 p16rst
 p16kbe
-p16hdc
+ide
 //
 cop/con p16p.sav,wd.sav,vt.sav t.t
 ru pl

@@ -43,14 +43,14 @@
 ;‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹
 
 ;	.enabl		AMA
-	.mcall		.exit,push,pop
+	.mcall		.exit
 	.dsabl		GBL
 
 	.Title	Hard Disk Controller
 
-	.include "sy:p16mac"
+	.include "p16mac"
 
-;	$BIOS		=   0
+	$BIOS		=   1
 
 .if	DF	$BIOS
 	ADD.REG		=  l.reg
@@ -1459,7 +1459,7 @@ H.ERR		:  .word	0		;
 ;‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹
 
 IDE.xxx:
-	push	<R0,R1>
+	.push	<R0,R1>
 	mov	#xerr, R1
 
 ;?	movb	6(R1), R0		; xcsr
@@ -1495,7 +1495,7 @@ IDE.xxx:
 	DSTRING #D98$
 	DVAL	#D95$
 	DVAL	#D955$
-	pop	<R1,R0>
+	.pop	<R1,R0>
 	return
 
 ;ﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂ
@@ -1512,13 +1512,13 @@ IDE.xxx:
 ;‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹
 
 IDE.res:
-	push	<R0>
+	.push	<R0>
 	mov	#4,	@#id.irq
 	clr	R0
 	sob	R0,	.
 	mov	x.076,	@#id.irq
 	sob	R0,	.
-	pop	<R0>
+	.pop	<R0>
 	return
 
 ;ﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂﬂ
@@ -1538,7 +1538,7 @@ IDE.res:
 ;‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹
 
 IDE.skip:
-	push	<R0,R1,R2>
+	.push	<R0,R1,R2>
 	clr	R1
 	mov	#2, R2
 3$:	mov	IDE.delay, R0
@@ -1549,10 +1549,10 @@ IDE.skip:
 	sob	R0, 2$
 	call	IDE.res
 	sob	R2, 3$
-	pop	<R2,R1,R0>
+	.pop	<R2,R1,R0>
 	<clz>
 	return
-1$:	pop	<R2,R1,R0>
+1$:	.pop	<R2,R1,R0>
 	<sez>
 	return
 
@@ -1574,7 +1574,7 @@ IDE.skip:
 ;‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹
 
 IDE.wait:
-	push	<R0,R1,R3,R5>
+	.push	<R0,R1,R3,R5>
 	com	R3			; R3 - CUT  mask
 	mov	IDE.delay, R0		; R4 - TEST mask
 	clr	R1			; 177777 - cycle
@@ -1586,11 +1586,11 @@ IDE.wait:
 
 	sob	R1, 2$
 	sob	R0, 2$
-	pop	<R5,R3,R1,R0>
+	.pop	<R5,R3,R1,R0>
 	<clz>
 	return
 
-1$:	pop	<R5,R3,R1,R0>
+1$:	.pop	<R5,R3,R1,R0>
 	<sez>
 	return
 
@@ -1611,7 +1611,7 @@ IDE.wait:
 ;‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹
 
 IDE.send:
-	push	<R0,R1,R2,R3,R4>
+	.push	<R0,R1,R2,R3,R4>
 	call	IDE.xxx
 	mov	#4, R2			; Ç·•£Æ 4 ØÆØÎ‚™®
 1$:	call	IDE.skip
@@ -1637,11 +1637,11 @@ IDE.send:
 	bne	4$
 	movb	(R1), (R0)
 
-	pop	<R4,R3,R2,R1,R0>
+	.pop	<R4,R3,R2,R1,R0>
 	<sez>
 	return
 
-4$:	pop	<R4,R3,R2,R1,R0>
+4$:	.pop	<R4,R3,R2,R1,R0>
 	<clz>
 	return
 
@@ -1657,7 +1657,7 @@ IDE.send:
 ;‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹
 
 IDE.hlt:
-	push	<R0,R1,R2>
+	.push	<R0,R1,R2>
 	mov	#id.csr, R1
 	clr	R2
 	mov	#IDE.del, R0
@@ -1670,10 +1670,10 @@ IDE.hlt:
 2$:	sob	R2, 1$
 	sob	R0, 1$
 	call	IDE.res
-3$:	pop	<R2,R1,R0>
+3$:	.pop	<R2,R1,R0>
 	<clz>
 	return
-4$:	pop	<R2,R1,R0>
+4$:	.pop	<R2,R1,R0>
 	<sez>
 	return
 
@@ -1697,17 +1697,17 @@ IDE.rb:	mov	us.bufer, R1
 	mov	n.words, R2
 	mov	#id.buf, R5
 
-1$:	push	<R1,R2>
+1$:	.push	<R1,R2>
 	mov	#<$IDE.time>, R3	; á† Ì‚Æ ¢‡•¨Ô §Æ´¶≠Æ ·Á®‚†‚Ï·Ô (4s)
 	mov	#-1, R4			; Ñ´Ô Ø‡Æ¢•‡™® -> Á‚Æ Ø‡Æ®ßÆË´Æ
 	WHI.ONL	#<M.IDE+M.TIO>		; Ü§•¨...
 	cmp	R4, R2			; ó‚Æ °Î´Æ?
 	bne	2$			; ÅÎ´ Time_Out
-	pop	<R2,R1>			; Ä Ì‚Æ Ø´ÆÂÆ - ¢ÎÂÆ§®¨ · ÆË®°™Æ©
+	.pop	<R2,R1>			; Ä Ì‚Æ Ø´ÆÂÆ - ¢ÎÂÆ§®¨ · ÆË®°™Æ©
 	call	IDE.res			; ë™®≠•¨ ·Æ·‚ÆÔ≠®•
 	br	14$			; ÇÎÂÆ§®¨
 
-2$:	pop	<R2,R1>			; ê•£®·‚‡Î...
+2$:	.pop	<R2,R1>			; ê•£®·‚‡Î...
 
 3$:	call	IDE.hlt			; *
 	bne	14$			; *
@@ -1824,17 +1824,17 @@ IDE.wb:	mov	us.bufer, R1
 	<nop>
 	sob	R0, 8$
 
-9$:	push	<R1,R2>
+9$:	.push	<R1,R2>
 	mov	#<$IDE.TIME>, R3	;ß† Ì‚Æ ¢‡•¨Ô §Æ´¶≠Æ ß†Ø®·†‚Ï·Ô
 	mov	#-1, R4
 	WHI.ONL	#<M.IDE+M.TIO>
 	cmp	R4, R2
 	bne	10$
-	pop	<R2,R1>
+	.pop	<R2,R1>
 	call	IDE.res
 	br	14$
 
-10$:	pop	<R2,R1>
+10$:	.pop	<R2,R1>
 	tstb	@#id.csr	; *
 	bmi	14$		; *
 
@@ -1865,7 +1865,7 @@ IDE.wb:	mov	us.bufer, R1
 ;			C = 0  - ¢·• Ø‡ÆË´Æ ≠Æ‡¨†´Ï≠Æ.
 ;‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹
 
-sec.r:	push	<R0,R2,R3,R4,R5>
+sec.r:	.push	<R0,R2,R3,R4,R5>
 	mov	R3, n.words
 	mov	R1, us.buffer
 	call	IDE.send
@@ -1874,11 +1874,11 @@ sec.r:	push	<R0,R2,R3,R4,R5>
 	bne	1$
 	call	IDE.skip
 	bne	1$
-	pop	<R5,R4,R3,R2,R0>
+	.pop	<R5,R4,R3,R2,R0>
 	<clc>
 	return
 
-1$:	pop	<R5,R4,R3,R2,R0>
+1$:	.pop	<R5,R4,R3,R2,R0>
 	<sec>
 	return
 
@@ -1894,7 +1894,7 @@ sec.r:	push	<R0,R2,R3,R4,R5>
 ;			C = 0  - ¢·• Ø‡ÆË´Æ ≠Æ‡¨†´Ï≠Æ.
 ;‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹
 
-sec.w:	push	<R0,R2,R3,R4,R5>
+sec.w:	.push	<R0,R2,R3,R4,R5>
 	mov	R3, n.words
 	mov	R1, us.buffer
 	call	IDE.send
@@ -1903,11 +1903,11 @@ sec.w:	push	<R0,R2,R3,R4,R5>
 	bne	1$
 	call	IDE.skip
 	bne	1$
-	pop	<R5,R4,R3,R2,R0>
+	.pop	<R5,R4,R3,R2,R0>
 	<clc>
 	return
 
-1$:	pop	<R5,R4,R3,R2,R0>
+1$:	.pop	<R5,R4,R3,R2,R0>
 	<sec>
 	return
 
@@ -1991,4 +1991,3 @@ us.buffer	:  .word	0
 n.words		:  .word	0
 
 	.end	hdcini
-                                                                                                                                                                                                                                                                       
