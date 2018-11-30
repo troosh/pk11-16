@@ -1,0 +1,24 @@
+﻿	.title	VT100	- display process
+$ROM$	= 0	;rom
+.enabl	ama,lc
+	.asect
+.	= 0
+.ascii	"PC"
+.word	0,2,0
+.asciz	"Дисплей_VT-100"
+
+.nlist
+	.include	"p16mac.mac"
+	.include	"wdc.mac"
+.	= 1000
+	.include	"vtf.mac"
+.print	;Конец фонта
+.list
+	.include	"vtc.mac"
+	.include	"vt0.mac"
+	.include	"vt1.mac"
+	.include	"vt2.mac"
+	.include	"vt3.mac"
+	.include	"vt4.mac"
+
+.end	START

@@ -1,0 +1,199 @@
+﻿;----------------------------------------
+.macro	print	txt		;
+	jsr	r5,	print	;
+	.asciz	txt		;
+	.even			;
+.endm				;
+;----------------------------------------
+tabsim:	.byte	15,	30,	31,	32,	'G,	'H,	'I,	'P
+	.byte	'R,	'U,	377
+.even
+tabjmp:	.word	close,	open,	pred,	succ,	ggg,	hhh,	iii,	exit
+	.word	rrr,	uuu
+;----------------------------------------
+dbg00::
+	.push	<r5,r4,r3,r2,r1,r0>
+	mov	sp,	r3
+	br	db0
+dbg::				;
+	mov	runnin,	r3	;
+	sub	#6*2,	r3	;
+db0:	print	^\<15><12>\	;
+	mov	#7,	r4	;
+5$:				;
+	mov	(r3)+,	r0	;
+	jsr	r5,	octout	;
+	sob	r4,	5$	;
+	rcpc			;
+	jsr	r5,	octout	;
+	rcps			;
+	jsr	r5,	octout	;
+	bis	#344,	r4	; сброс флагов
+;----------------------------------------
+dc1:					;
+	print	^\<15><12>"PK11/12 _>"\	;
+dc1.3:					;
+	jsr	r5,	octinp		;
+dc1.4:					;
+	clr	r2			;
+dc1.5:					;
+	cmpb	r0,	tabsim(r2)	;
+	bne	dc1.10			;
+	asl	r2			;
+	jmp	@tabjmp(r2)		;
+dc1.10:					;
+	inc	r2			;
+	bcc	dc1.5			;
+dtrap4:					;
+dc1.20:					;
+	print	<" ?">			;
+	br	dc1			;
+;----------------------------------------
+hhh:				;
+	bic	#4,	r4	;
+	br	dc1		;
+;--------------------------------
+uuu:				;
+	bis	#4,	r4	;
+	br	dc1		;
+;--------------------------------
+open:				;
+	mtps	r4		;
+	bvc	opn.10		;
+	mov	r1,	r3	;
+opn.10:				;
+	print	<+/+>		;
+	mov	(r3),	r0	;
+	mtps	r4
+	bne	10$
+	mov	r3,	r5
+	mfus
+10$:
+	jsr	r5,	octout	;
+	bis	#341,	r4	; флаг 'открыто слово'
+	br	dc1.3		;
+;----------------------------------------
+close:				;
+	mtps	r4		;
+	bcc	dc1.20		;
+	bvc	cls.10		;
+	bne	10$
+	mov	r3,	r5
+	add	#2,	r5
+	mov	r1,	r0
+	mtus
+	br	cls.10
+10$:
+	mov	r1,	(r3)	;
+cls.10:				;
+	dec	r4		; снять флаг
+	br	dc1		;
+;----------------------------------------
+pred:	mov	#-2,	r2	;
+	br	succ.1		;
+succ:				;
+	mov	#2,	r2	;
+succ.1:				;
+	mtps	r4		;
+	bcc	dc1.20		;
+	bvc	succ.2		;
+	bne	10$
+	mov	r3,	r5
+	add	#2,	r5
+	mov	r1,	r0
+	mtus
+	br	succ.2	
+10$:
+	mov	r1,	(r3)	;
+succ.2:				;
+	add	r2,	r3	;
+	print	^\<15><12>\	;
+	mtps	r4
+	beq	10$
+	print	<+H +>
+10$:
+	mov	r3,	r0	;
+	jsr	r5,	octout	;
+	print	<+/+>		;
+	mov	(r3),	r0	;
+	mtps	r4		;
+	bne	20$		;
+	mov	r3,	r5
+	mfus
+20$:
+	jsr	r5,	octout	;
+	br	dc1.3		;
+;----------------------------------------
+rrr:
+	.pop	<r0,r1,r2,r3,r4,r5>
+	return
+iii:				;
+	jmp	(r1)		;
+;--------------------------------
+ggg:				;
+	mov	r1,	r0	;
+	wcpc			;
+	jmp	exit		;
+;--------------------------------
+print:				; вывод строки в asciz
+	bit	#1,	dlcs	; 
+	beq	print		;
+	movb	(r5)+,	dlbuf	;
+	bne	print		;
+	inc	r5		;
+	bic	#1,	r5	;
+	rts	r5		;
+;----------------------------------------
+getchr:				;
+	bit	#2,	dlcs	;
+	beq	getchr		;
+	mov	dlbuf,	r0	;
+	bic	#177600,r0	;
+	cmp	r0,	#140	;
+	bcs	putchr		;
+	bic	#40,	r0	;
+putchr:				;
+	cmpb	r0,	#40	;
+	bcs	99$		;
+40$:	bit	#1,	dlcs	;
+	beq	40$		;
+	mov	r0,	dlbuf	;
+99$:	rts	r5		;
+;----------------------------------------
+octout:				; печать числа из r1
+	mov	r1,	r2	; портит: r0,r2
+	mov	r0,	r1	;
+	mov	#30,	r0	;
+	ashc	#1,	r0	;
+	inc	r1		;
+10$:				;
+	bit	#1,	dlcs	;
+	beq	10$		;
+	mov	r0,	dlbuf	;
+	mov	#6,	r0	;
+	ashc	#3,	r0	;
+	tst	r1		;
+	bne	10$		;
+	mov	#40,	r0	;
+	mov	r2,	r1	;
+	br	putchr		;
+;----------------------------------------
+octinp:				; число в r1
+	mov	r5,	r2	; флаг ввода числа : 2 в r4
+	clr	r1		; завершальник  в r0
+	bic	#2,	r4	; портит: r0,r1,r2,r4
+10$:				;
+	jsr	r5,	getchr	;
+	cmpb	r0,	#'0	;
+	bcs	99$		;
+	cmpb	r0,	#'8	;
+	bcc	99$		;
+	ashc	#3,	r1	;
+	bic	#^C7,	r0	;
+	bis	r0,	r1	;
+	bis	#342,	r4	;
+	br	10$		;
+99$:	rts	r2		;
+;----------------------------------------
+.print .-dbg
+.end

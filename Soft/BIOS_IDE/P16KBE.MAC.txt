@@ -1,0 +1,632 @@
+﻿	KBCSR	= 177560
+	KBBUF	= 177562
+	KBESC   = 174106
+	CBBUF	= 174110
+	KBVEC	= 60
+	T.WAIT	= 25.
+	T.REPT	= 5
+
+	KB.CSR	= <KBCSR & 7777> + L.REG
+	KB.BUF	= <KBBUF & 7777> + L.REG
+	KB.ESC  = <KBESC & 7777> + L.REG
+	CB.BUF	= <CBBUF & 7777> + L.REG
+
+RD.PTR=.
+KSTBL:	.WORD   KBCSR,  ^C100,  0,   2000, W.KCSR, 0
+KBTBL:	.WORD	KBBUF,  ^C0,    0,   4000, R.KBUF,-1
+KETBL:	.WORD	KBESC,    0,    0,   2000, W.ESC, -1
+CBTBL:	.WORD   CBBUF,    0,    0,   2000, WC.BUF,-1
+
+pname:	.asciz	/Keyboard process/
+.even
+
+KBEINI::
+	mov	#pname,	r2
+	call	wname
+	ADD	#P.CPRC,R0
+	MOV	R0,	KB.CPRC
+
+	MOV	#ESC$HEA, ESC.HEAP
+	MOV	#REQ.PTR, REQ.PTR
+
+	PROREG	#CBTBL
+
+	PROREG	#KETBL
+
+	PROREG	#KSTBL
+	MOV	R0,     KS.COPY
+
+	PROREG	#KBTBL
+	MOV	R0,     KB.COPY
+
+	MOV	#KBE.INT,R0
+	PROVEC	#V.KBD
+
+	SETPRI	#50000-M.KBD
+        DCHAR	#8.*400+70
+	MOV	#M.KBD, KB.MASK
+        MOV	#360,	KBDCSR
+	MOV	#RD.PTR+2,RD.PTR
+	MOV	#RD.PTR+2,WR.PTR
+	MOV	PC,	SP
+WR.PTR=.-30 
+KBESTK::
+
+
+KBE:
+	mov	#ret,	r0	
+	mov	r0,	r1
+	mov	r0,	r2
+	MOV	KB.TIME, R3
+	MOV	#K.REPT,R4
+	WAITINT KB.MASK
+	.PUSH	<#KBE,R0>
+	JSR	R1,	(R2)
+
+KB.CPRC: .BLKW	 1
+
+W.ESC:
+	clr	r0
+	GETPAR	#kb.map
+	mov	kb.esc, r0
+	call	map
+	movb	(r0)+,	r1
+	bic 	#177400,r1
+	asl	r1
+	mov	esc.tbl(r1), r4
+	tstb	(r0)
+	beq	90$
+	tstb	esc.tbl+1(r1)
+	beq	20$
+	bmi	20$
+10$:
+	cmp	r4,	#esc.buf+1000
+	bcc	20$
+	tstb	(r4)
+	beq	20$
+	clrb	(r4)+
+	br	10$
+20$:
+	MOV	ESC.HEAP,R4
+	cmp	r4, #esc.buf+1000-100
+	bcs	90$
+;................................
+	.push	<r0,r1,r2>	;
+	mov	#esc.buf, r4	; w.ptr
+	mov	r4,	r0	; r.ptr
+30$:
+	cmp	r0,	#esc.buf+1000
+	bhis	80$
+	tstb	(r0)
+	bne	40$
+	inc	r0
+	br	30$
+40$:
+	mov	#esc.tbl, r1
+	mov	#256.,	r2
+50$:
+	cmp	r0,	(r1)+
+	beq	60$
+	sob	r2,	50$
+   halt
+60$:
+	mov	r4,	-(r1)	; ptr
+70$:
+	movb	(r0)+,	(r4)+
+	bne	70$
+	br	30$
+80$:
+	mov	r4,	esc.heap
+	mov	r4,	r2
+82$:
+	cmp	r2,	#esc.buf+1000
+	bhis	85$
+	clrb	(r2)+
+	br	82$
+85$:
+	.pop	<r2,r1,r0>
+;................................
+90$:
+    	MOV	R4,     ESC.TBL(R1)
+	MOVB	(R0)+,	(R4)+
+	BNE	150$
+
+	MOV	REQ.PTR,	R4
+	MOV	(R0),	R0
+	BPL	130$
+	CMP	R0,	(R4)
+	BEQ	120$
+	.push	r4
+100$:
+	cmp	r4,#req.ptr
+	bcc	110$
+	cmp	r0,	(r4)+
+	bne	100$
+	clr	-(r4)
+110$:
+	.pop	r4
+	br	140$
+120$:
+	tst	(r4)+
+	tst	(r4)
+	beq	120$
+	br	140$	
+
+130$:	BIS	#100000,R0
+	CMP	#REQ.TBL,R4
+	BCC	140$
+	MOV	R0,	-(R4)
+140$:
+	MOV	R0,	ESC.TBL(R1)
+	MOV	R4,	REQ.PTR
+	RETURN
+;--------------------------------
+150$:	TSTB	(R0)
+	BNE	170$
+	clrb	-(R4)
+	MOV	-(R0),   R4
+	CLRB	R4
+	SWAB	R4
+	MOV	R4,	ESC.TBL(R1)
+	RETURN
+
+160$:
+	MOVB	(R0)+,	(R4)+
+	BEQ	180$
+170$:	cmp	r4,	#esc.buf+1000-2	;
+
+	BCS	160$
+	CLRB	-(R4)
+180$:
+	MOV	R4,	ESC.HEAP
+190$: 	RETURN
+;--------------------------------
+MAP: 
+	mov	r0,	r1
+	ash	#-12.,	r1
+	bic	#^c16,	r1
+	add	#kb.map,r1
+	mov	(r1)+,	ur2
+	mov	(r1),	ur3
+     	bic	#160000,r0
+	bis	#40000, r0
+	return
+;--------------------------------
+WC.BUF:
+	clr	r0
+	GETPAR	#kb.map
+	MOV	CB.BUF, R0
+	CALL	MAP
+	MOV	#20,	R1
+20$:	MOVB	(R0)+,	R2
+	BEQ	30$
+	CALL	W.CBUF
+	SOB	R1,	20$
+
+30$:
+	BIT	#200,	@KS.COPY
+	BNE	40$
+	JMP	R.KB10
+40$:
+	RETURN
+
+;================================
+KBE.INT:			;
+	MOV	#M.KBD, KB.MASK	;
+	MOV	#120,	KBDCSR	;
+	MOV	#KBUF0, R0	;
+	MOV	#KBUF1, R1	;
+	MOV	#8.,	R5	;
+;................................
+10$:	MOV	KBDBUF, R4	;
+	MOV	(R0),	(R1)	;
+	MOV	R4,	R3	;
+	BIC	#7,	R3	;
+	ASL	R3		;
+	ASL	R3		;
+	ASL	R3		;
+	BIC	#^C7,	R4	;
+	BISB	TBL1(R4),R3	;
+	XOR	R3,	(R1)+	;
+	MOV	R3,	(R0)+	;
+	SOB	R5,	10$	;
+        MOV	#302,	KBDCSR	;
+;................................
+	CLR	CTRL		;
+	CLR     ESC.M		;
+	bic	#<t$graf!t$shft>, t$$
+	MOV	#2000,  R5	;
+	MOV	#KBUF0+10,R4	;
+;................................
+	BIT	R5,	KBUF0+6 ; GRAPH
+	BEQ	20$		;
+	BIC	R5,	KBUF0+6 ;
+	BIC	R5,	KBUF1+6 ;
+	bis	#t$graf, t$$
+20$:				;
+    	BIT	R5,	KBUF0+4 ;
+	BEQ	30$		;
+ 	BIC	R5,	KBUF0+4 ; CTRL
+  	BIC	R5,	KBUF1+4 ;
+   	MOVB	#340,	CTRL	;
+    	BIS	#40,    ESC.M	;
+30$:				;
+     	ROR	R5		;
+	BIT	R5,	(R4)	;
+	BEQ	40$		;
+     	BIC	R5,	(R4)	; SHIFT
+	BIC	R5,	KBUF1+10;
+      	MOVB	#40,	SHIFT	;
+        BIS 	#100,	ESC.M	;
+	bis	#t$shft, t$$
+40$:				;
+     	ASR	(R4)		;
+	BCC	50$		;
+	BIC	#1,	KBUF1+10; ALT (fiks)
+      	BIS	#200,	ESC.M	;
+50$:	ASL	(R4)		;
+;................................
+	bit	r5,	kbuf0+4	;
+	beq	60$		;
+	bic	r5,	kbuf0+4	;
+	bic	r5,	kbuf1+4	;
+	bis	#c.hlt,	VRQFLG	;
+60$:				;
+;--------------------------------
+70$:	MOV	#8.,	R5	;
+	MOV	#-1,	R2	;
+				;
+80$:	MOV	-(R0),  R4	;
+	TST	-(R1)		;
+	BNE	110$		;
+90$:	ADD	#11.,   R2	;
+	SOB	R5,	80$	;
+100$:
+	RETURN			;
+;................................
+110$:	TST	R4		;
+	bne	140$
+	.push	<r2,r4>
+	mov	(r1),	r4
+120$:	ROR	R4		;
+	INC	R2		;
+	BCC	120$		;
+	cmp	r2,	KB.SYM
+	bne	130$
+	mov	#-1,	KB.SYM
+130$:	
+	tst	r4
+	bne	120$
+	.pop	<r4,r2>
+	br	90$
+140$:	ROR	R4		;
+	INC	R2		;
+	BCC	140$		;
+	cmp	r2,	KB.SYM
+	beq	100$
+	MOV	R2,	KB.SYM	;
+	MOV	#T.WAIT,KB.TIME	;
+	MOV	#M.KBD+M.TIO, KB.MASK
+	BR	K26$		;
+;--------------------------------
+K.REPT: MOV	KB.SYM, R2	;
+	MOV	#T.REPT,KB.TIME	;
+K26$:				;
+	CMPB	#53,	R2	;ALPH
+	BNE	40$		;
+	TSTB	SHIFT		;
+	BNE	20$		;
+	MOV	#t$caps, R5	;
+	XOR	R5,	t$$	;CAPS
+	BIT	R5,	t$$	;
+	BEQ	10$		;
+	DCHAR	#7.*400+62	;
+	RETURN			;
+10$:
+	DCHAR	#7.*400		;
+	RETURN			;
+;................................
+20$:	MOV	#t$rus,	R5	;
+	XOR	R5,	t$$	;LAT
+	BIT     R5,     t$$
+	BEQ	30$		;
+	DCHAR	#8.*400		;
+	RETURN			;
+30$:
+	DCHAR	#8.*400+70	;
+	RETURN			;
+;--------------------------------
+40$:	DSTRING #150$		;
+	MOVB	TBL2(R2),R2	;
+	BMI	80$		;
+	tstb	ctrl
+	beq	50$
+	movb	t$0000(r2), r2
+	cmpb	r2,	#100
+	bcs	60$
+	bic	#340,	r2
+	br	60$
+50$:
+	mov	t$$,	r5
+	mov	t$tbl(r5), r5
+	add	r2,	r5
+	clr	r2
+	bisb	(r5),	r2
+60$:
+	MOV	R2,	160$
+	MOV	REQ.PTR,R5
+	CMP	#REQ.PTR,R5
+;	BEQ	70$
+	bne	95$
+;	DVAL	#160$
+;	MOV	R2,	@(R5)+
+;	RETURN
+
+70$:	CALL	W.CBUF
+	BR	130$
+
+80$:	BIC	#177740,R2
+	ADD 	ESC.M,	R2
+	MOV	R2,	160$
+	BIS	#400,	160$
+      	DVAL	#160$
+	DCHAR	#<4*400>+170
+	ASL	R2
+	MOV	ESC.TBL(R2),R3
+	BPL	90$
+	MOV	160$,	(R3)
+	bcc	89$
+	clr	ESC.TBL(r2)		; reg not reply
+89$:
+	RETURN
+90$:
+	MOV	REQ.PTR,R5
+     	CMP	#REQ.PTR,R5
+	BEQ	110$
+95$:
+	MOV	160$,	@(R5)+
+;+
+	bcc	100$
+96$:
+	tst	(r5)+
+	beq	96$
+	tst	-(r5)
+	mov	r5, REQ.PTR
+;-
+100$:
+	RETURN
+110$:
+	MOV	R3,R2
+	BIT	#177400,R2
+	BNE	120$
+	TSTB	R2
+	BNE	60$
+	RETURN
+
+120$:	MOVB	(R3)+,	R2
+	BEQ	140$
+	CALL	W.CBUF
+	BR	120$
+
+130$:	DVAL	#160$
+140$:	BIT	#200,	@KS.COPY
+	BEQ	R.KB10
+	RETURN
+;................................
+150$:	.BYTE 2*16.+3,2,333     ;A-
+.EVEN
+160$:	.WORD	0,8.*400+<3*16.>
+;================================
+W.CBUF: MOV	WR.PTR, R5	;
+	MOVB	R2,	(R5)+	;
+	CMP	R5,	#WR.PTR	;
+ 	BNE	110$		;
+	MOV	#RD.PTR+2,R5	;
+110$:	CMP	R5,	RD.PTR	;
+	BEQ	111$		;
+	MOV	R5,	WR.PTR	;
+111$:	RETURN			;
+;................................
+R.KBUF::			;
+	MOVB	KB.CS1, KB.CS0	;
+R.KB10: MOV	RD.PTR, R5	;
+	CMP	R5,     WR.PTR	;
+	BNE	5$		;
+     	CLR	@KS.COPY	;
+        BIC	#200,   KB.CSR	;
+     	RETURN			;
+5$:				;
+	MOVB	(R5),   KB.BUF	;
+	MOVB	(R5)+,	@KB.COPY;
+	CMP	R5,     #WR.PTR	;
+	BNE	10$		;
+	MOV	#RD.PTR+2,R5	;
+10$:	MOV	R5,	RD.PTR	;
+
+	BIS	#200,	@KS.COPY
+	BIS	#200,	KB.CSR
+K.VRQ:	BITB	KB.CS0, @KS.COPY
+	BEQ	RET
+	SETINT	#KBVEC
+	CLRB	KB.CS0
+RET:	RETURN
+
+W.KCSR::
+        MOV     KB.CSR, R0
+	ASLB	R0
+	CMPB	R0,	KB.CS1
+	BEQ	10$
+	MOVB	R0,	KB.CS1
+	MOVB	R0,	KB.CS0
+	BNE	K.VRQ
+	RESINT	#KBVEC
+10$:	RETURN
+
+TBL1:	.BYTE   0,1,2,4,10,20,40,0
+
+;----------------------------------------------------------------
+t$shft	= 002
+t$caps	= 004
+t$rus	= 010
+t$graf	= 020
+t$tbl::	.word	t$0000, t$000s, t$00c0, t$00cs
+	.word	t$0r00, t$0r0s, t$0rc0, t$0rcs
+	.word	t$g000, t$g00s, t$g000, t$g00s
+	.word	t$g000, t$g00s, t$g000, t$g00s
+;----------------------------------------------------------------
+t$0000:	.ascii	";1234567890-:jcukeng[]zh_/fywaproldv\.q^smitxb@, "
+t$000s:	.ascii	-+!"#$%&'()0=*JCUKENG{}ZH ?FYWAPROLDV|>Q~SMITXB`< -
+t$00c0:	.ascii	";1234567890-:JCUKENG[]ZH_/FYWAPROLDV\.Q^SMITXB@, "
+t$00cs:	.ascii	-+!"#$%&'()0=*jcukeng{}zh ?fywaproldv|>q~smitxb`< -
+
+t$0r00:	.ascii	";1234567890-:йцукенгшщзхъ/фывапролджэ.ячсмитьбю, "
+t$0r0s:	.ascii	-+!"#$%&'()0=*ЙЦУКЕНГШЩЗХЪ?ФЫВАПРОЛДЖЭ>ЯЧСМИТЬБЮ< -
+t$0rc0:	.ASCII	";1234567890-:ЙЦУКЕНГШЩЗХЪ/ФЫВАПРОЛДЖЭ.ЯЧСМИТЬБЮ, "
+t$0rcs:	.ascii	-+!"#$%&'()0=*йцукенгшщзхъ?фывапролджэ>ячсмитьбю< -
+
+t$g000: .ascii	';│─3║═67890╨╜┌┬┐╔╦╗╒╤╕╓╥╖/├┼┤╠╬╣╞╪╡╟╫╢└┴┘╚╩╝╘╧╛╙ '
+;		 ;1234567890-:jcukeng[]zh_/fywaproldv\.q^smitxb@,
+t$g00s: .ascii	'Ёё"№¤▌▐▀█▄±÷→←↓↑╮╭╰╯{}ZH_░▒▓■APROLDV|>Q~SMITXB`< '
+
+					;217,237
+;	.	.    .    .    .    .    .    .    .    .    .    .
+;----------------------------------------------------------------------
+TBL2:	;	3#   6#  ПОМ  СБРОС -	 9    :    /   0     9#   ВВОД
+	.byte  203, 206, 220, 221, 13,	11,  14,  31, 12,   211,  216
+;----------------------------------------------------------------------
+	;	2#   5#  УСТ  ИСП   _	 Z   CR    ↓	H    8#   .#
+	.byte  202, 205, 222, 223, 30,	26, 217,  224, 27,  210, 212
+;----------------------------------------------------------------------
+	;	1#   4#   BS   +#   .	 V    →    ↑	\    7#   0#
+	.byte  201, 204, 237, 213, 45,	43,  225, 226, 44,  207, 200
+;----------------------------------------------------------------------
+	;      ФИКС  ^	  M    S    X	 ,    SP   T	←	  АЛФ
+	.byte  000, 47,  51,  50,  54,	57,  60,  53,  227, 0,	  1
+;----------------------------------------------------------------------
+	;	Q    Y	  A    W    O	 @    I    R	B	  ГРАФ
+	.byte  46,  33,  35,  34,  40,	56,  52,  37,  55,  0,	  2
+;----------------------------------------------------------------------
+	;	F    C	  K    U    G	 D    P    N	L
+	.byte  32,  16,  20,  17,  23,	42,  36,  22,  41,  0,	 0
+;----------------------------------------------------------------------
+	;	J    1	  3    2    6	 ]    E    5	[    -#  ТАБ
+	.byte  15,   1,   3,   2,   6,	25,  21,   5,  24,  214, 230
+;----------------------------------------------------------------------
+	;	;    K1   K3   K2   K5	 8    4    K4	7    ,#  АР2
+	.byte	0,  231, 232, 233, 234, 10,   4,  235,	7,  215, 236
+;----------------------------------------------------------------------
+.IIF NE .-TBL2-88. .ERROR
+;----------------------------------------------------------------
+ESC.TBL:
+.WORD	K0,	K1,	K2,	K3,	K4,	K5,	K6,	K7
+.WORD	K10,	K11,	K12,	K13,	K14,	K15,	K16,	CR
+.WORD	K20,	0,	K22,	K23,	K24,	K25,	K26,	K27
+.WORD	11,	3,	2,	1,	37,	14,	33,	177
+.WORD	K40,	K41,	K42,	K43,	K44,	K45,	K46,	K47
+.WORD	K50,	K51,	K52,	K53,	K54,	K55,	K56,	0
+.WORD	K60,	0,	K62,	K63,	K64,	K65,	K66,	K67
+.WORD	0,	0,	0,	0,	0,	0,	0,	0
+	.BLKW	300
+;----------------------------------------------------------------
+REQ.TBL:  .blkw	40
+REQ.PTR:  .blkw	1
+ESC.HEAP: .blkw	1
+;--------------------------------
+kb.map:	.blkw	8.		; UR's of caller
+;-----------------------------------
+KB.MASK:  .blkw	1
+KB.SYM:	  .blkw	1
+KB.TIM:	  .blkw	1
+KB.CS0:	  .blkb	1
+KB.CS1:	  .blkb	1
+KS.COPY:  .blkw	1
+KB.COPY:  .blkw	1
+CTRL:	  .blkb	1
+SHIFT:	  .blkb	1
+t$$:	  .word	0		; таблица
+ESC.M:	  .blkw	1
+KBUF0:    .blkw	8.
+KBUF1:    .blkw	8.
+;----------------------------------------------------------------
+esc.buf:  
+
+;--------------------------------
+;	Macro 'k' add ESC char
+.macro  k       str
+        .byte   33
+        .asciz  "'str'"
+.endm   k
+;********************
+;	Macro 'ke' NOT add ESC
+.macro  ke      kod, str
+        .byte   str
+.endm   ke
+;-----------------------------------
+;   key-code    ESC<string>     KEY
+;-----------------------------------
+;       for  VT100
+k0:	K	<Op>		; 0
+k1:	K	<Oq>		; 1
+k2:	K	<Or>		; 2
+k3:	K	<Os>		; 3
+k4:	K	<Ot>		; 4
+k5:	K	<Ou>		; 5
+k6:	K	<Ov>		; 6
+k7:	K	<Ow>		; 7
+k10:	K	<Ox>		; 8
+k11:	K	<Oy>		; 9
+
+k14:	K	<Om>		; -
+k15:	K	<Ol>		; ,
+k12:	K	<On>		; .
+k16:	K	<OM>		; ENTER
+
+k24:	K	<[A>		; CUP
+k26:	K	<[B>		; CUD
+k25:	K	<[C>		; CUR
+k27:	K	<[D>		; CUL
+
+k13:	K	<OP>		; +     (PF1)
+k20:	K	<OQ>		; POM   (PF2)
+k22:	K	<OR>		; UST   (PF3)
+k23:	K	<OS>		; ISP   (PF4)
+
+;--------------------------------
+;       for  VT52
+; +shift=100
+; +ctrl = 40
+k40:	K	<?p>		; 0
+k41:	K	<?q>		; 1
+k42:	K	<?r>		; 2
+k43:	K	<?s>		; 3
+k44:	K	<?t>		; 4
+k45:	K	<?u>		; 5
+k46:	K	<?v>		; 6
+k47:	K	<?w>		; 7
+k50:	K	<?x>		; 8
+k51:	K	<?y>		; 9
+
+k64:	K	<A>		; CUP
+k66:	K	<B>		; CUD
+k65:	K	<C>		; CUR
+k67:	K	<D>		; CUL
+
+k53:	K	<P>		; +     (PF1)
+k60 	=	16		; POM (RUS)
+k62:	Ke	<33,10>		; UST (HOME)
+k63	=	17		; ISP (LAT)
+k52:	K	<?n>		; .
+k56:	K	<?M>		; CR
+
+k54:	K	<Q>		; -  (PF2)
+k55:	K	<R>		; ,  (PF3)
+
+ESC$HEAP:
+
+. = ESC.BUF+1000
+
+	.WORD	0
+
+kb$dat	= . - kb.mask
+
+.end
