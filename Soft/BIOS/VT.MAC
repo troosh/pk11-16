@@ -8,8 +8,8 @@ $ROM$	= 0	;rom
 .asciz	"Дисплей_VT-100"
 
 .nlist
-	.include	"sy:p16mac.mac"
-	.include	"sy:wdc.mac"
+	.include	"p16mac.mac"
+	.include	"wdc.mac"
 .	= 1000
 	.include	"vtf.mac"
 .print	;Конец фонта
