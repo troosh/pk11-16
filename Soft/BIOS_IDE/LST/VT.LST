@@ -1,0 +1,2149 @@
+VT100	- display process	MACRO V05.06R Friday 30-Nov-18 09:49
+Table of contents
+
+    2- 462	common definitions for bios monitor
+    4-   1	common definitions for WINDOW-monitor
+    8-   2	initialization and interface
+   18-   2	initialization and interface
+VT100	- display process	MACRO V05.06R Friday 30-Nov-18 09:49  Page 1
+
+
+      1						.title	VT100	- display process
+      2		000000 			$ROM$	= 0	;rom
+      3					.enabl	ama,lc
+      4	000000					.asect
+      5		000000 			.	= 0
+      6	000000	   120 	   103 		.ascii	"PC"
+      7	000002	000000 	000002 	000000 	.word	0,2,0
+      8	000010	   277 	   373 	   302 	.asciz	"?исплей_VT-100"
+	000013	   361 	   371 	   350
+	000016	   375 	   137 	   126
+	000021	   124 	   055 	   061
+	000024	   060 	   060 	   000
+      9
+VT100	- display process	MACRO V05.06R Friday 30-Nov-18 09:49  Page 7
+Common definitions for WINDOW-monitor
+
+      1	006026				.print	;?онец фонта
+      3						.include	"vtc.mac"
+VT100	- display process	MACRO V05.06R Friday 30-Nov-18 09:49  Page 8
+Common definitions for WINDOW-monitor
+
+      1					;====================================================
+      2					.sbttl	initialization and interface
+      3
+      4		177564 			csr	= 177564
+      5		000064 			vec	= 64
+      6		000124 			cc	= 80.+4		;chars on line
+      7		000031 			ll	= 25.		;lines on screen
+      8		000000 			vmode	= vm1		;video-mode bits
+      9		000000 			cb	= 0		;background color
+     10		000001 			cf	= 1		;foreground color
+     11		000012 			lhigh	= 10.		;high of char in v-lines
+     12
+     13		000002 			c10	= ^B00000010	; c o
+     14		000002 			c11	= ^B00000010	;    l o
+     15		000377 			c12	= ^B11111111	;        r s
+     16
+     17		000060 			$$csr	= 60		;halt subr for CSR processing
+     18		147564 			xcsr	= <csr & 7777> + l.reg
+     19		147566 			xbuf	= <<csr+2> & 7777> + l.reg
+     20
+     21		000120 			COL80   = 80.           ; MAX COLS IN 80-MODE
+     22		000204 			COL132  = 132.          ; MAX COLS IN 132-MODE
+     23		000030 			LINMAX  = ll-1          ; MAX LINS OF TEXT
+     24		000240 			COLMAX  = 160.          ; MAX COLS FOR TABS
+     25		000020 			ESCMAX  = 20            ; MAX CHARS IN ESC-SEQ
+     26
+     27					; CTRL CODES:
+     28
+     29		000177 			C.DEL   = 177           ;
+     30		000040 			C.SP    = 040           ;
+     31		000033 			C.ESC   = 033           ; FOR THOSE WHO DON'T KNOW HIM
+     32
+     33					;---------------------------------------- VT-100 shape table (window #0)
+     34	006026					DSECT	0
+     35	006026				dw SYM$TB,	256.	; addresses of shapes for each of 0..255. chars
+     36	006026				dw SYM$HI		; hight of char in lines
+     37	006026				dw SYM$WI		; width of char in bits (in shapes it is
+     38								;	rounded to byte boundary)
+     39	006026				dw SYM$ID		; .ascii "PC" ; identifier for testing
+     40	006026				dw SYM$LB,	7.	; .asciz "name of font"
+     41	006026				dw SYM$ST		; start of area for shapes ...
+     42
+     43					;---------------------------------------- VT-100 code area   (window #1)
+     44	006026					DSECT	20000
+     45	006026				dw COD$BE,	0	; begin addr for code area
+     46
+     47					;---------------------------------------- VT-100 main table  (window #2)
+     48	006026					DSECT	40000
+     49					;dw V.CSR	;p	; addr of CSR-reg
+     50					;dw V.BUF	;p	; addr of BUF-reg
+     51					;dw V.VEC	;p	; addr of vector
+     52
+     53					;dw V.CMAX	;p	; max cols on the text plane
+     54					;dw V.LMAX	;p	; max lins on the text plane
+     55
+     56	006026				dw V.MODE	;p	; CURRENT VIDEO-MODE
+     57	006026				dw I15			; state of display (i15 <>0  or vt52 =0)
+VT100	- display process	MACRO V05.06R Friday 30-Nov-18 09:49  Page 8-1
+Initialization and interface
+
+     58
+     59					;dw V.MAP	;i	; par value to map start of BIT-map
+     60	006026				dw UR4c		;i	; par to win#4
+     61	006026				dw UR5c		;i	; par to win#5
+     62	006026				dw CUR.M	;i	; CURS SAVE AREA:  .word	; start addr
+     63
+     64					;---------------------------------------- VT-100 LEVEL 1 RAM
+     65
+     66	006026				dw ES.PTR	;i	; POINTER TO ESC-BUFFER
+     67	006026				db ESCAPE	;i	; ONLY FOR "ESC" - REPORTS
+     68	006026				db ES.BUF,	<ESCMAX+1>	; ESC-BUFFER
+     69					;.even
+     70	006026				dw SAVE.C,	4	; SAVE AREA FOR CURSOR
+     71
+     72					;********************************************
+     73					;** DO NOT CHANGE THE ORDER WITHOUT V1$INI **
+     74					;********************************************
+     75	006026				dw ESC.J	;i	; STATE OF VT:
+     76					                        ;  0 - NORMAL
+     77					                        ;  2 - ENTERING 2-ND CHAR OF ESC
+     78					                        ;  4 - ENTERING ESC-LONG (TYPE "[")
+     79					                        ;  6 - ENTERING ESC-SHORT (ALL - 3 BYTES)
+     80					                        ; 10 - ESC-Y
+     81					                        ; 12 - ESC-Y
+     82
+     83	006026				dw V1.MOD	;i	; MODES OF VT100
+     84		000001 			    M.NL    = 1             ; NEW LINE / LINE FEED
+     85		000002 			    M.APL   = 2             ;-APPLICATION (CURSOR)
+     86		000004 			    M.ANSI  = 4             ; ANSI / VT52
+     87		000010 			    M.132   = 10            ;-132 / 80
+     88		000020 			    M.SMOT  = 20            ;-SMOOTH / JUMP
+     89		000040 			    M.RVRS  = 40            ; REVERSE / NORMAL
+     90		000100 			    M.REL   = 100           ; RELATIVE / ABSOLUTE
+     91		000200 			    M.WRAP  = 200           ; WRAPAROUND ON / OFF
+     92		000400 			    M.AUTO  = 400           ;-AUTOREPEAT ON / OFF
+     93		001000 			    M.INTE  = 1000          ;-INTERLACE ON / OFF
+     94		002000 			    M.KEYP  = 2000          ; KEYPAD APPLICATION / NUMERIC
+     95		004000 			    M.40    = 4000          ;-40 COLS
+     96		010000 			    C.BOLD  = 10000         ;-BOLD ON/OFF
+     97		020000 			    C.UNDS  = 20000         ; UNDERSCOPE ON/OFF
+     98		040000 			    C.BLNK  = 40000         ;-BLINK ON/OFF
+     99		100000 			    C.RVRS  = 100000        ; REVERSE VIDEO ON/OFF
+    100
+    101	006026				dw CURS.Y	;i	; LIN NUMBER
+    102	006026				dw CURS.X	;i	; COL NUMBER
+    103	006026				dw CURS.T	;i	; CURSOR STATUS WORD (0-OK, 1-NO)
+    104
+    105	006026				dw LIN.S	;i	; =1  - NUM OF 1ST LINE
+    106	006026				dw LIN.E	;i	; =24 - NUM OF LAST LINE
+    107	006026				dw LIN.N	;i	; =24 - NUM OF LINES
+    108
+    109	006026				dw COL.S	;i	; =1      - NUM OF 1ST COL
+    110	006026				dw COL.E	;i	; =80/132 - NUM OF LAST COL
+    111	006026				dw COL.N	;i	; =80/132 - NUM OF COLS
+    112
+    113	006026				dw TOP.L	;i	; TOP LINE OF SCROLLING REGION (ABSOLUTE)
+    114	006026				dw BOT.L	;i	; BOT LINE OF SCROLLING REGION (ABSOLUTE)
+VT100	- display process	MACRO V05.06R Friday 30-Nov-18 09:49  Page 8-2
+Initialization and interface
+
+    115
+    116	006026				db V1.TAB,	COLMAX ;i	; TAB-PATTERN TABLE
+    117					;        .EVEN
+    118
+    119	006026				dw V.GMOD		; constant for GR-mode
+    120
+    121	006026				dw V.TAL,ll	;i	; start of table of lines' pointers
+    122
+    123		040424 				$$ = <$$+3>&177774
+    124
+    125	006026				dw TAS,ll*lhigh+2*2+4	;start of TAS
+    126
+    127	006026				dw MAP$			; start of bit-map
+    128
+    129					;=======================================================
+    130					; EXTERNAL ENTRIES:
+    131					; ----------------
+    132					;               NOTES:  1. NO REGS CHANGED, EXEPT MENTIONED
+    133					;                       2. LIN = 1..24; COL = 1..80/132
+    134					;
+    135					; ->    SC$SYM  - OUTPUT A CHAR         ;
+    136					;               R0 - CODE               ;
+    137					;               R1 - COL                ;
+    138					;               R2 - LIN                ;
+    139					;                                       ;
+    140					; ->    SC$SCU  - SCROLL UP             ;-> SC$INI - INITIALIZATION
+    141					; ->    SC$SCD  - SCROLL DOWN           ;
+    142					; ->    SC$CLS  - CLEAR SCREEN          ;-> SAVE$R - SAV/RES R0-R5
+    143					;               R1 - TOP LINE           ;
+    144					;               R2 - BOTTOM LINE        ;
+    145					;                                       ;
+    146					; ->    SC$CUR  - DRAW CURSOR           ;
+    147					;               CURS.Y                  ;
+    148					;               CURS.X                  ;
+    149					;                                       ;
+    150					; ->    SC$CER  - ERASE CURSOR (PREV.SET)
+    151					;
+    152					; ->    SC$REV  - REVERSE SCREEN+BORDER
+    153					;
+    154					; GLOBAL ENTRIES:
+    155					; --------------
+    156					;
+    157					; ->    V1$INI  - START UP, POWER UP OR RESTART
+    158					;
+    159					; ->    V1$SYM  - ACCEPTS A CHAR FROM R0
+    160
+    161					;=======================================================
+    162
+    163					; ESC-SEQUENCES:
+    164
+    165					;    ESC-[      FORMAT
+    166					;       PN A    - CURSOR UP
+    167					;       PN B    - CURSOR DOWN
+    168					;       PN C    - CURSOR FORWARD
+    169					;       PN D    - CURSOR BACK
+    170					;       PL;PC H - DIRECT CUR ADDR
+    171					;       PL;PC f - DIRECT CUR ADDR
+VT100	- display process	MACRO V05.06R Friday 30-Nov-18 09:49  Page 8-3
+Initialization and interface
+
+    172					;       PS;PS;..PS m (SMALL) - CHAR ATTRIBS
+    173					;         PS=0  - ALL OFF
+    174					;            1  - BOLD ON
+    175					;            4  - UNDERSCOPE
+    176					;            5  - BLINK ON
+    177					;            7  - REVERSE VIDEO ON
+    178					;       K OR 0K - ERASE LINE FROM CUR TO END
+    179					;       1K      - ERASE LINE FROM BEG TO CUR
+    180					;       2K      - ERASE LINE FROM BEG TO END
+    181					;       J OR 0J - ERASE SCREEN FROM CUR TO END
+    182					;       1J      - ERASE SCREEN FROM BEG TO CUR
+    183					;       2J      - ERASE SCREEN FROM BEG TO END
+    184					;       PS;PS;...PS q (SMALL) - LEDS
+    185					;         PS=0  - ALL OFF
+    186					;            1  - L1 ON
+    187					;            2  - L2 ON
+    188					;            3  - L3 ON
+    189					;            4  - L4 ON
+    190					;       PT;PB r (SMALL) - SET SCROLLING REGION (PB>PT)
+    191					;       g OR 0g (SMALL) - CLEAR TAB AT CURRENT COL
+    192					;       3g      (SMALL) - CLEAR ALL TABS
+    193					;
+    194					;*****  PF;PB X - SET SCREEN'S F-COLOR AND B-COLOR
+    195					;*****	PC Y	- set border's color
+    196					;          ---------------------- MODES -----------------------
+    197					;               S E T               ;       R E S E T
+    198					;          ----------------------------------------------------
+    199					;       20h (SMALL)  - NEW LINE     ; 20l (SMALL)  - LINE FEED
+    200					;****   ?1h (SMALL)  - APPLICATION  ; ?1l (SMALL)  - CURSOR TYP
+    201					;                    - ANSI (N/A)   ; ?2l (SMALL)  - VT52
+    202					;       ?3h (SMALL)  - 132 COL      ; ?3l (SMALL)  - 80 COL
+    203					;       ?4h (SMALL)  - SMOOTH       ; ?4l (SMALL)  - JUMP
+    204					;       ?5h (SMALL)  - REVERSE      ; ?5l (SMALL)  - NORMAL
+    205					;       ?6h (SMALL)  - RELATIVE     ; ?6l (SMALL)  - ABSOLUTE
+    206					;       ?7h (SMALL)  - WRAPAROUND   ; ?7l (SMALL)  - OFF
+    207					;       ?8h (SMALL)  - AUTO REPEAT  ; ?8l (SMALL)  - OFF
+    208					;       ?9h (SMALL)  - INTERLACE    ; ?9l (SMALL)  - OFF
+    209					;****  ?10h (SMALL)  - 40 COLS      ;?10l (SMALL)  - 40 COLS
+    210					;       ========================================================
+    211					;       REQUEST         REPORT                  TOPIC
+    212					;       --------------------------------------------------------
+    213					;       6n (SMALL)      PL;PC R                 - CURSOR POSITION
+    214					;       5n (SMALL)      0n (SMALL) - OK OR      - VT100 STATUS
+    215					;                       3n (SMALL) - NOT OK
+    216					;       0c (SMALL) OR   ?l (SMALL); 0c (SMALL)  - WHAT ? - BASE VT100
+    217					;          ESC Z
+    218					;****	9n (small)	abcde z			- VT100 state
+    219					;		a=0 - underscope	off
+    220					;		 =1 -			on
+    221					;		b=0 - reverse chars	off
+    222					;		 =1 -			on
+    223					;		c=0 - line feed
+    224					;		 =1 - new line
+    225					;		d=0 - wraparound	off
+    226					;		 =1 -			on
+    227					;		e=0 - cursor		on
+    228					;		 =1 -			off
+VT100	- display process	MACRO V05.06R Friday 30-Nov-18 09:49  Page 8-4
+Initialization and interface
+
+    229					;               ------------------------------------------------
+    230
+    231					;    ESC-#   FORMAT
+    232					;       3    - CHANGE LINE TO 2*H TOP/2
+    233					;       4    -                2*H BOT/2
+    234					;       5    -                1*W,1*H
+    235					;       6    -                2*W,1*H
+    236					;       8    - DO TEST "E"
+    237
+    238					;    ESC-(   FORMAT                ; ESC-)   FORMAT
+    239					;       A    - G0 U.K.             ;    A    - G0 U.K.
+    240					;       B    - G0 U.S.ASCII        ;    B    - G0 U.S.ASCII
+    241					;       0    - G0 SPEC.GR.CHARS    ;    0    - G0 SPEC.GR.CHARS
+    242					;       1    - G0 ALT-ROM          ;    1    - G0 ALT-ROM
+    243					;       2    - G0 ALT-ROM-GR.CHARS ;    2    - G0 ALT-ROM-GR.CHARS
+    244
+    245					;    ESC-X      FORMAT:
+    246					;       D       - INDEX
+    247					;       E       - NEW LINE
+    248					;       M       - REVERSE INDEX
+    249					;       7       - SAVE CURS AND ATTRS
+    250					;       8       - RESTORE CURS AND ATTRS
+    251					;       H       - SET TAB AT CUR POS
+    252					;       c       - RESET VT100 (AS ON POWER-UP)
+    253					;       =       - APPLICATION KEYPAD
+    254					;       >       - NUMERIC KEYPAD
+    255					;****   W       - SWITCH CURSOR ON/OFF
+    256
+    257					;       ========================================================
+    258					;               VT52 COMPATIBLE MODE
+    259					;       --------------------------------------------------------
+    260					;   ESC A       - CURSOR UP
+    261					;   ESC B       - CURSOR DOWN
+    262					;   ESC C       - CURSOR RIGHT
+    263					;   ESC D       - CURSOL REFT
+    264					;   ESC F       - SELECT SPECIAL GR-CHAR-SET
+    265					;   ESC G       - SELECT ASCII CHAR-SET
+    266					;   ESC H       - CURSOR TO HOME
+    267					;   ESC I       - REVERSE LINE FEED
+    268					;   ESC J       - ERASE TO END OF SCREEN
+    269					;   ESC K       - ERASE TO END OF LINE
+    270					;   ESC Y l c   - DIRECT CURSOR ADDRESS (LIN,COL=N-37)
+    271					;   ESC Z       - IDENTIFY      : RESPONSE = "ESC / Z"
+    272					;   ESC =       - ENTER ALTERNATE KEYPAD MODE
+    273					;   ESC >       - EXIT ALTERNATE KEYPAD MODE
+    274					;   ESC <       - ENTER ANSI MODE
+    275					;===============================================================
+    276					;             KEYBORD SIMULATION ESC-SEQUENCES FROM KEYPAD
+    277					;---------------------------------------------------------------
+    278					; VT100-KEY     PC11-KEY/CODE    VT100-MODE      VT52-MODE
+    279					;---------------------------------------------------------------
+    280					;   0               F00 / 200    ESC O p          ESC ? p
+    281					;   1               F01 / 201    ESC O q          ESC ? q
+    282					;   2               F02 / 202    ESC O r          ESC ? r
+    283					;   3               F03 / 203    ESC O s          ESC ? s
+    284					;   4               F04 / 204    ESC O t          ESC ? t
+    285					;   5               F05 / 205    ESC O u          ESC ? u
+VT100	- display process	MACRO V05.06R Friday 30-Nov-18 09:49  Page 8-5
+Initialization and interface
+
+    286					;   6               F06 / 206    ESC O v          ESC ? v
+    287					;   7               F07 / 207    ESC O w          ESC ? w
+    288					;   8               F08 / 210    ESC O x          ESC ? x
+    289					;   9               F09 / 211    ESC O y          ESC ? y
+    290
+    291					;   -               F10 / 212    ESC O m            -
+    292					;   ,               F11 / 213    ESC O l            ,
+    293					;   .               F12 / 214    ESC O n          ESC ? N
+    294					; ENTER             F13 / 215    ESC O M          ESC ? M
+    295
+    296					;  CUP              CUP / 031    ESC [ A          ESC A
+    297					;  CUD              CUD / 032    ESC [ B          ESC B
+    298					;  CUR              CUR / 030    ESC [ C          ESC C
+    299					;  CUL              CUL / 010    ESC [ D          ESC D
+    300
+    301					;  PF1              DL  / 036    ESC O P          ESC P
+    302					;  PF2              IL  / 013    ESC O Q          ESC Q
+    303					;  PF3              DC  / 035    ESC O R          ESC R
+    304					;  PF4              IC  / 034    ESC O S          ESC S
+    305					;---------------------------------------------------------------
+VT100	- display process	MACRO V05.06R Friday 30-Nov-18 09:49  Page 9
+Initialization and interface
+
+      1						.include	"vt0.mac"
+VT100   - LEVEL 0	MACRO V05.06R Friday 30-Nov-18 09:49  Page 10
+Initialization and interface
+
+					        .TITLE  VT100   - LEVEL 0
+      2					;=======================================
+      3	006026					.ASECT
+      4		020000 			. =	COD$BE
+      5
+      6					;*******************************
+      7					; CLEAR SCREEN
+      8					;       ENTER:  R1 - TOP LINE
+      9					;               R2 - BOT LINE
+     10
+     11	020000				SC$CLS::
+     12	020000	010046 				mov	r0, -(sp)	;
+     13	020002	010146 				mov	r1, -(sp)	;
+     14	020004	010246 				mov	r2, -(sp)	;
+     15	020006	010346 				mov	r3, -(sp)	;
+     16	020010	010446 				mov	r4, -(sp)	;
+     17	020012	010203 				mov	r2, r3		;
+     18	020014	160103 				sub	r1, r3		;
+     19	020016	005203 				inc	r3		;num of lines to clear
+     20	020020	006301 				asl	r1		;
+     21	020022	062701 	040342 			add	#V.TAL, r1	;pointer
+     22	020026	005002 				clr	r2		;
+     23	020030				10$:
+     24	020030	012100 				mov	(r1)+, r0	;
+     25	020032	012704 	000025 			mov	#cc/4, r4	;
+     26	020036				20$:
+     27		000012 			.rept	lhigh
+     28						mov	r2, (r0)+	;
+     29						mov	r2, (r0)+	;
+     30					.endr
+     31	020106	077425 				sob	r4, 20$		;
+     32	020110	077331 				sob	r3, 10$		;
+     33	020112	012604 				mov	(sp)+, r4	;
+     34	020114	012603 				mov	(sp)+, r3	;
+     35	020116	012602 				mov	(sp)+, r2	;
+     36	020120	012601 				mov	(sp)+, r1	;
+     37	020122	012600 				mov	(sp)+, r0	;
+     38	020124	000207 			        RETURN                  ;
+     39					;*******************************
+     40					; CLEAR part of line
+     41					;       ENTER:  R1 - current LINE
+     42					;               R2 - start col
+     43					;		R3 - end col
+     44
+     45	020126				SC$CLL::
+     46	020126	010046 				mov	r0, -(sp)	;
+     47	020130	010146 				mov	r1, -(sp)	;
+     48	020132	010246 				mov	r2, -(sp)	;
+     49	020134	010346 				mov	r3, -(sp)	;
+     50	020136	010446 				mov	r4, -(sp)	;
+     51	020140	005302 				dec	r2		;
+     52	020142	160203 				sub	r2, r3		;num of cols to clear
+     53	020144	006301 				asl	r1		;
+     54	020146	066102 	040342 			add	V.TAL(r1), r2	;pointer
+     55	020152	012701 	000012 			mov	#lhigh,	r1	;
+     56	020156				10$:
+     57	020156	010200 				mov	r2,	r0	;
+VT100   - LEVEL 0	MACRO V05.06R Friday 30-Nov-18 09:49  Page 10-1
+Initialization and interface
+
+     58	020160	010304 				mov	r3,	r4	;
+     59	020162				20$:
+     60	020162	105020 				clrb	(r0)+		;
+     61	020164	077402 				sob	r4, 20$		;
+     62	020166	062702 	000124 			add	#cc,	r2	;
+     63	020172	077107 				sob	r1, 10$		;
+     64	020174	012604 				mov	(sp)+, r4	;
+     65	020176	012603 				mov	(sp)+, r3	;
+     66	020200	012602 				mov	(sp)+, r2	;
+     67	020202	012601 				mov	(sp)+, r1	;
+     68	020204	012600 				mov	(sp)+, r0	;
+     69	020206	000207 			        RETURN                  ;
+     70
+     71					;*******************************
+     72					; REVERSE SCREEN
+     73
+     74	020210				SC$REV::
+     75
+     76					; Here we need only to swap col#0 and col#1 in the pallette !!!!!
+     77
+     78	020210	004737 	026254 			call	CSWAP		;
+     79	020214	000207 			        RETURN                  ;
+     80
+     81					;*******************************
+     82					; DRAW SYMBOL ON PHYS-SCREEN
+     83					;       R0      - CODE OF SYMBOL 0..255.
+     84					;       R1      - ABS LIN.ADDR [0..24]
+     85					;       R2      - ABS COL.ADDR [1..40/80/160]
+     86
+     87	020216				SC$SYM::
+     88	020216	010046 				mov	r0, -(sp)	;
+     89	020220	010146 				mov	r1, -(sp)	;
+     90	020222	010346 				mov	r3, -(sp)	;
+     91	020224	006301 				asl	r1		;
+     92	020226	016101 	040342 			mov	V.TAL(r1), r1	; addr of byte in line
+     93	020232	060201 				add	r2, r1		;
+     94	020234	005301 				dec	r1		; make it [0...]
+     95	020236	006300 				asl	r0		;make it word offset
+     96	020240	016000 	000000 			mov	SYM$TB(r0), r0	; start of sym's shape
+     97	020244	032737 	100000 	040050 		bit	#c.rvrs, v1.mod	; is it revers ?
+     98	020252	001024 				bne	20$		; yes
+     99		000000 			offs=0
+    100	020254				10$:
+    101	020254	112011 				movb	(r0)+, (r1)	;
+    102
+    103		000011 			.rept	lhigh-1
+    104					offs=offs+cc			; len of V-line in bytes
+    105						movb	(r0)+,	offs(r1);
+    106					.endr
+    107	020322	000447 				br	30$		;
+    108	020324				20$:
+    109	020324	112003 				movb	(r0)+, r3
+    110	020326	105103 				comb	r3		;
+    111	020330	110311 				movb	r3, (r1)	;
+    112		000000 			offs=0
+    113		000011 			.rept	lhigh-1
+    114					offs=offs+cc
+VT100   - LEVEL 0	MACRO V05.06R Friday 30-Nov-18 09:49  Page 10-2
+Initialization and interface
+
+    115						movb	(r0)+, r3
+    116						comb	r3		;
+    117						movb	r3, offs(r1)	;
+    118					.endr
+    119	020442				30$:
+    120	020442	032737 	020000 	040050 		bit	#c.unds, v1.mod	; underscoping on ?
+    121	020450	001402 				beq	40$		; no
+    122	020452	105161 	001364 			comb	offs(r1)	; do it
+    123	020456				40$:
+    124	020456	012603 				mov	(sp)+, r3	;
+    125	020460	012601 				mov	(sp)+, r1	;
+    126	020462	012600 				mov	(sp)+, r0	;
+    127	020464	000207 			        RETURN
+    128
+    129					;*******************************
+    130					; DRAW SYMBOL & cursor ON PHYS-SCREEN
+    131					;       R0      - CODE OF SYMBOL 0..255.
+    132					;       R1      - ABS LIN.ADDR [0..24]
+    133					;       R2      - ABS COL.ADDR [1..40/80/160]
+    134
+    135	020466				SC$SYC::
+    136	020466	010046 				mov	r0, -(sp)	;
+    137	020470	010146 				mov	r1, -(sp)	;
+    138	020472	010346 				mov	r3, -(sp)	;
+    139	020474	006301 				asl	r1		;
+    140	020476	016101 	040342 			mov	V.TAL(r1), r1	; addr of byte in line
+    141	020502	060201 				add	r2, r1		;
+    142	020504	010137 	040010 			mov	r1,	cur.m	;;
+    143	020510	005301 				dec	r1		; make it [0...]
+    144	020512	006300 				asl	r0		;make it word offset
+    145	020514	016000 	000000 			mov	SYM$TB(r0), r0	; start of sym's shape
+    146	020520	012703 	000123 			mov	#cc-1,	r3	; len of V-line in bytes
+    147	020524	032737 	100000 	040050 		bit	#c.rvrs, v1.mod	; is it revers ?
+    148	020532	001036 				bne	20$		; yes
+    149
+    150	020534				10$:
+    151
+    152		000011 			.rept	lhigh-1
+    153						movb	(r0)+,	(r1)+	;
+    154						comb	(r1)		;
+    155						add	r3,	r1	;
+    156					.endr
+    157	020622	112021 				movb	(r0)+,	(r1)+	;
+    158	020624	105111 				comb	(r1)		;
+    159	020626	000447 				br	30$		;
+    160
+    161	020630				20$:
+    162		000011 			.rept	lhigh-1
+    163						movb	(r0)+, (r1)	;
+    164						comb	(r1)+		;
+    165						comb	(r1)		;
+    166						add	r3,	r1	;
+    167					.endr
+    168	020740	112011 				movb	(r0)+, (r1)	;
+    169	020742	105121 				comb	(r1)+		;
+    170	020744	105111 				comb	(r1)		;
+    171
+VT100   - LEVEL 0	MACRO V05.06R Friday 30-Nov-18 09:49  Page 10-3
+Initialization and interface
+
+    172	020746				30$:
+    173	020746	032737 	020000 	040050 		bit	#c.unds, v1.mod	; underscoping on ?
+    174	020754	001401 				beq	40$		; no
+    175	020756	105141 				comb	-(r1)		; do it
+    176	020760				40$:
+    177	020760	012603 				mov	(sp)+, r3	;
+    178	020762	012601 				mov	(sp)+, r1	;
+    179	020764	012600 				mov	(sp)+, r0	;
+    180	020766	000207 			        RETURN
+    181
+    182					;*******************************
+    183					; SCROLL UP OF SCREEN ZONE
+    184					;       ENTER:  R1 - TOP LINE
+    185					;               R2 - BOT LINE
+    186
+    187	020770				SC$SCU::
+    188	020770	010046 				mov	r0, -(sp)	;
+    189	020772	010146 				mov	r1, -(sp)	;
+    190	020774	010246 				mov	r2, -(sp)	;
+    191	020776	010346 				mov	r3, -(sp)	;
+    192	021000	010446 				mov	r4, -(sp)	;
+    193	021002	010546 				mov	r5, -(sp)	;
+    194
+    195	021004	160102 			        SUB     R1, R2          ; NUM OF LINES TO SHIFT
+    196	021006	006301 				asl	r1		;
+    197	021010	062701 	040342 			add	#V.TAL, r1	; TO-pointer
+    198	021014	010100 				mov	r1, r0		;
+    199	021016	012003 				mov	(r0)+, r3	;save it ;r0 -FROM-pointer
+    200	021020				10$:
+    201	021020	012021 				mov	(r0)+, (r1)+	;
+    202	021022	077202 				sob	r2, 10$		;
+    203	021024	010321 				mov	r3, (r1)+	;... at last
+    204	021026	000420 				br	sc$sce		;
+    205					;*******************************
+    206					; SCROLL DOWN OF SCREEN ZONE
+    207					;       ENTER:  R1 - TOP LINE
+    208					;               R2 - BOT LINE
+    209
+    210	021030				SC$SCD::
+    211	021030	010046 				mov	r0, -(sp)	;
+    212	021032	010146 				mov	r1, -(sp)	;
+    213	021034	010246 				mov	r2, -(sp)	;
+    214	021036	010346 				mov	r3, -(sp)	;
+    215	021040	010446 				mov	r4, -(sp)	;
+    216	021042	010546 				mov	r5, -(sp)	;
+    217
+    218	021044	010203 			        MOV     R2, R3          ;
+    219	021046	160103 			        SUB     R1, R3          ; NUM OF LINES TO SHIFT
+    220	021050	006302 				asl	r2		;
+    221	021052	062702 	040342 			add	#V.TAL, r2	;FROM-pointer
+    222	021056	010201 				mov	r2, r1		;
+    223	021060	012100 				mov	(r1)+, r0	;save it ... ;r1 - TO-pointer
+    224	021062				10$:
+    225	021062	014241 				mov	-(r2), -(r1)	;
+    226	021064	077302 				sob	r3, 10$		;
+    227	021066	010041 				mov	r0, -(r1)	;... at last
+    228
+VT100   - LEVEL 0	MACRO V05.06R Friday 30-Nov-18 09:49  Page 10-4
+Initialization and interface
+
+    229	021070				sc$sce:
+    230	021070	004737 	026330 			call	SETTAS		;
+    231	021074	012605 				mov	(sp)+, r5	;
+    232	021076	012604 				mov	(sp)+, r4	;
+    233	021100	012603 				mov	(sp)+, r3	;
+    234	021102	012602 				mov	(sp)+, r2	;
+    235	021104	012601 				mov	(sp)+, r1	;
+    236	021106	012600 				mov	(sp)+, r0	;
+    237	021110	000207 			        RETURN
+    238
+    239					.ENABL  LSB
+    240					;*******************************
+    241					; SET/RESET CURSOR
+    242					;       ENTER:  CURS.Y - LIN.NUM [0..24]
+    243					;               CURS.X - COL.NUM [1..NN]
+    244
+    245	021112				SC$CUR::		; set cursor
+    246	021112	032737 	000001 	040056 	        BIT     #1, CURS.T      ; is there any cursor (in this state) ?
+    247	021120	001046 			        BNE     30$		; no
+    248	021122	010046 				mov	r0, -(sp)	;
+    249	021124	013700 	040052 		        MOV     CURS.Y, r0      ;
+    250	021130	006300 				asl	r0		;
+    251	021132	016000 	040342 			mov	V.TAL(r0), r0	; this will be the pointer
+    252	021136	063700 	040054 			add	curs.x, r0	;
+    253	021142	005300 				dec	r0		;
+    254	021144	010037 	040010 			mov	r0, cur.m	;
+    255	021150	000406 				br	20$		;
+    256
+    257	021152				SC$CER::		; reset cursor
+    258	021152	010046 				mov	r0, -(sp)	;
+    259	021154	013700 	040010 			mov	cur.m, r0	;
+    260	021160	001425 				beq	25$		;
+    261	021162	005037 	040010 			clr	cur.m		;
+    262	021166				20$:
+    263	021166	105110 				comb	(r0)		;
+    264		000000 			offs=0
+    265		000011 			.rept	lhigh-1
+    266					offs=offs+cc
+    267						comb	offs(r0)	;
+    268					.endr
+    269	021234				25$:
+    270	021234	012600 				mov	(sp)+, r0	;
+    271	021236				30$:
+    272	021236	000207 			        RETURN
+    273					.DSABLE LSB
+    274					;=======================================
+VT100   - LEVEL 0	MACRO V05.06R Friday 30-Nov-18 09:49  Page 11
+Initialization and interface
+
+      1						.include	"vt1.mac"
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 12
+Initialization and interface
+
+					        .TITLE  VT100   - LEVEL 1
+      2					;=======================================================
+      3					;       .PSECT  V1.ROM
+      4		021240 			v1.rom	== .
+      5	021240	   126 	   040 	   124 	ME.52:  .ASCIZ  "V T -  5 2   "
+	021243	   040 	   055 	   040
+	021246	   040 	   065 	   040
+	021251	   062 	   040 	   040
+	021254	   040 	   000
+      6	021256	   126 	   040 	   124 	ME.100: .ASCIZ  "V T - 1 0 0  "
+	021261	   040 	   055 	   040
+	021264	   061 	   040 	   060
+	021267	   040 	   060 	   040
+	021272	   040 	   000
+      7	021274	   061 	   040 	   065 	ME.15:	.ASCIZ	"1 5 -  "<184.>" "<205.>"   "
+	021277	   040 	   055 	   040
+	021302	   040 	   270 	   040
+	021305	   315 	   040 	   040
+	021310	   040 	   000
+      8	021312	   126 	   062 	   056 	ME.:	.asciz	"V2.7     Font : "
+	021315	   067 	   040 	   040
+	021320	   040 	   040 	   040
+	021323	   106 	   157 	   156
+	021326	   164 	   040 	   072
+	021331	   040 	   000
+      9	021333	   033 	   133 	   077 	VTBASE: .ASCIZ  <C.ESC>"[?l;0c"
+	021336	   154 	   073 	   060
+	021341	   143 	   000
+     10	021343	   033 	   057 	   132 	VT52:   .ASCIZ  <C.ESC>"/Z"
+	021346	   000
+     11	021347	   033 	   133 	   060 	vtstate:.asciz	<c.esc>"[00000z"	;report of VT100 state
+	021352	   060 	   060 	   060
+	021355	   060 	   172 	   000
+     12	021360	   102 	   040 	   040 	ME.bel:	.asciz	"B  e  e  p  . . ."
+	021363	   145 	   040 	   040
+	021366	   145 	   040 	   040
+	021371	   160 	   040 	   040
+	021374	   056 	   040 	   056
+	021377	   040 	   056 	   000
+     13					;-------------------------------
+     14					; CTRL - TABLE
+     15
+     16	021402				CTR.CT:
+     17	021402	   005 	   007 	   010 	        .BYTE   005,    007,    010,    011,    012,    013
+	021405	   011 	   012 	   013
+     18	021410	   014 	   015 	   016 	        .BYTE   014,    015,    016,    017
+	021413	   017
+     19	021414	   030 	   027 	   033 	        .BYTE   030,    027,    033,    377	;vt15 -change ^Z to ^W
+	021417	   377
+     20					        .EVEN
+     21	021420				CTR.AT:
+     22	021420	022504 	025120 	022556 	        .WORD   V1$ENQ, V1$BEL, V1$BS,  V1$HT,  V1$LF,  V1$LF
+	021426	022646 	022700 	022700
+     23	021434	022700 	022636 	022436 	        .WORD   V1$LF,  V1$CR,  V1$SO,  V1$SI
+	021442	022464
+     24	021444	022366 	022414 	022374 	        .WORD   V1$CAN, V1$15,   V1$ESC
+     25
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 12-1
+Initialization and interface
+
+     26					;*******************************
+     27					;  ESC  - TABLE #1
+     28
+     29	021452				ES1.CT:
+     30	021452	   133 	   043 	   050 	        .BYTE   '[,     '#,     '(,     '),     'D,     'E
+	021455	   051 	   104 	   105
+     31	021460	   115 	   067 	   070 	        .BYTE   'M,     '7,     '8,     'H,     'c,     '=
+	021463	   110 	   143 	   075
+     32	021466	   076 	   132 	   127 	        .BYTE   '>,     'Z,     'W,     377
+	021471	   377
+     33					        .EVEN
+     34	021472				ES1.AT:
+     35	021472	022506 	022514 	022514 	        .WORD   E1.LON, E1.SHT, E1.SHT, E1.SHT, V1$LF,  V1$NL
+	021500	022514 	022700 	022674
+     36	021506	022740 	023160 	023172 	        .WORD   V1$RLF, V1$SAV, V1$RES, V1$STB, V1$INI, V1$KAP
+	021514	023214 	023234 	023374
+     37	021522	023404 	025032 	024506 	        .WORD   V1$KNM, V1$CNF, VX$SWC
+     38
+     39					;*******************************
+     40					;  ESC  - TABLE FOR VT52-MODE
+     41
+     42	021530				E52.CT:
+     43	021530	   101 	   102 	   103 	        .BYTE   'A,     'B,     'C,     'D,     'F,     'G
+	021533	   104 	   106 	   107
+     44	021536	   110 	   111 	   112 	        .BYTE   'H,     'I,     'J,     'K,     'Y,     'Z
+	021541	   113 	   131 	   132
+     45	021544	   075 	   076 	   074 	        .BYTE   '=,     '>,     '<,     377
+	021547	   377
+     46					        .EVEN
+     47	021550				E52.AT:
+     48	021550	022536 	022576 	022616 	        .WORD   V1$CUP, V1$CUD, V1$CUR, V1$CUL, V5$EGM, V5$XGM
+	021556	022556 	025074 	025074
+     49	021564	024206 	022740 	023110 	        .WORD   CURHOM, V1$RLF, V1$EOS, V1$EOL, E1.Y,   V1$CNF
+	021572	023016 	022522 	025032
+     50	021600	023374 	023404 	025054 	        .WORD   V1$KAP, V1$KNM, VT52EN
+     51
+     52					;*******************************
+     53					;  ESC  - TABLE #2
+     54
+     55	021606				ES2.CT:
+     56	021606	   101 	   102 	   103 	        .BYTE   'A,     'B,     'C,     'D,     'H,     'f
+	021611	   104 	   110 	   146
+     57	021614	   155 	   113 	   112 	        .BYTE   'm,     'K,     'J,     'q,     'r,     'g
+	021617	   161 	   162 	   147
+     58	021622	   150 	   154 	   156 	        .BYTE   'h,     'l,     'n,     'c,     'X,     'Y
+	021625	   143 	   130 	   131
+     59	021630	   132 	   377 			.byte	'Z, 377
+     60					        .EVEN
+     61	021632				ES2.AT:
+     62	021632	023414 	023436 	023460 	        .WORD   VL$CUU, VL$CUD, VL$CUF, VL$CUB, VL$POS, VL$POS
+	021640	023502 	023524 	023524
+     63	021646	023674 	023040 	023060 	        .WORD   VL$CAT, VL$ERL, VL$ERS, VL$LED, VL$SCR, VL$TAB
+	021654	024026 	024030 	024136
+     64	021662	024242 	024242 	024520 	        .WORD   VL$MOD, VL$MOD, VL$REP, VL$CNF, VL$COL, VL$BOD
+	021670	025024 	024432 	024420
+     65	021676	024404 				.word	VL$FON
+     66
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 12-2
+Initialization and interface
+
+     67					;=======================================================
+     68					;       .PSECT  V1.COD
+     69		021700 			v1.cod	== .
+     70					;*******************************
+     71					; VT-100 EMULATOR ENTRY
+     72					;       ENTER:  R0 - A CHAR
+     73
+     74	021700				V1$SYM::
+     75	021700	022700 	000177 		        CMP     #C.DEL, R0      ;
+     76	021704	001502 			        BEQ     999$            ; IGNORE DEL
+     77	021706	020027 	000040 		        CMP     R0, #C.SP       ;
+     78	021712	103011 			        BHIS    1$              ;
+     79					    ; CTRLS SHOULD BE PROCESSED IMMEDIATELLY !!!
+     80	021714	004737 	021152 		        CALL    SC$CER          ; ERASE CURSOR (IF NOT ALREADY ERASED)
+     81	021720	012701 	021402 		        MOV     #CTR.CT, R1     ;
+     82	021724	012702 	021420 		        MOV     #CTR.AT, R2     ;
+     83	021730	004737 	025330 		        CALL    TB$JMP          ;
+     84	021734	000463 			        BR      998$            ; GO OUT AND SET CURSOR
+     85	021736				1$:
+     86	021736	063707 	040046 		        ADD     ESC.J, PC       ;
+     87	021742	000405 			         BR 2$          ; NORMAL
+     88	021744	000463 			         BR 100$        ;
+     89	021746	000506 			         BR 200$        ;
+     90	021750	000543 			         BR 300$        ;
+     91	021752	000564 			         BR 400$        ; ESC-Y-LIN
+     92	021754	000574 			         BR 500$        ; ESC-Y-LIN-COL
+     93	021756				2$:
+     94	021756	113701 	040340 			movb	v.gmod,	r1	;
+     95	021762	001406 				beq	2222$		;
+     96	021764	105700 				tstb	r0		;
+     97	021766	100404 				bmi	2222$		;
+     98	021770	020027 	000140 			cmp	r0, #140	;???
+     99	021774	103401 				blo	2222$		;
+    100	021776	040100 				bic	r1,	r0	;GR mode ?
+    101	022000				2222$:
+    102	022000	013701 	040002 			mov	i15,	r1	;
+    103	022004	003404 				ble	2244$		;
+    104	022006	116000 	025524 			movb	i15t(r0),r0	;
+    105	022012	042700 	177400 			bic	#177400, r0	;
+    106	022016				2244$:
+    107	022016	013701 	040052 		        MOV     CURS.Y, R1      ;
+    108	022022	013702 	040054 		        MOV     CURS.X, R2      ;
+    109					;;;     CALL    V1$CUR          ;
+    110	022026	020237 	040070 			cmp	r2,	col.e
+    111	022032	001412 				beq	990$
+    112	022034	005237 	040054 			inc	curs.x
+    113	022040	032737 	000001 	040056 		bit	#1,	curs.t
+    114	022046	001002 				bne	980$
+    115	022050	000137 	020466 		        jmp     SC$SYC          ;sym+cur
+    116	022054				980$:
+    117	022054	000137 	020216 			jmp	SC$SYM		;sym
+    118	022060				990$:
+    119	022060	004737 	020216 			call	SC$SYM
+    120	022064	032737 	000200 	040050 	        BIT     #M.WRAP, V1.MOD ;
+    121	022072	001402 			        BEQ     995$            ;
+    122	022074	004737 	022674 		        CALL    V1$NL           ;
+    123	022100	000137 	021112 		995$:	jmp     SC$CUR          ;
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 12-3
+Initialization and interface
+
+    124
+    125	022104				998$:
+    126	022104	005737 	040046 			tst	esc.j
+    127	022110	001773 				beq	995$
+    128	022112	000207 			999$:   RETURN
+    129
+    130	022114				100$:                   ; 1-ST CHAR AFTER ESC
+    131	022114	110037 	040015 		        MOVB    R0, ES.BUF      ; SAVE IT FOR LATER
+    132	022120	005037 	040046 		        CLR     ESC.J           ; SET NORMAL STATE FOR THE SHORTEST ESCS
+    133	022124	032737 	000004 	040050 	        BIT     #M.ANSI, V1.MOD ;
+    134	022132	001005 			        BNE     101$            ;
+    135	022134	012701 	021530 		        MOV     #E52.CT, R1     ;
+    136	022140	012702 	021550 		        MOV     #E52.AT, R2     ;
+    137	022144	000404 			        BR      102$            ;
+    138	022146				101$:
+    139	022146	012701 	021452 		        MOV     #ES1.CT, R1     ;
+    140	022152	012702 	021472 		        MOV     #ES1.AT, R2     ;
+    141	022156				102$:
+    142	022156	004737 	025330 		        CALL    TB$JMP          ;
+    143	022162	000750 			        BR      998$            ;
+    144	022164				200$:                   ; 2-ND CHAR AFTER ESC (LONG FORMAT)
+    145	022164	110077 	015622 		        MOVB    R0, @ES.PTR     ; SAVE NEXT CHAR
+    146	022170	005237 	040012 		        INC     ES.PTR          ; CORRECT POINTER
+    147					                        ; END OF LONG ESC - LETTER !!!
+    148	022174	020027 	000100 		        CMP     R0, #100        ;
+    149	022200	101744 			        BLOS    999$            ; NO
+    150	022202	020027 	000133 		        CMP     R0, #133        ;
+    151	022206	103406 			        BLO     201$            ; YES
+    152	022210	020027 	000140 		        CMP     R0, #140        ;
+    153	022214	101736 			        BLOS    999$            ;NO
+    154	022216	020027 	000173 		        CMP     R0, #173        ;
+    155	022222	103333 			        BHIS    999$            ; NO
+    156	022224				201$:                   ; THIS IS THE END OF LONG ESC
+    157	022224	005037 	040046 		        CLR     ESC.J           ;
+    158	022230	012701 	021606 		        MOV     #ES2.CT, R1     ;
+    159	022234	012702 	021632 		        MOV     #ES2.AT, R2     ;
+    160	022240	012704 	040016 		        MOV     #ES.BUF+1, R4   ;
+    161	022244	013705 	040012 		        MOV     ES.PTR, R5      ;
+    162	022250	114500 			        MOVB    -(R5), R0       ;
+    163	022252	004737 	025330 		        CALL    TB$JMP          ;
+    164	022256	000712 			        BR      998$            ; EXIT AND SET CURSOR
+    165	022260				300$:                   ; THIS IS ESC IN SHORT FORMAT
+    166	022260	005037 	040046 		        CLR     ESC.J           ;
+    167	022264	113701 	040015 		        MOVB    ES.BUF, R1      ;
+    168	022270	012702 	025116 		        MOV     #ESC.LS, R2     ;
+    169	022274	022701 	000043 		        CMP     #'#, R1         ;
+    170	022300	001407 			        BEQ     301$            ;
+    171	022302	012702 	025076 		        MOV     #ESC.G0, R2     ;
+    172	022306	022701 	000050 		        CMP     #'(, R1         ;
+    173	022312	001402 			        BEQ     301$            ;
+    174	022314	012702 	025076 		        MOV     #ESC.G1, R2     ;
+    175	022320				301$:
+    176	022320	004712 			        CALL    @R2             ;
+    177	022322	000670 			        BR      998$
+    178	022324				400$:                   ; THIS IS ESC-Y PROCESSING IN VT52-MODE
+    179	022324	012737 	000012 	040046 	        MOV     #12, ESC.J      ;
+    180	022332	162700 	000037 		        SUB     #37, R0         ;
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 12-4
+Initialization and interface
+
+    181	022336	010003 			        MOV     R0, R3          ;
+    182	022340	004737 	023602 		        CALL    SETY            ;
+    183	022344	000662 			        BR      999$            ;
+    184	022346				500$:
+    185	022346	005037 	040046 		        CLR     ESC.J           ;
+    186	022352	162700 	000037 		        SUB     #37, R0         ;
+    187	022356	010003 			        MOV     R0, R3          ;
+    188	022360	004737 	023650 		        CALL    SETX            ;
+    189	022364	000647 			        BR      998$            ;
+    190
+    191					;*******************************
+    192	022366				V1$CAN::
+    193	022366	005037 	040046 		        CLR     ESC.J           ; CLEAR ESC-PROCESSIGN FLAG
+    194	022372	000207 			        RETURN
+    195					;*******************************
+    196	022374				V1$ESC::
+    197	022374	012737 	000002 	040046 	        MOV     #2, ESC.J       ; SET START OF ESC (ABORT IF IN PROGRESS)
+    198	022402	012737 	040016 	040012 	        MOV     #ES.BUF+1, ES.PTR ; SET POINTER TO START OF BUFFER
+    199	022410	005726 			        TST     (SP)+           ; RETURN WITHOUT CURSOR
+    200	022412	000207 			        RETURN
+    201					;*******************************
+    202	022414				V1$15:
+    203	022414	012737 	177777 	040002 		mov	#-1,	i15	;set i15 mode
+    204	022422	042737 	000004 	040050 		bic	#m.ansi, v1.mod	;
+    205	022430	004737 	025160 			call	hellow		;
+    206	022434	000207 				return			;
+    207					;*******************************
+    208	022436				V1$SO::
+    209	022436	005737 	040002 			tst	i15		;is it i15 ?
+    210	022442	001404 				beq	10$		;no
+    211	022444	012737 	025524 	040002 		mov	#i15t,	i15	;
+    212	022452	000414 				br	v1$enq		;
+    213	022454				10$:
+    214	022454	112737 	000340 	040340 		movb	#340, v.gmod	;enable graghics
+    215	022462	000410 				br	v1$enq		;
+    216	022464				V1$SI::
+    217	022464	005737 	040002 			tst	i15		;is it i15 ?
+    218	022470	001403 				beq	10$		;no
+    219	022472	012737 	177777 	040002 		mov	#-1,	i15	;
+    220	022500				10$:
+    221	022500	105037 	040340 			clrb	v.gmod		;desable graphics
+    222	022504				V1$ENQ::                ; TRANSMITE ANSWERBACK MESSAGE
+    223	022504	000207 			        RETURN
+    224					.ENABL  LSB
+    225					;*******************************
+    226	022506				E1.LON::
+    227	022506	012700 	000004 		        MOV     #4, R0          ;
+    228	022512	000405 			        BR      1$              ;
+    229	022514				E1.SHT::
+    230	022514	012700 	000006 		        MOV     #6, R0          ;
+    231	022520	000402 			        BR      1$              ;
+    232	022522				E1.Y::
+    233	022522	012700 	000010 		        MOV     #10, R0         ;
+    234	022526				1$:
+    235	022526	010037 	040046 		        MOV     R0, ESC.J       ;
+    236	022532	005726 			        TST     (SP)+           ;
+    237	022534	000207 			        RETURN
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 12-5
+Initialization and interface
+
+    238					.DSABL  LSB
+    239					;*******************************
+    240					; CURSOR STEPS: UP, DOWN, LEFT, RIGHT
+    241					;       EXIT :  C-SET - O.K.
+    242					;               C-CLR - CANNOT MOVE
+    243	022536				V1$CUP::
+    244	022536	023737 	040052 	040074 	        CMP     CURS.Y, TOP.L           ;
+    245	022544	001403 			        BEQ     1$                      ;
+    246	022546	005337 	040052 		        DEC     CURS.Y                  ;
+    247	022552	000261 			        SEC                             ;
+    248	022554	000207 			1$:     RETURN
+    249	022556				V1$BS::
+    250	022556				V1$CUL::
+    251	022556	023737 	040054 	040066 	        CMP     CURS.X, COL.S           ;
+    252	022564	001403 			        BEQ     1$                      ;
+    253	022566	005337 	040054 		        DEC     CURS.X                  ;
+    254	022572	000261 			        SEC                             ;
+    255	022574	000207 			1$:     RETURN
+    256	022576				V1$CUD::
+    257	022576	023737 	040052 	040076 	        CMP     CURS.Y, BOT.L           ;
+    258	022604	001403 			        BEQ     1$                      ;
+    259	022606	005237 	040052 		        INC     CURS.Y                  ;
+    260	022612	000261 			        SEC                             ;
+    261	022614	000207 			1$:     RETURN
+    262	022616				V1$CUR::
+    263	022616	023737 	040054 	040070 	        CMP     CURS.X, COL.E           ;
+    264	022624	001403 			        BEQ     1$                      ;
+    265	022626	005237 	040054 		        INC     CURS.X                  ;
+    266	022632	000261 			        SEC                             ;
+    267	022634	000207 			1$:     RETURN
+    268					;*******************************
+    269	022636				V1$CR::
+    270	022636	013737 	040066 	040054 	        MOV     COL.S, CURS.X   ;
+    271	022644	000207 			        RETURN
+    272					;*******************************
+    273	022646				V1$HT::                 ; HORISONTAL TAB
+    274	022646	004737 	022616 		        CALL    V1$CUR          ;
+    275	022652	103007 			        BCC     1$              ;
+    276	022654	013700 	040054 		        MOV     CURS.X, R0      ; R0 = CURS.X
+    277	022660	163700 	040066 		        SUB     COL.S, R0       ;
+    278	022664	105760 	040100 		        TSTB    V1.TAB(R0)      ;
+    279	022670	001766 			        BEQ     V1$HT           ;
+    280	022672				1$:
+    281	022672	000207 			        RETURN
+    282					.ENABL  LSB     ;<<<<<<<<<<<<<<<<
+    283					;*******************************
+    284	022674				V1$NL::                 ; NEW LINE
+    285	022674	004737 	022636 		        CALL    V1$CR           ;
+    286					;*******************************
+    287	022700				V1$LF::                 ; LINE FEED
+    288	022700	004737 	022576 		        CALL    V1$CUD          ;
+    289	022704	103410 			        BCS     12$             ;
+    290	022706	013701 	040074 		        MOV     top.L, r1       ;
+    291	022712	004737 	022774 			call	V1$CR1		;clear line
+    292	022716	013702 	040076 			mov	bot.l, r2	;
+    293	022722	004737 	020770 		        CALL    SC$SCU          ;
+    294	022726				12$:
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 12-6
+Initialization and interface
+
+    295	022726	032737 	000001 	040050 	        BIT     #M.NL, V1.MOD   ;
+    296	022734	001340 			        BNE     V1$CR           ;
+    297	022736				1$:
+    298	022736	000207 			        RETURN                  ;
+    299					;*******************************
+    300	022740				V1$RLF::                ; REVERSE LINE FEED
+    301	022740	004737 	022536 		        CALL    V1$CUP          ;
+    302	022744	103774 			        BCS     1$              ;
+    303	022746	013701 	040076 		        MOV     bot.L, r1       ;
+    304	022752	004737 	022774 			call	V1$CR1		;
+    305	022756	013701 	040074 			mov	top.l, r1	;
+    306	022762	004737 	021030 		        CALL    SC$SCD          ;
+    307	022766	000207 			        RETURN
+    308					.DSABL  LSB     ;>>>>>>>>>>>>>>>>
+    309					.ENABL  LSB     ;<<<<<<<<<<<<<<<<
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 13
+Initialization and interface
+
+      1						.include	"vt2.mac"
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 14
+Initialization and interface
+
+					;*******************************
+      2	022770				V1$ELN::                ; ERASE THE LINE
+      3	022770	013701 	040052 		        MOV     CURS.Y, R1      ;
+      4	022774				V1$CR1:
+      5	022774	010102 			        MOV     R1, R2          ;
+      6	022776	004737 	020000 		        CALL    SC$CLS          ;
+      7	023002	000207 			        RETURN
+      8	023004				V1$SOL::                ; ERASE LINE FROM START TO CUR
+      9	023004	013702 	040066 		        MOV     COL.S, R2       ;
+     10	023010	013703 	040054 		        MOV     CURS.X, R3      ;
+     11	023014	000404 			        BR      1$              ;
+     12	023016				V1$EOL::                ; ERASE LINE FROM CUR TO END
+     13	023016	013702 	040054 		        MOV     CURS.X, R2      ;
+     14	023022	013703 	040070 		        MOV     COL.E, R3       ;
+     15	023026				1$:
+     16	023026	013701 	040052 		        MOV     CURS.Y, R1      ;
+     17	023032	004737 	020126 		        CALL    SC$CLL          ;
+     18	023036	000207 			        RETURN
+     19					.DSABL  LSB     ;>>>>>>>>>>>>>>>>
+     20	023040				VL$ERL::                ; LINE ERASE DISPATCHER
+     21	023040	004737 	025344 		        CALL    GETNUM          ;
+     22	023044	001764 			        BEQ     V1$EOL          ;
+     23	023046	005303 			        DEC     R3              ;
+     24	023050	001755 			        BEQ     V1$SOL          ;
+     25	023052	005303 			        DEC     R3              ;
+     26	023054	001745 			        BEQ     V1$ELN          ;
+     27	023056	000207 			        RETURN
+     28					;*******************************
+     29					.ENABL  LSB     ;<<<<<<<<<<<<<<<<
+     30	023060				VL$ERS::                ; ERASE SCREEN DISPATCHER
+     31	023060	004737 	025344 		        CALL    GETNUM          ;
+     32	023064	001411 			        BEQ     V1$EOS          ;
+     33	023066	005303 			        DEC     R3              ;
+     34	023070	001417 			        BEQ     V1$SOS          ;
+     35	023072	005303 			        DEC     R3              ;
+     36	023074	001030 			        BNE     3$              ; ILLEGAL FUNCTION
+     37	023076				V1$ERS::                ; ERASE ALL SCREEN
+     38	023076	013701 	040060 		        MOV     LIN.S, R1       ;
+     39	023102	013702 	040062 		        MOV     LIN.E, R2       ;
+     40	023106	000421 			        BR      2$              ;
+     41	023110				V1$EOS::                ; ERASE SCREEN FROM CUR TO END
+     42	023110	004737 	023016 		        CALL    V1$EOL          ;
+     43	023114	013701 	040052 		        MOV     CURS.Y, R1      ;
+     44	023120	013702 	040062 		        MOV     LIN.E, R2       ;
+     45	023124	005201 			        INC     R1              ;
+     46	023126	000407 			        BR      1$              ;
+     47	023130				V1$SOS::                ; ERASE SCREEN FROM START TO CUR
+     48	023130	004737 	023004 		        CALL    V1$SOL          ;
+     49	023134	013701 	040060 		        MOV     LIN.S, R1       ;
+     50	023140	013702 	040052 		        MOV     CURS.Y, R2      ;
+     51	023144	005302 			        DEC     R2              ;
+     52	023146				1$:
+     53	023146	020102 			        CMP     R1, R2          ;
+     54	023150	101002 			        BHI     3$              ;
+     55	023152				2$:
+     56	023152	004737 	020000 		        CALL    SC$CLS          ;
+     57	023156				3$:
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 14-1
+Initialization and interface
+
+     58	023156	000207 			        RETURN
+     59					.DSABL  LSB     ;>>>>>>>>>>>>>>>>
+     60					.ENABL  LSB     ;<<<<<<<<<<<<<<<<
+     61					;*******************************
+     62					; SAVE/RESTORE CURSOR AND ATTRIBUTES
+     63	023160				V1$SAV::
+     64	023160	012700 	040050 		        MOV     #V1.MOD, R0     ;
+     65	023164	012701 	040036 		        MOV     #SAVE.C, R1     ;
+     66	023170	000404 			        BR      10$             ;
+     67	023172				V1$RES::
+     68	023172	012701 	040050 		        MOV     #V1.MOD, R1     ;
+     69	023176	012700 	040036 		        MOV     #SAVE.C, R0     ;
+     70	023202				10$:
+     71	023202	012021 				mov	(r0)+, (r1)+	;
+     72	023204	012021 			        MOV     (R0)+, (R1)+    ;
+     73	023206	012021 			        MOV     (R0)+, (R1)+    ;
+     74	023210	012021 			        MOV     (R0)+, (R1)+    ;
+     75	023212	000207 			        RETURN
+     76					.DSABL  LSB     ;>>>>>>>>>>>>>>>>
+     77					;*******************************
+     78					; SET TAB STOP
+     79	023214				V1$STB::
+     80	023214	013700 	040054 		        MOV     CURS.X, R0      ;
+     81	023220	163700 	040066 		        SUB     COL.S, R0       ;
+     82	023224	112760 	000377 	040100 	        MOVB    #377, V1.TAB(R0);
+     83	023232	000207 			        RETURN
+     84					;*******************************
+     85					; INIT VT100 ON POWER ON
+     86	023234				V1$INI::
+     87	023234	112737 	000033 	040014 	        MOVB    #C.ESC, ESCAPE  ;
+     88	023242	012701 	000001 		        MOV     #1, R1          ;
+     89					;       MOV     V.LMAX, R2	;
+     90	023246	012702 	000030 			mov	#ll-1,	r2	;;;
+     91					;       MOV     V.CMAX, R3	;
+     92	023252	012703 	000120 			mov	#cc-4,	r3	;;;
+     93	023256	012705 	040046 		        MOV     #ESC.J, R5      ;
+     94
+     95	023262	005025 			        CLR     (R5)+           ; ESC.J
+     96	023264	012725 	000204 		        MOV     #M.ANSI+M.WRAP, (R5)+ ; V1.MOD
+     97	023270	010125 			        MOV     R1, (R5)+       ; CURS.Y
+     98	023272	010125 			        MOV     R1, (R5)+       ; CURS.X
+     99	023274	005025 			        CLR     (R5)+           ; CURS.T
+    100	023276	010125 			        MOV     R1, (R5)+       ; LIN.S
+    101	023300	010225 			        MOV     R2, (R5)+       ; LIN.E
+    102	023302	010225 			        MOV     R2, (R5)+       ; LIN.N
+    103	023304	010125 			        MOV     R1, (R5)+       ; COL.S
+    104	023306	010325 			        MOV     R3, (R5)+       ; COL.E
+    105	023310	010325 			        MOV     R3, (R5)+       ; COL.N
+    106	023312	010125 			        MOV     R1, (R5)+       ; TOP.L
+    107	023314	010225 			        MOV     R2, (R5)+       ; BOT.L
+    108
+    109	023316	005000 			        CLR     R0              ; V1.TAB
+    110	023320	012704 	000240 		        MOV     #COLMAX, R4     ;
+    111	023324				1$:
+    112	023324	032700 	000007 		        BIT     #7, R0          ;
+    113	023330	001003 			        BNE     2$              ;
+    114	023332	112725 	000377 		        MOVB    #377, (R5)+     ;
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 14-2
+Initialization and interface
+
+    115	023336	000401 			        BR      3$              ;
+    116	023340				2$:
+    117	023340	105025 			        CLRB    (R5)+           ;
+    118	023342				3$:
+    119	023342	005200 			        INC     R0              ;
+    120	023344	077411 			        SOB     R4, 1$          ;
+    121
+    122	023346	105025 				clrb	(r5)+		;v.gmod
+    123	023350	005037 	040010 			clr	cur.m		;
+    124	023354	005001 			        CLR     R1              ; CLEAR SCREEN
+    125	023356	013702 	040076 		        MOV     BOT.L, R2       ;
+    126	023362	004737 	020000 		        CALL    SC$CLS          ;
+    127	023366	004737 	025160 		        CALL    HELLOW          ;
+    128	023372	000207 			        RETURN
+    129					;*******************************
+    130					; SET APPLICATION OR NUMERIC KEYBORD
+    131	023374				V1$KAP::
+    132	023374	052737 	002000 	040050 	        BIS     #M.KEYP, V1.MOD ;
+    133	023402	000207 			        RETURN
+    134	023404				V1$KNM::
+    135	023404	042737 	002000 	040050 	        BIC     #M.KEYP, V1.MOD ;
+    136	023412	000207 			        RETURN
+    137					;*******************************
+    138					; CURSOR UP PN LINES
+    139	023414				VL$CUU::
+    140	023414	004737 	025344 		        CALL    GETNUM          ;
+    141	023420	001001 			        BNE     1$              ;
+    142	023422	005203 			        INC     R3              ;
+    143	023424				1$:
+    144	023424	004737 	022536 		        CALL    V1$CUP          ;
+    145	023430	103001 			        BCC     2$              ;
+    146	023432	077304 			        SOB     R3, 1$          ;
+    147	023434				2$:
+    148	023434	000207 			        RETURN
+    149					;*******************************
+    150					; CURSOR DOWN PN LINES
+    151	023436				VL$CUD::
+    152	023436	004737 	025344 		        CALL    GETNUM          ;
+    153	023442	001001 			        BNE     1$              ;
+    154	023444	005203 			        INC     R3              ;
+    155	023446				1$:
+    156	023446	004737 	022576 		        CALL    V1$CUD          ;
+    157	023452	103001 			        BCC     2$              ;
+    158	023454	077304 			        SOB     R3, 1$          ;
+    159	023456				2$:
+    160	023456	000207 			        RETURN
+    161					;*******************************
+    162					; CURSOR FORWARD PN LINES
+    163	023460				VL$CUF::
+    164	023460	004737 	025344 		        CALL    GETNUM          ;
+    165	023464	001001 			        BNE     1$              ;
+    166	023466	005203 			        INC     R3              ;
+    167	023470				1$:
+    168	023470	004737 	022616 		        CALL    V1$CUR          ;
+    169	023474	103001 			        BCC     2$              ;
+    170	023476	077304 			        SOB     R3, 1$          ;
+    171	023500				2$:
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 14-3
+Initialization and interface
+
+    172	023500	000207 			        RETURN
+    173					;*******************************
+    174					; CURSOR BACKWARD PN LINES
+    175	023502				VL$CUB::
+    176	023502	004737 	025344 		        CALL    GETNUM          ;
+    177	023506	001001 			        BNE     1$              ;
+    178	023510	005203 			        INC     R3              ;
+    179	023512				1$:
+    180	023512	004737 	022556 		        CALL    V1$CUL          ;
+    181	023516	103001 			        BCC     2$              ;
+    182	023520	077304 			        SOB     R3, 1$          ;
+    183	023522				2$:
+    184	023522	000207 			        RETURN
+    185					;*******************************
+    186	023524				VL$POS::                ; DIRECT ADDR CURSOR
+    187	023524	004737 	025344 		        CALL    GETNUM          ; CURS.X
+    188	023530	020405 				cmp	r4, r5		;
+    189	023532	001012 				bne	10$
+    190	023534	122714 	000073 			cmpb	#';, (r4)	;???
+    191	023540	001407 				beq	10$		;!!!
+    192	023542	005703 				tst	r3		;set z in ps
+    193	023544	004737 	023602 			call	sety		;
+    194	023550	005003 				clr	r3		;
+    195	023552	004737 	023650 			call	setx		;
+    196	023556	000207 				return
+    197	023560				10$:
+    198	023560	010302 				mov	r3, r2		;save it
+    199	023562	004737 	025344 			call	getnum		;
+    200	023566	004737 	023602 			call	sety		;
+    201	023572	010203 				mov	r2, r3		;
+    202	023574	004737 	023650 			call	setx		;
+    203	023600	000207 				return
+    204
+    205	023602				SETY:
+    206	023602	001001 			        BNE     1$              ;
+    207	023604	005203 			        INC     R3              ;
+    208	023606				1$:
+    209	023606	013701 	040062 		        MOV     LIN.E, R1       ;
+    210	023612	032737 	000100 	040050 	        BIT     #M.REL, V1.MOD  ;
+    211	023620	001405 			        BEQ     2$              ;
+    212	023622	063703 	040074 		        ADD     TOP.L, R3       ;
+    213	023626	005303 			        DEC     R3              ;
+    214	023630	013701 	040076 		        MOV     BOT.L, R1       ;
+    215	023634				2$:
+    216	023634	020301 			        CMP     R3, R1          ;
+    217	023636	101401 			        BLOS    3$              ;
+    218	023640	010103 			        MOV     R1, R3          ;
+    219	023642				3$:
+    220	023642	010337 	040052 		        MOV     R3, CURS.Y      ;
+    221	023646	000207 			        RETURN
+    222	023650				SETX:
+    223	023650	001001 			        BNE     1$              ;
+    224	023652	005203 			        INC     R3              ;
+    225	023654				1$:
+    226	023654	020337 	040070 		        CMP     R3, COL.E       ;
+    227	023660	101402 			        BLOS    2$              ;
+    228	023662	013703 	040070 		        MOV     COL.E, R3       ;
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 14-4
+Initialization and interface
+
+    229	023666				2$:
+    230	023666	010337 	040054 		        MOV     R3, CURS.X      ;
+    231	023672	000207 			        RETURN
+    232
+    233					;*******************************
+    234	023674				VL$CAT::                ; CHAR ATTRIBUTES
+    235	023674	005002 			        CLR     R2              ; COUNTER OF ARGS
+    236	023676	020405 				cmp	r4, r5		;
+    237	023700	001442 				beq	51$		;
+    238	023702				1$:
+    239	023702	020405 			        CMP     R4, R5          ;
+    240	023704	001434 			        BEQ     4$              ;
+    241	023706	005202 			        INC     R2              ;
+    242	023710	004737 	025344 		        CALL    GETNUM          ;
+    243	023714	001002 			        BNE     2$              ;
+    244	023716	005046 			        CLR     -(SP)           ;
+    245	023720	000770 			        BR      1$              ;
+    246	023722				2$:
+    247	023722	012700 	010000 		        MOV     #C.BOLD, R0     ;
+    248	023726	020327 	000001 		        CMP     R3, #1          ;
+    249	023732	001417 			        BEQ     3$              ;
+    250	023734	012700 	020000 		        MOV     #C.UNDS, R0     ;
+    251	023740	020327 	000004 		        CMP     R3, #4          ;
+    252	023744	001412 			        BEQ     3$              ;
+    253	023746	012700 	040000 		        MOV     #C.BLNK, R0     ;
+    254	023752	020327 	000005 		        CMP     R3, #5          ;
+    255	023756	001405 			        BEQ     3$              ;
+    256	023760	012700 	100000 		        MOV     #C.RVRS, R0     ;
+    257	023764	020327 	000007 		        CMP     R3, #7          ;
+    258	023770	001344 			        BNE     1$
+    259	023772				3$:
+    260	023772	010046 			        MOV     R0, -(SP)       ;
+    261	023774	000742 			        BR      1$              ;
+    262	023776				4$:
+    263	023776				5$:
+    264	023776	005302 			        DEC     R2              ;
+    265	024000	100411 			        BMI     7$              ;
+    266	024002	012600 			        MOV     (SP)+, R0       ;
+    267	024004	001004 			        BNE     6$              ;
+    268	024006				51$:
+    269	024006	042737 	170000 	040050 	        BIC     #C.BOLD+C.UNDS+C.BLNK+C.RVRS, v1.mod ; ALL OFF
+    270	024014	000770 			        BR      5$              ;
+    271	024016				6$:
+    272	024016	050037 	040050 		        BIS     R0, v1.mod      ;
+    273	024022	000765 			        BR      5$              ;
+    274	024024				7$:
+    275								;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    276								; this is the place to do something at last
+    277								;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    278	024024	000207 			        RETURN
+    279					;*******************************
+    280	024026				VL$LED::                ; SWITCH LEDS ON/OFF
+    281	024026	000207 			        RETURN
+    282					.ENABL  LSB     ;<<<<<<<<<<<<<<<<
+    283					;*******************************
+    284	024030				VL$SCR::                ; SET SCROLLING REGION
+    285	024030	004737 	025344 		        CALL    GETNUM          ;
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 14-5
+Initialization and interface
+
+    286	024034	013701 	040062 			mov	lin.e, r1	;
+    287	024040	020405 				cmp	r4, r5		; 1 arg ?
+    288	024042	001007 				bne	20$		; no, 2 !!!
+    289	024044	005703 				tst	r3		;
+    290	024046	001001 				bne	10$		;
+    291	024050	005203 				inc	r3		;
+    292	024052				10$:
+    293	024052	010102 				mov	r1, r2		;
+    294	024054	020301 				cmp	r3, r1		;
+    295	024056	101420 				blos	37$		;
+    296	024060	000207 				return
+    297	024062				20$:
+    298	024062	010302 				mov	r3, r2		;
+    299	024064	001001 				bne	21$		;
+    300	024066	010102 				mov	r1, r2		;
+    301	024070				21$:
+    302	024070	004737 	025344 			call	getnum		;
+    303	024074	001001 				bne	25$		;
+    304	024076	005203 				inc	r3		;
+    305	024100				25$:
+    306	024100	020301 				cmp	r3, r1		;
+    307	024102	101401 				blos	30$		;
+    308	024104	010103 				mov	r1, r3		;
+    309	024106				30$:
+    310	024106	020201 				cmp	r2, r1		;
+    311	024110	101401 				blos	35$		;
+    312	024112	010102 				mov	r1, r2		;
+    313	024114				35$:
+    314	024114	020302 				cmp	r3, r2		;
+    315	024116	103006 				bhis	40$		;
+    316	024120				37$:
+    317	024120	010337 	040074 			mov	r3, top.l	;
+    318	024124	010237 	040076 			mov	r2, bot.l	;
+    319	024130	004737 	024206 			call	curhom		;
+    320	024134	000207 			40$:	return			;
+    321
+    322					.DSABL  LSB     ;>>>>>>>>>>>>>>>>
+    323					;*******************************
+    324	024136				VL$TAB::                ; TABS CONTROL
+    325	024136	004737 	025344 		        CALL    GETNUM          ;
+    326	024142	001007 			        BNE     1$              ;
+    327	024144	013700 	040054 		        MOV     CURS.X, R0      ; CLEAR TAB AT CUR
+    328	024150	163700 	040066 		        SUB     COL.S, R0       ;
+    329	024154	105060 	040100 		        CLRB    V1.TAB(R0)      ;
+    330	024160	000207 			        RETURN
+    331	024162				1$:
+    332	024162	020327 	000003 		        CMP     R3, #3          ;
+    333	024166	001006 			        BNE     3$              ; ILLEGAL FUNCTION
+    334	024170	012700 	040100 		        MOV     #V1.TAB, R0     ; CLEAR ALL TABS
+    335	024174	013701 	040072 		        MOV     COL.N, R1       ;
+    336	024200				2$:
+    337	024200	105020 			        CLRB    (R0)+           ;
+    338	024202	077102 			        SOB     R1, 2$          ;
+    339	024204				3$:
+    340	024204	000207 			        RETURN
+    341					;*******************************
+    342	024206				CURHOM::                 ; CURSOR TO HOME
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 14-6
+Initialization and interface
+
+    343	024206	013737 	040066 	040054 	        MOV     COL.S, CURS.X   ;
+    344	024214	013737 	040060 	040052 	        MOV     LIN.S, CURS.Y   ;
+    345	024222	032737 	000100 	040050 	        BIT     #M.REL, V1.MOD  ;
+    346	024230	001403 			        BEQ     1$              ;
+    347	024232	013737 	040074 	040052 	        MOV     TOP.L, CURS.Y   ;
+    348	024240				1$:
+    349	024240	000207 			        RETURN
+    350					;*******************************
+    351	024242				VL$MOD::                ; SET/RESET VT MODES
+    352	024242	110002 			        MOVB    R0, R2          ; SAVE CMD-CHAR
+    353	024244	004737 	025344 		        CALL    GETNUM          ;
+    354	024250	001454 			        BEQ     9999$           ; ILLEGAL
+    355	024252	020327 	000024 		        CMP     R3, #20.        ;
+    356	024256	001001 			        BNE     1$              ;
+    357	024260	005003 			        CLR     R3              ;
+    358	024262				1$:
+    359	024262	020327 	000012 		        CMP     R3, #10.        ;
+    360	024266	101045 			        BHI     9999$           ; ILLEGAL
+    361	024270	012700 	000001 		        MOV     #1, R0          ; A BIT TO SHIFT
+    362	024274	072003 			        ASH     R3, R0          ; PREPARE MASK
+    363	024276	020227 	000150 		        CMP     R2, #'h         ; IS IT SET ?
+    364	024302	001003 			        BNE     2$              ;
+    365	024304	050037 	040050 		        BIS     R0, V1.MOD      ;
+    366	024310	000405 			        BR      3$              ;
+    367	024312				2$:
+    368	024312	020227 	000154 		        CMP     R2, #'l         ; IS IT RESET ?
+    369	024316	001031 			        BNE     9999$           ;
+    370	024320	040037 	040050 		        BIC     R0, V1.MOD      ;
+    371	024324				3$:
+    372					;----------------------- SPECIAL PROCESSING
+    373	024324	022703 	000006 		        CMP     #6., R3         ; REL/ABS CHANGE ?
+    374	024330	001003 			        BNE     4$              ;
+    375	024332	004737 	024206 		        CALL    CURHOM          ;
+    376	024336	000421 			        BR      9999$           ;
+    377	024340				4$:
+    378	024340	022703 	000002 			cmp	#2., r3		;ansi / vt52 ?
+    379	024344	001011 				bne	6$		;
+    380	024346	032737 	000004 	040050 		bit	#m.ansi, v1.mod ; ?
+    381	024354	001402 				beq	5$		;
+    382	024356	005037 	040002 			clr	i15		;
+    383	024362				5$:
+    384	024362	004737 	025160 			call	hellow		;
+    385	024366	000405 				br	9999$		;
+    386	024370				6$:
+    387	024370	022703 	000005 		        CMP     #5., R3         ;
+    388	024374	001002 			        BNE     9999$           ;
+    389	024376	004737 	020210 		        CALL    SC$REV          ;
+    390	024402				9999$:
+    391	024402	000207 			        RETURN
+    392
+    393					.ENABL  LSB     ;<<<<<<<<<<<<<<<<
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 15
+Initialization and interface
+
+      1						.include	"vt3.mac"
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 16
+Initialization and interface
+
+					;*******************************
+      2	024404				VL$FON::		; set new font
+      3	024404	004737 	025344 			call	getnum		;
+      4	024410	010337 	161220 			mov	r3,	@#ur0	;set par to new font
+      5	024414	000137 	025160 			jmp	hellow		;
+      6					;*******************************
+      7	024420				VL$BOD::                ; SET border COLOR FOR SCREEN
+      8	024420	004737 	025344 		        CALL    GETNUM          ;
+      9	024424	110337 	025460 			movb	r3, lap		;
+     10	024430	000416 				br	mopal		;
+     11	024432				VL$COL::		; set F-color and B-color for screen
+     12	024432	004737 	025344 			call	getnum		;
+     13	024436	110337 	025477 			movb	r3, lap+15.	;
+     14	024442	004737 	025344 			call	getnum		;
+     15	024446	110337 	025467 			movb	r3, lap+07.	;
+     16	024452	110337 	025473 			movb	r3, lap+11.	;
+     17	024456	110337 	025475 			movb	r3, lap+13.	;
+     18	024462	110337 	025476 			movb	r3, lap+14.	;
+     19	024466				mopal:
+     20	024466					PLMOD	#parea		;
+     21	024504	000207 			        RETURN
+     22					.DSABL  LSB     ;>>>>>>>>>>>>>>>>
+     23					;*******************************
+     24	024506				VX$SWC::                ; SWITCH CURSOR
+     25	024506	012700 	000001 		        MOV     #1, R0          ;
+     26	024512	074037 	040056 		        XOR     R0, CURS.T      ;
+     27	024516	000207 			        RETURN
+     28					.ENABL  LSB     ;<<<<<<<<<<<<<<<<
+     29					;******************* ************
+     30	024520				VL$REP::                ; REQUEST REPORT
+     31	024520	004737 	025344 		        CALL    GETNUM          ;
+     32	024524	022703 	000011 			cmp	#9.,	r3	;is it state-report ?
+     33	024530	001046 				bne	19$		;no
+     34	024532	012703 	021351 			mov	#vtstate+2, r3	;pointer to report buffer
+     35	024536	012700 	000060 			mov	#'0,	r0	;
+     36	024542	010001 				mov	r0,	r1	;
+     37	024544	013702 	040050 			mov	v1.mod,	r2	;
+     38	024550	032702 	020000 			bit	#c.unds, r2	;
+     39	024554	001401 				beq	10$		;
+     40	024556	005200 				inc	r0		;
+     41	024560	110023 			10$:	movb	r0,	(r3)+	;
+     42	024562	010100 				mov	r1,	r0	;
+     43					;	bit	#c.rvrs, v1.mod	;
+     44	024564	005702 				tst	r2		;
+     45	024566	100001 				bpl	11$		;
+     46	024570	005200 				inc	r0		;
+     47	024572	110023 			11$:	movb	r0,	(r3)+	;
+     48	024574	010100 				mov	r1,	r0	;
+     49	024576	032702 	000001 			bit	#m.nl,	r2	;
+     50	024602	001401 				beq	12$		;
+     51	024604	005200 				inc	r0		;
+     52	024606	110023 			12$:	movb	r0,	(r3)+	;
+     53	024610	010100 				mov	r1,	r0	;
+     54	024612	032702 	000200 			bit	#m.wrap,r2	;
+     55	024616	001401 				beq	13$		;
+     56	024620	005200 				inc	r0		;
+     57	024622	110023 			13$:	movb	r0,	(r3)+	;
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 16-1
+Initialization and interface
+
+     58	024624	010100 				mov	r1,	r0	;;;
+     59	024626	005737 	040056 			tst	curs.t		;
+     60	024632	001401 				beq	14$		;
+     61	024634	005200 				inc	r0		;
+     62	024636	110023 			14$:	movb	r0,	(r3)+	;
+     63	024640	012703 	021347 			mov	#vtstate,r3	;
+     64	024644	000445 				br	reporc		;
+     65	024646				19$:
+     66	024646	162703 	000006 		        SUB     #6, R3          ;
+     67	024652	001412 			        BEQ     100$            ;
+     68	024654	005203 			        INC     R3              ;
+     69	024656	001043 			        BNE     999$            ;
+     70					                        ; TERMINAL STATUS (ALWAYS OK !)
+     71	024660	012703 	040016 		        MOV     #ES.BUF+1, R3   ;
+     72	024664	112723 	000060 		        MOVB    #'0, (R3)+      ;
+     73	024670	112723 	000156 		        MOVB    #'n, (R3)+      ;
+     74	024674	105023 			        CLRB    (R3)+           ;
+     75	024676	000426 			        BR      REPORT          ;
+     76
+     77	024700				100$:                   ; REPORT CURSOR POSITION
+     78	024700	012702 	040016 		        MOV     #ES.BUF+1, R2   ;
+     79	024704	013701 	040052 		        MOV     CURS.Y, R1      ; THIS IS CURS.Y
+     80	024710	032737 	000100 	040050 	        BIT     #M.REL, V1.MOD  ;
+     81	024716	001403 			        BEQ     1$              ;
+     82	024720	063701 	040074 		        ADD     TOP.L, R1       ;
+     83	024724	005301 			        DEC     R1              ;
+     84	024726				1$:
+     85	024726	004737 	024770 		        CALL    DECOUT          ;
+     86	024732	112722 	000073 		        MOVB    #';, (R2)+      ;
+     87	024736	013701 	040054 		        MOV     CURS.X, R1      ; THIS IS CURS.X
+     88	024742	004737 	024770 		        CALL    DECOUT          ;
+     89	024746	112722 	000122 		        MOVB    #'R, (R2)+      ;
+     90	024752	105022 			        CLRB    (R2)+           ;
+     91
+     92	024754				REPORT:
+     93	024754	012703 	040014 		        MOV     #ESCAPE, R3     ;
+     94	024760				REPORC:
+     95							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     96							;string, pointered by R3 should be reported !!!!!!!!
+     97							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     98	024760					RESPON	r3		; it is here ...
+     99	024766				999$:
+    100	024766	000207 			        RETURN
+    101
+    102	024770				DECOUT:
+    103	024770	005046 			        CLR     -(SP)           ; MARKER
+    104	024772				20$:
+    105	024772	005000 			        CLR     R0              ;
+    106	024774	071027 	000012 		        DIV     #10., R0        ;
+    107	025000	062701 	000060 		        ADD     #'0, R1         ;
+    108	025004	010146 			        MOV     R1, -(SP)       ;
+    109	025006	010001 			        MOV     R0, R1          ;
+    110	025010	001370 			        BNE     20$             ;
+    111	025012				21$:
+    112	025012	012600 			        MOV     (SP)+, R0       ;
+    113	025014	001402 			        BEQ     22$             ;
+    114	025016	110022 			        MOVB    R0, (R2)+       ;
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 16-2
+Initialization and interface
+
+    115	025020	000774 			        BR      21$             ;
+    116	025022				22$:
+    117	025022	000207 			        RETURN
+    118					;*******************************
+    119	025024				VL$CNF::                ; REQUEST CONFIGURATION
+    120	025024	004737 	025344 		        CALL    GETNUM          ;
+    121	025030	001374 			        BNE     22$             ;
+    122	025032				V1$CNF::
+    123	025032	012703 	021333 		        MOV     #VTBASE, R3     ;
+    124	025036	032737 	000004 	040050 	        BIT     #M.ANSI, V1.MOD ;
+    125	025044	001345 			        BNE     REPORC          ;
+    126	025046	012703 	021343 		        MOV     #VT52, R3       ;
+    127	025052	000742 			        BR      REPORC          ;
+    128					.DSABL  LSB     ;>>>>>>>>>>>>>>>>
+    129					;*******************************
+    130	025054				VT52EN::                ; END OF VT52 MODE (GOTO VT100)
+    131	025054	005037 	040002 			clr	i15		;
+    132	025060	052737 	000004 	040050 	        BIS     #M.ANSI, V1.MOD ;
+    133	025066	004737 	025160 			call	hellow		;
+    134	025072	000207 			        RETURN
+    135					;*******************************
+    136	025074				V5$EGM::                ; ENTER GR-MODE
+    137	025074				V5$XGM::                ; EXIT  GR-MODE
+    138	025074	000207 			        RETURN
+    139					;*******************************
+    140	025076				ESC.G0::                ; SWITCH CHARACTER SET TO "G0"
+    141	025076				ESC.G1::                ; SWITCH CHARACTER SET TO "G1"
+    142	025076	105037 	040340 			clrb	v.gmod		;
+    143	025102	120027 	000100 			cmpb	R0, #100	;
+    144	025106	101003 				bhi	10$		;
+    145	025110	112737 	000340 	040340 		movb	#340, v.gmod	;
+    146	025116				10$:
+    147	025116				ESC.LS::                ; LINE-SIZE COMMANDS
+    148	025116	000207 			        RETURN
+    149					;*******************************
+    150	025120				V1$BEL::
+    151	025120	013746 	040050 		        MOV     V1.MOD, -(SP)   ;
+    152	025124	052737 	120000 	040050 		bis	#c.rvrs+c.unds, v1.mod	;
+    153	025132	012702 	000074 			MOV	#60., R2        ;
+    154	025136	012703 	021360 		        MOV     #ME.bel, R3     ;
+    155	025142	004737 	025304 			call	locout		;
+    156	025146	005227 			1$:	inc	(pc)+		;
+    157	025150	000000 				.word	0
+    158	025152	001375 				bne	1$		;
+    159	025154	012637 	040050 			mov	(sp)+, v1.mod	;
+    160					;*******************************
+    161	025160				HELLOW:                 ; DRAW HELLOW MESSAGE
+    162	025160	005001 				clr	r1		;clear
+    163	025162	005002 				clr	r2		;	line#0
+    164	025164	004737 	020000 			call	SC$CLS		;		first of all !!!!!!!!!!!
+    165	025170	112737 	000340 	040340 		movb	#340, v.gmod	;;;;;
+    166	025176	013746 	040050 		        MOV     V1.MOD, -(SP)   ;
+    167	025202	052737 	120000 	040050 		bis	#c.rvrs+c.unds, v1.mod	;
+    168	025210	012702 	000001 		        MOV     #1, R2          ;
+    169	025214	012703 	021256 		        MOV     #ME.100, R3     ;
+    170	025220	032737 	000004 	040050 	        BIT     #M.ANSI, V1.MOD ;
+    171	025226	001007 			        BNE     1$              ;
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 16-3
+Initialization and interface
+
+    172	025230	012703 	021240 		        MOV     #ME.52, R3      ;
+    173	025234	005737 	040002 			tst	i15		;
+    174	025240	001402 				beq	1$		;
+    175	025242	012703 	021274 			mov	#me.15, r3	;
+    176	025246				1$:
+    177	025246	004737 	025304 		        CALL    LOCOUT          ;
+    178	025252	012703 	021312 			mov	#ME., r3	;
+    179	025256	004737 	025304 			call	LOCOUT		;
+    180	025262	012703 	001006 			mov	#SYM$LB, r3	;
+    181	025266	004737 	025304 			call	LOCOUT		;
+    182	025272	012637 	040050 			mov	(sp)+, v1.mod	;
+    183	025276	105037 	040340 			clrb	v.gmod		;;;;;
+    184	025302	000207 				return
+    185	025304				LOCOUT:
+    186	025304	005001 			        CLR     R1              ;
+    187	025306				10$:
+    188	025306	005000 				clr	r0		;
+    189	025310	152300 			        bisB    (R3)+, R0       ;
+    190	025312	001404 			        BEQ     20$             ;
+    191	025314	004737 	020216 		        CALL    SC$SYM          ;
+    192	025320	005202 			        INC     R2              ;
+    193	025322	000771 			        BR      10$             ;
+    194	025324				20$:
+    195	025324	000207 			        RETURN
+    196
+    197					;*******************************
+    198					; TABLE-JUMP
+    199					;       ENTER:  R1 - CODE-TABLE ADR
+    200					;               R2 - JUMP-TABLE ADR
+    201					.ENABLE LSB
+    202	025326				1$:
+    203	025326	005722 			        TST     (R2)+           ;
+    204	025330				TB$JMP::
+    205	025330	112103 			        MOVB    (R1)+, R3       ;
+    206	025332	100403 			        BMI     2$              ;
+    207	025334	120003 			        CMPB    R0, R3          ;
+    208	025336	001373 			        BNE     1$              ;
+    209	025340	011207 			        MOV     @R2, PC         ;
+    210	025342				2$:
+    211	025342	000207 			        RETURN
+    212					.DSABL  LSB
+    213					;*******************************
+    214					; CALCULATE DECIMAL ARG FOR ESC-SEQ
+    215					;       ENTER:  R5 - POINTER TO BUF
+    216					;               R4 - BUF BOUNDARY
+    217					;       EXIT:   R3 - NUMBER
+    218					;               R1,R2,R4 - UNCHANGED
+    219					;               R5 - POINTS TO CHAR <> NUMBER
+    220					;               R0 - ???
+    221	025344				GETNUM:
+    222	025344	005003 			        CLR     R3              ; RESULT
+    223	025346	012746 	177777 		        MOV     #-1, -(SP)      ; MARKER
+    224	025352				1$:
+    225	025352	020405 			        CMP     R4, R5          ; END OF BUFFER ?
+    226	025354	001411 			        BEQ     2$              ; YES
+    227	025356	114500 			        MOVB    -(R5), R0       ; TAKE A CHAR
+    228	025360	162700 	000060 		        SUB     #'0, R0         ; TRY TO CONVERT IT TO BINARY
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 16-4
+Initialization and interface
+
+    229	025364	002405 			        BLT     2$              ;
+    230	025366	020027 	000011 		        CMP     R0, #9.         ;
+    231	025372	003002 			        BGT     2$              ;
+    232	025374	010046 			        MOV     R0, -(SP)       ;
+    233	025376	000765 			        BR      1$              ;
+    234	025400				2$:
+    235	025400	012600 			        MOV     (SP)+, R0       ;
+    236	025402	100404 			        BMI     3$              ; MARKER !
+    237	025404	070327 	000012 		        MUL     #10., R3        ;
+    238	025410	060003 			        ADD     R0, R3          ;
+    239	025412	000772 			        BR      2$              ;
+    240	025414				3$:
+    241	025414	005703 			        TST     R3              ;SET ZERO-BIT IN PS
+    242	025416	000207 			        RETURN
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 17
+Initialization and interface
+
+      1						.include	"vt4.mac"
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 18
+Initialization and interface
+
+					;====================================================
+      2					.sbttl	initialization and interface
+      3
+      4	025420	177564 	177677 	000200 	tcsr:	.word	csr,	^c100,	200,	2400,	$$CSR,VEC,200
+	025426	002400 	000060 	000064
+	025434	000200
+      5	025436	177566 	000000 	000000 	tbuf:	.word	csr+2,	^c177777, 0,	2000,	w.vbuf,	-1
+	025444	002000 	025754 	177777
+      6	025452				vt.cs0:	.blkb	1
+      7	025453				vt.cs1:	.blkb	1
+      8	025454				parea:
+      9	025454	000000 				.word	0
+     10	025456	000000 			nump:	.word	vmode
+     11	025460				lap:
+     12	025460	   002 	   000 	   000 	.byte	c10,	0,	0,	0,	0,	0,	0,	c11
+	025463	   000 	   000 	   000
+	025466	   000 	   002
+     13	025470	   000 	   000 	   000 	.byte	0,	0,	0,	c11,	0,	c11,	c11,	c12
+	025473	   002 	   000 	   002
+	025476	   002 	   377
+     14
+     15					;	VWCRE	#vvwind,#0,@#tas+2,#0,#0,#40.,#292.,#3.,#23.,#2*400+1
+     16	025500	000004 	000000 	000000 	vvwind:	.word	vwcre,0,0,0,0,40.,292.,3.,23.,2*400+1
+	025506	000000 	000000 	000050
+	025514	000444 	000003 	000027
+	025522	001001
+     17
+     18	025524				i15t:
+     19	025524	   000 	   001 	   002 	.byte	0,	1,	2,	3,	4,	5,	6,	7
+	025527	   003 	   004 	   005
+	025532	   006 	   007
+     20	025534	   010 	   011 	   012 	.byte	10,	11,	12,	13,	14,	15,	16,	17
+	025537	   013 	   014 	   015
+	025542	   016 	   017
+     21	025544	   020 	   021 	   022 	.byte	20,	21,	22,	23,	24,	25,	26,	27
+	025547	   023 	   024 	   025
+	025552	   026 	   027
+     22	025554	   030 	   031 	   032 	.byte	30,	31,	32,	33,	34,	35,	36,	37
+	025557	   033 	   034 	   035
+	025562	   036 	   037
+     23	025564	   040 	   041 	   042 	.byte	40,	41,	42,	43,	44,	45,	46,	47
+	025567	   043 	   044 	   045
+	025572	   046 	   047
+     24	025574	   050 	   051 	   052 	.byte	50,	51,	52,	53,	54,	55,	56,	57
+	025577	   053 	   054 	   055
+	025602	   056 	   057
+     25	025604	   060 	   061 	   062 	.byte	60,	61,	62,	63,	64,	65,	66,	67
+	025607	   063 	   064 	   065
+	025612	   066 	   067
+     26	025614	   070 	   071 	   072 	.byte	70,	71,	72,	73,	74,	75,	76,	77
+	025617	   073 	   074 	   075
+	025622	   076 	   077
+     27	025624	   356 	   320 	   321 	.byte	206.+40,176.+40,177.+40,198.+40,180.+40,181.+40,196.+40,179.+40
+	025627	   346 	   324 	   325
+	025632	   344 	   323
+     28	025634	   345 	   330 	   331 	.byte	197.+40,184.+40,185.+40,186.+40,187.+40,188.+40,189.+40,190.+40
+	025637	   332 	   333 	   334
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 18-1
+Initialization and interface
+
+	025642	   335 	   336
+     29	025644	   337 	   357 	   340 	.byte	191.+40,207.+40,192.+40,193.+40,194.+40,195.+40,182.+40,178.+40
+	025647	   341 	   342 	   343
+	025652	   326 	   322
+     30	025654	   354 	   353 	   327 	.byte	204.+40,203.+40,183.+40,200.+40,205.+40,201.+40,199.+40,202.+40
+	025657	   350 	   355 	   351
+	025662	   347 	   352
+     31	025664	   316 	   260 	   261 	.byte	206.,	176.,	177.,	198.,	180.,	181.,	196.,	179.
+	025667	   306 	   264 	   265
+	025672	   304 	   263
+     32	025674	   305 	   270 	   271 	.byte	197.,	184.,	185.,	186.,	187.,	188.,	189.,	190.
+	025677	   272 	   273 	   274
+	025702	   275 	   276
+     33	025704	   277 	   317 	   300 	.byte	191.,	207.,	192.,	193.,	194.,	195.,	182.,	178.
+	025707	   301 	   302 	   303
+	025712	   266 	   262
+     34	025714	   314 	   313 	   267 	.byte	204.,	203.,	183.,	200.,	205.,	201.,	199.,	202.
+	025717	   310 	   315 	   311
+	025722	   307 	   312
+     35
+     36	025724				hisadr:	.blkw	10		;storage for caller's mapping
+     37
+     38	025744				TOWORK::
+     39	025744				vte:
+     40	025744					WAITINT	#0		;
+     41
+     42	025754				w.vbuf:
+     43	025754	012737 	026674 	026672 		mov	#start+2, start	;
+     44	025762	013700 	147566 			mov	@#xbuf, r0	;
+     45	025766	005037 	147566 			clr	@#xbuf		;
+     46	025772	032700 	177400 			bit	#177400, r0	;
+     47	025776	001003 				bne	5$		;
+     48	026000	010037 	026674 			mov	r0, start+2	;
+     49	026004	000446 				br	20$		;
+     50	026006				5$:
+     51	026006	010001 				mov	r0, r1		;get user addr pointer
+     52	026010	005000 				clr	r0		;
+     53
+     54	026012					GETPAR	#hisadr		;get caller's mapping
+     55
+     56	026022	073027 	000003 			ashc	#3, r0		;
+     57	026026	006300 				asl	r0		;
+     58	026030	006001 				ror	r1		;
+     59	026032	006001 				ror	r1		;
+     60	026034	000261 				sec			;this is for w#4
+     61	026036	006001 				ror	r1		;
+     62	026040	016037 	025724 	161230 		mov	hisadr  (r0), @#ur4 ;
+     63	026046	016037 	025726 	161232 		mov	hisadr+2(r0), @#ur5 ;
+     64
+     65					;start processing here:
+     66					; r1 - user's pointer
+     67	026054	012702 	026674 			mov	#start+2, r2	;
+     68	026060	012703 	000200 			mov	#200,	r3	;stop code
+     69	026064				10$:
+     70	026064	112100 				movb	(r1)+,	r0	;take next char
+     71	026066	001410 				beq	18$		;null
+     72	026070	003002 				bgt	15$		;
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 18-2
+Initialization and interface
+
+     73	026072	120003 				cmpb	r0,	r3	;is it stop ?
+     74	026074	001411 				beq	19$		;yes
+     75	026076				15$:
+     76	026076	110022 				movb	r0,	(r2)+	;s t o r e  !
+     77	026100	020206 				cmp	r2,	sp	;end of buffer ?
+     78	026102	103770 				blo	10$		;no, continue
+     79	026104	105042 				clrb	-(r2)		;mark the end
+     80	026106	000405 				br	20$		;
+     81	026110				18$:
+     82	026110	112722 	000012 			movb	#12,	(r2)+	; the end + new line
+     83	026114	112722 	000015 			movb	#15,	(r2)+
+     84	026120				19$:
+     85	026120	105022 				clrb	(r2)+
+     86	026122				20$:
+     87	026122	013737 	040004 	161230 		mov	UR4c, @#ur4	;
+     88	026130	013737 	040006 	161232 		mov	UR5c, @#ur5	;
+     89	026136				30$:
+     90	026136	005000 				clr	r0		;
+     91	026140	157700 	000526 			bisb	@start, r0	;
+     92	026144	001407 				beq	40$		;
+     93	026146	004737 	021700 			call	V1$SYM		;
+     94	026152	005237 	026672 			inc	start		;
+     95	026156	023706 	026672 			cmp	start, sp	;
+     96	026162	103765 				blo	30$		;
+     97	026164				40$:
+     98	026164	013737 	161210 	161230 		mov	@#hr4, @#ur4	;
+     99	026172	013737 	161212 	161232 		mov	@#hr5, @#ur5	;
+    100	026200				vt.vrq:
+    101	026200	032737 	000100 	147564 		bit	#100, @#xcsr	;
+    102	026206	001656 				beq	towork		;
+    103
+    104					;;;;	SETINT	#vec		;
+    105	026210	012705 	100156 			mov	#vec+vrqtbl-v.low+4,r5
+    106	026214	052737 	000010 	100036 	        bis     #c.irq, vrqflg  ; enable vector request
+    107	026222	011500 				mov	(r5), r0	; request for this vector...
+    108	026224	001247 				bne	towork		;  already exists
+    109	026226	013700 	100146 			mov	vrqtbl, r0	;
+    110	026232	010015 				mov	r0, (r5)	;
+    111	026234	016065 	000002 	000002 		mov	2(r0), 2(r5)	;
+    112	026242	010570 	000002 			mov	r5, @2(r0)	;
+    113	026246	010560 	000002 			mov	r5, 2(r0)	;
+    114
+    115	026252	000634 			10$:	br	towork
+    116
+    117					;================================
+    118	026254				CSWAP:			;swap colors in pallette
+    119	026254	113700 	025477 			movb	lap+15., r0	;
+    120	026260	113701 	025467 			movb	lap+07., r1	;
+    121	026264	110037 	025467 			movb	r0, lap+07.	;
+    122	026270	110037 	025473 			movb	r0, lap+11.	;
+    123	026274	110037 	025475 			movb	r0, lap+13.	;
+    124	026300	110037 	025476 			movb	r0, lap+14.	;
+    125	026304	110137 	025477 			movb	r1, lap+15.	;
+    126	026310					PLMOD	#parea		;
+    127	026326	000207 				return
+    128					;--------------------------------
+    129	026330				SETTAS:
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 18-3
+Initialization and interface
+
+    130
+    131		040434 			scrtas	= tas+10		;start of tas
+    132
+    133								; init TAS ............
+    134	026330	012705 	040434 			mov	#scrtas, r5	;pointer to TAS
+    135	026334	012704 	040342 			mov	#v.tal,	r4	;pointer V.TAL
+    136	026340	012746 	000031 			mov	#ll,	-(sp)	;cnt of l-lines
+    137	026344	013702 	161224 			mov	@#ur2,	r2	;
+    138	026350	162702 	000100 			sub	#40000/400,r2	;sub base addr of win#2
+    139	026354	053702 	025456 			bis	nump,	r2	; par + vmode + palnum
+    140	026360	012700 	000124 			mov	#cc,	r0
+    141	026364				10$:
+    142	026364	012403 				mov	(r4)+,	r3	;next TAL
+    143	026366				20$:
+    144		000012 			.rept	lhigh
+    145						mov	r3,	(r5)+	;
+    146						mov	r3,	r1
+    147						bic	#7777,	r1
+    148						swab	r1
+    149						add	r2,	r1
+    150						mov	r1,	(r5)+	;
+    151						add	r0,	r3	;
+    152					.endr
+    153	026626	005316 				dec	(sp)
+    154	026630	001255 				bne	10$	;
+    155	026632	005726 				tst	(sp)+
+    156								;2 extra empty lines
+    157	026634	012700 	040500 			mov	#scrtas+<lhigh-1*4>,r0	;
+    158	026640	010001 				mov	r0,	r1	;
+    159		000002 			.rept	2
+    160						mov	(r0)+,	(r5)+	;
+    161					.endr
+    162		000002 			.rept	2
+    163						mov	(r1)+,	(r5)+	;
+    164					.endr
+    165	026652					ARINST	#tas		;
+    166	026670	000207 				return
+    167
+    168					;--------------------------------
+    169	026672				start::
+    170	026672	005007 				CLR	PC
+    171	026674	012706 	040000 			mov	#40000, sp	; set stack pointer
+    172	026700					SETPRI	#30000		;;;
+    173	026710					GET4K	#8.		;get 1*8K for RAM, 3*8K for BITMAP
+    174	026720	012701 	161224 			mov	#ur2, r1	;pointer mem-pars
+    175	026724	010021 				mov	r0, (r1)+	;map RAM window#2
+    176	026726	012705 	040000 			mov	#v.mode, r5	;;;
+    177	026732	012725 	000000 			mov	#vmode, (r5)+	;v.mode
+    178	026736	005025 				clr	(r5)+		;i15
+    179
+    180	026740	062700 	000040 			add	#40, r0		;
+    181	026744	010021 				mov	r0, (r1)+	;window#3
+    182	026746	062700 	000040 			add	#40, r0		;
+    183	026752	010021 				mov	r0, (r1)+	;window#4
+    184	026754	010025 				mov	r0, (r5)+	;UR4c
+    185	026756	062700 	000040 			add	#40, r0		;
+    186	026762	010021 				mov	r0, (r1)+	;window#5
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 18-4
+Initialization and interface
+
+    187	026764	010025 				mov	r0, (r5)+	;UR5c
+    188	026766	005021 				clr     (r1)+		;window#6
+    189								; init TAS
+    190	026770	012705 	040430 			mov	#tas+4, r5	;
+    191	026774	012725 	000374 			mov	#lhigh*ll+2, (r5)+	 ;
+    192	027000	012715 	000124 			mov	#cc, (r5)	;
+    193								; init V.TAL
+    194	027004	012705 	040342 			mov	#v.tal, r5	;
+    195	027010	012703 	042414 			mov	#map$, r3	;
+    196	027014	012700 	000031 			mov	#ll, r0		;counter of L-lines
+    197	027020				30$:
+    198	027020	010325 				mov	r3, (r5)+	;vadr
+    199	027022	062703 	001510 			add	#lhigh*cc, r3	;
+    200	027026	077004 				sob	r0, 30$		;
+    201					;---------------------------------
+    202	027030	012701 	027332 			mov	#freee,	r1	;adr for RAM-bit-map
+    203	027034					GETBMAP	r1		;
+    204	027042	010102 				mov	r1,	r2	;
+    205	027044				40$:
+    206	027044	012203 				mov	(r2)+,	r3	;
+    207	027046	005103 				com	r3		;
+    208	027050	001775 				beq	40$		;
+    209	027052	012704 	027272 			mov	#mastbl,r4	;
+    210	027056				50$:
+    211	027056	032403 				bit	(r4)+,	r3	;
+    212	027060	001776 				beq	50$		;
+    213	027062	054442 				bis	-(r4),	-(r2)	;
+    214	027064					PUTBMAP	r1		;
+    215	027072	013700 	161220 			mov	@#ur0,	r0	;
+    216	027076	062700 	000020 			add	#20,	r0	;
+    217	027102					FRE4K	#1		;
+    218					;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    219	027112	005000 				clr	r0		;vir adr
+    220	027114	012701 	000400 			mov	#256.,	r1	;counter
+    221	027120	012702 	001024 			mov	#sym$st, r2	;
+    222	027124				60$:
+    223	027124	010220 				mov	r2,	(r0)+	;
+    224	027126	063702 	001000 			add	sym$hi,	r2	;
+    225	027132	077104 				sob	r1,	60$	;
+    226	027134					FNINST	#freee,@#ur0	;
+    227					;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    228					.if ne $ROM$
+    229						UNPREG	#csr		;release CSR
+    230						UNPREG	#csr+2		;release BUF
+    231					.endc
+    232	027160	005037 	025452 			clr	vt.cs0		;
+    233	027164					PROREG	#tcsr		;
+    234	027174					PROREG	#tbuf		;
+    235
+    236	027204					PLCRE	#parea		;
+    237
+    238	027222	004737 	026330 			call	SETTAS		;
+    239	027226	013737 	040426 	025504 		mov	@#tas+2, vvwind+4 ;
+    240	027234	012700 	025500 			mov	#vvwind, r0	;
+    241	027240					VWCRE			;
+    242					;	VWCRE	#vvwind,#0,@#tas+2,#0,#0,#40.,#292.,#3.,#23.,#2*400+1
+    243	027246	004737 	023234 			call	V1$INI		;;;;;;;;;;;;;;;;;;;;;;;
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 18-5
+Initialization and interface
+
+    244
+    245	027252	013737 	161210 	161230 		mov	@#hr4, @#ur4	;
+    246	027260	013737 	161212 	161232 		mov	@#hr5, @#ur5	;
+    247
+    248	027266	000137 	025744 			jmp	TOWORK		;
+    249
+    250	027272				MASTBL:
+    251	027272	100000 	040000 	020000 		.word	100000,040000,020000,010000,004000,002000,001000,000400
+	027300	010000 	004000 	002000
+	027306	001000 	000400
+    252	027312	000200 	000100 	000040 		.word	000200,000100,000040,000020,000010,000004,000002,000001
+	027320	000020 	000010 	000004
+	027326	000002 	000001
+    253		027332 			freee	== .
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 19
+Initialization and interface
+
+      1
+      2		026672 			.end	START
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 19-1
+Symbol table
+
+ARCRE = 000046   	DLCS  = 161062 G 	I15T    025524   	PAREA   025454   	REPORC  024760
+ARFREE= 020052   	ELEN  = 000064   	KBDBUF= 161064 G 	PDPTR = 100572   	REPORT  024754
+ARINST= 000000   	ESCAPE= 040014   	KBDCSR= 161066 G 	PICCSR= 161000 G 	RUNNIN= 100016
+ARKILL= 000002   	ESCMAX= 000020   	LAP     025460   	PICMR = 161002 G 	R.COPY= 000002
+ARTBL = 020354   	ESC.G0  025076 G 	LF    = 000012 G 	PLB   = 000004   	R.MASK= 000000
+AR.LEN= 000002   	ESC.G1  025076 G 	LHIGH = 000012   	PLCRE = 000016   	R.PROC= 000006
+AR.LIN= 000004   	ESC.J = 040046   	LINMAX= 000030   	PLCREX= 000017   	R.RESE= 000012
+AR.SLE= 000006   	ESC.LS  025116 G 	LIN.E = 040062   	PLFRE = 000020   	R.RQST= 000004
+AR.SUC= 000000   	ES.BUF= 040015   	LIN.N = 040064   	PLFREX= 000021   	R.STAT= 000005
+AR.TAS= 000010   	ES.PTR= 040012   	LIN.S = 040060   	PLMOD = 000022   	R.STRT= 000010
+ATL   = 000100   	ES1.AT  021472   	LL    = 000031   	PLMODX= 000023   	SAVE.C= 040036
+BMAX  = 000032   	ES1.CT  021452   	LOCOUT  025304   	PLPAR = 024446   	SAV.PC= 100056
+BOT.L = 040076   	ES2.AT  021632   	LOGLIN= 000113   	PLSAV = 000024   	SAV.PS= 100060
+BVIEW = 020004   	ES2.CT  021606   	LONUM = 000010   	PLSAVX= 000025   	SAV.R0= 100040
+B.EF0 = 000001 G 	E1.LON  022506 G 	LSPAT = 001717   	PL0   = 000000   	SAV.R1= 100042
+B.EF1 = 000002 G 	E1.SHT  022514 G 	L.RDA = 150000 G 	PL1   = 040000   	SAV.R2= 100044
+B.INT = 000004 G 	E1.Y    022522 G 	L.REG = 140000 G 	PL2   = 100000   	SAV.R3= 100046
+CB    = 000000   	E52.AT  021550   	MAPLEN= 100002   	PL3   = 140000   	SAV.R4= 100050
+CC    = 000124   	E52.CT  021530   	MAP$  = 042414   	PPIA  = 161030 G 	SAV.R5= 100052
+CF    = 000001   	FNFIND= 000036   	MASTBL  027272   	PPIB  = 161032 G 	SAV.SP= 100054
+COD$BE= 020000   	FNFREE= 020056   	MEMUSE= 100014   	PPIC  = 161034 G 	SCRDOT= 000640
+COLMAX= 000240   	FNINST= 000032   	ME.     021312   	PPIP  = 161036 G 	SCREEN= 020002
+COL.E = 040070   	FNKILL= 000034   	ME.BEL  021360   	PROADR= 020554   	SCRLIN= 000454
+COL.N = 040072   	FNLEN = 000004   	ME.100  021256   	PROLEN= 000106 G 	SCRTAS= 040434
+COL.S = 040066   	FNLOOK= 000040   	ME.15   021274   	PTLEN = 000036   	SC$CER  021152 G
+COL132= 000204   	FNSUCC= 020054   	ME.52   021240   	P.CPRC= 000050   	SC$CLL  020126 G
+COL80 = 000120   	FN.BEG= 001024   	MOPAL   024466   	P.DSUC= 000104   	SC$CLS  020000 G
+CR    = 000015 G 	FN.HI = 001000   	M.ANSI= 000004   	P.MASK= 000046   	SC$CUR  021112 G
+CRERA = 000030   	FN.ID = 001004   	M.APL = 000002   	P.MEM = 000056   	SC$REV  020210 G
+CRSET = 000026   	FN.NAM= 001006   	M.AUTO= 000400   	P.NAME= 000060   	SC$SCD  021030 G
+CSR   = 177564   	FN.PAR= 000002   	M.FLOP= 000002 G 	P.PC  = 000022   	SC$SCE  021070
+CSWAP   026254   	FN.SUC= 000000   	M.INIT= 000001 G 	P.PRED= 000002   	SC$SCU  020770 G
+CTAO  = 063034   	FN.TB = 000000   	M.INTE= 001000   	P.PRI = 000054   	SC$SYC  020466 G
+CTAS  = 024432   	FN.WI = 001002   	M.KBD = 000020 G 	P.PS  = 000024   	SC$SYM  020216 G
+CTR.AT  021420   	FREEE = 027332 G 	M.KEYP= 002000   	P.R0  = 000004   	SEMLEN= 000010 G
+CTR.CT  021402   	FREEMA= 100012   	M.NL  = 000001   	P.R1  = 000006   	SETTAS  026330
+CURHOM  024206 G 	FREEPR= 100006   	M.PRRD= 000100 G 	P.R2  = 000010   	SETX    023650
+CURS.T= 040056   	FREERE= 100004   	M.RCRD= 000004 G 	P.R3  = 000012   	SETY    023602
+CURS.X= 040054   	FREESE= 100010   	M.REL = 000100   	P.R4  = 000014   	SNDCSR= 161016 G
+CURS.Y= 040052   	GETNUM  025344   	M.RUN = 040000 G 	P.R5  = 000016   	SNDC0R= 161010 G
+CUR.M = 040010   	HBMOVE= 000050   	M.RVRS= 000040   	P.SP  = 000020   	SNDC1R= 161012 G
+C.BLNK= 040000   	HEAP  = 100000   	M.SCRN= 000040 G 	P.SUCC= 000000   	SNDC2R= 161014 G
+C.BOLD= 010000   	HEAP$$= 100602   	M.SLOT= 000200 G 	P.TIM = 000052   	SNLCSR= 161026 G
+C.DEL = 000177   	HELLOW  025160   	M.SMOT= 000020   	P.TIM0= 000100   	SNLC0R= 161020 G
+C.ESC = 000033   	HINUM = 000002   	M.TIO = 000400 G 	P.TIM1= 000102   	SNLC1R= 161022 G
+C.HLT = 000004 G 	HISADR  025724   	M.TRRD= 000010 G 	P.UR0 = 000026   	SNLC2R= 161024 G
+C.IRQ = 000010 G 	HR0   = 161200 G 	M.VRQ = 100000 G 	P.UR1 = 000030   	SPAT  = 020556
+C.RVRS= 100000   	HR1   = 161202 G 	M.WRAP= 000200   	P.UR2 = 000032   	SPATZZ= 024414
+C.SP  = 000040   	HR2   = 161204 G 	M.132 = 000010   	P.UR3 = 000034   	START   026672 G
+C.TIM0= 100574   	HR3   = 161206 G 	M.40  = 004000   	P.UR4 = 000036   	STAS  = 024436
+C.TIM1= 100576   	HR4   = 161210 G 	NB    = 002000   	P.UR5 = 000040   	SXCUR = 024434
+C.UNDS= 020000   	HR5   = 161212 G 	NUMP    025456   	P.UR6 = 000042   	SYM$HI= 001000
+C10   = 000002   	HR6   = 161214 G 	NVLL  = 000004   	P.UR7 = 000044   	SYM$ID= 001004
+C11   = 000002   	HR7   = 161216 G 	OFFS  = 001364   	RDPRED= 100024   	SYM$LB= 001006
+C12   = 000377   	HSTACK= 140000   	PAL   = 060000   	RDSUCC= 100022   	SYM$ST= 001024
+DECOUT  024770   	I.HLT = 000200 G 	PALREG= 140004   	READYQ= 100020   	SYM$TB= 000000
+DLBUF = 161060 G 	I15   = 040002   	PALTBL= 020060   	REGLEN= 000014 G 	SYM$WI= 001002
+VT100   - LEVEL 1	MACRO V05.06R Friday 30-Nov-18 09:49  Page 19-2
+Symbol table
+
+S.CNTR= 000000   	VL$COL  024432 G 	VWTAKE= 000010   	V.PV  = 000010   	V1$SO   022436 G
+S.FRST= 000002   	VL$CUB  023502 G 	VW.ARE= 000004   	V.RCRD= 100116   	V1$SOL  023004 G
+S.PRED= 000006   	VL$CUD  023436 G 	VW.ARX= 000010   	V.SCRN= 100132   	V1$SOS  023130 G
+S.SUCC= 000004   	VL$CUF  023460 G 	VW.ARY= 000006   	V.SLOT= 100142   	V1$STB  023214 G
+TAO   = 063040   	VL$CUU  023414 G 	VW.DEN= 000022   	V.SUPR= 100076   	V1$SYM  021700 G
+TAS   = 040424   	VL$ERL  023040 G 	VW.DY1= 000036   	V.TAL = 040342   	V1$15   022414
+TASREG= 140010   	VL$ERS  023060 G 	VW.DY2= 000040   	V.TRRD= 100122   	V1.COD= 021700 G
+TAS0  = 024426   	VL$FON  024404 G 	VW.DY3= 000042   	V.TR4H= 100066   	V1.MOD= 040050
+TAS0D = 024416   	VL$LED  024026 G 	VW.HD = 000026   	V.VP  = 000030   	V1.ROM= 021240 G
+TAS312= 062260   	VL$MOD  024242 G 	VW.NUM= 000033   	V.VV  = 000020   	V1.TAB= 040100
+TBUF    025436   	VL$POS  023524 G 	VW.PRE= 000002   	V.XOR = 000002   	V5$EGM  025074 G
+TB$JMP  025330 G 	VL$REP  024520 G 	VW.SUC= 000000   	V.2TIO= 100102   	V5$XGM  025074 G
+TCFLG = 100600   	VL$SCR  024030 G 	VW.SX1= 000016   	V1$BEL  025120 G 	WCSR  = 177530
+TCSR    025420   	VL$TAB  024136 G 	VW.SX2= 000020   	V1$BS   022556 G 	WDTBL = 020154
+TIMEQU= 100026   	VMODE = 000000   	VW.SY1= 000012   	V1$CAN  022366 G 	WHEAP = 020000
+TMPRED= 100032   	VM1   = 000000   	VW.SY2= 000014   	V1$CNF  025032 G 	WIN1  = 020000
+TMSUCC= 100030   	VM2   = 000001   	VW.TAR= 000024   	V1$CR   022636 G 	WIN3  = 060000
+TOP$$ = 100034   	VM40  = 000002   	VW.VD = 000032   	V1$CR1  022774   	WMAPH = 177532
+TOP.L = 040074   	VM41  = 000003   	VW.XOF= 000030   	V1$CUD  022576 G 	WMAPL = 177534
+TOWORK  025744 G 	VM8   = 000007   	VW.YOF= 000034   	V1$CUL  022556 G 	WPRI  = 040000
+UR0   = 161220 G 	VRQFLG= 100036   	VX$SWC  024506 G 	V1$CUP  022536 G 	WPRINT= 000044
+UR1   = 161222 G 	VRQTBL= 100146   	V.BIC = 000006   	V1$CUR  022616 G 	WSTACK= 060000
+UR2   = 161224 G 	VTBASE  021333   	V.BIS = 000004   	V1$ELN  022770 G 	WTL   = 000100
+UR3   = 161226 G 	VTE     025744   	V.BUT = 100072   	V1$ENQ  022504 G 	WTOP  = 024450
+UR4   = 161230 G 	VTSTAT  021347   	V.BYTE= 000001   	V1$EOL  023016 G 	W.VBUF  025754
+UR4C  = 040004   	VT.CS0  025452   	V.CPUH= 100062   	V1$EOS  023110 G 	XBUF  = 147566
+UR5   = 161232 G 	VT.CS1  025453   	V.CV  = 000000   	V1$ERS  023076 G 	XCSR  = 147564
+UR5C  = 040006   	VT.VRQ  026200   	V.DX  = 000100   	V1$ESC  022374 G 	XCUR  = 024442
+UR6   = 161234 G 	VT52    021343   	V.DY  = 000040   	V1$HT   022646 G 	XWCSR = 147530
+UR7   = 161236 G 	VT52EN  025054 G 	V.FLOP= 100112   	V1$INI  023234 G 	XWMAPH= 147532
+VD104 = 001000   	VVWIND  025500   	V.GMOD= 040340   	V1$KAP  023374 G 	XWMAPL= 147534
+VD208 = 001400   	VWBACK= 000014   	V.HIGH= 000500 G 	V1$KNM  023404 G 	XXXXXX= 062344
+VD52  = 000400   	VWCRE = 000004   	V.INIT= 100106   	V1$LF   022700 G 	YCUR  = 024444
+VD52S = 000000   	VWFORE= 000012   	V.KBD = 100126   	V1$NL   022674 G 	$ROM$ = 000000
+VEC   = 000064   	VWFREE= 020050   	V.LOW = 000060 G 	V1$RES  023172 G 	$$    = 042416
+VECLEN= 000064 G 	VWKILL= 000006   	V.MASK= 000200   	V1$RLF  022740 G 	$$CSR = 000060
+VL$BOD  024420 G 	VWLEN = 000044   	V.MODE= 040000   	V1$SAV  023160 G 	..ADDR= 007774
+VL$CAT  023674 G 	VWLOOK= 000042   	V.MOV = 000000   	V1$SI   022464 G 	..PAR = 037760
+VL$CNF  025024 G 	VWSUCC= 020004   	V.PRRD= 100136
+
+. ABS.	027332    000	(RW,I,GBL,ABS,OVR)
+      	000000    001	(RW,I,LCL,REL,CON)
+Errors detected:  0
+
+*** Assembler statistics
+
+
+Work  file  reads: 0
+Work  file writes: 0
+Size of work file: 11064 Words  ( 44 Pages)
+Size of core pool: 15872 Words  ( 62 Pages)
+Operating  system: RT-11
+
+Elapsed time: 00:00:00.30
+DK:VT,DK:VT=DK:VT

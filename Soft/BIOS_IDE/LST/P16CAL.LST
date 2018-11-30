@@ -1,0 +1,891 @@
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49
+Table of contents
+
+    2- 462	common definitions for bios monitor
+Bisubr	- internal bios subrout	MACRO V05.06R Friday 30-Nov-18 09:49  Page 1
+
+
+      1					.enabl  lc
+      2					.enabl	ama
+      3					.enabl  gbl
+      4					.mcall	.push,.pop
+Bisubr	- internal bios subrout	MACRO V05.06R Friday 30-Nov-18 09:49  Page 3
+Common definitions for bios monitor
+
+      2
+Bisubr	- internal bios subrout	MACRO V05.06R Friday 30-Nov-18 09:49  Page 4
+Common definitions for bios monitor
+
+      1						.title	bisubr	- internal bios subroutines
+      2					;------------------------------------------------
+      3					; remove	- removes process p from its queue
+      4					; p	- r3	- pointer to process p
+      5					; destroyed	- r0
+      6					;................................
+      7	000000				remove::			;
+      8	000000	012300 				mov	(r3)+, r0	;
+      9	000002	010033 				mov	r0, @(r3)+	; p^.pred^.succ:=p^.succ
+     10	000004	014360 	000002 			mov	-(r3), 2(r0)	; p^.succ^.pred:=p^.pred
+     11	000010	005043 				clr	-(r3)		; p^.succ :=0
+     12	000012	000207 				return			;
+     13					;------------------------------------------------
+     14					; putpri	- inserts process p in queue q according to priority
+     15					; p	- r3	- pointer to p
+     16					; q	- r1	- pointer to queue
+     17					; destroyed	- r0,r1
+     18					;................................
+     19	000014				putpri::			;
+     20	000014	011100 				mov	(r1), r0	; p1:=q^.succ
+     21	000016				10$:				; while
+     22	000016	020001 				cmp	r0, r1		; p1<>q and
+     23	000020	001406 				beq	20$		;
+     24	000022	026360 	000054 	000054 		cmp	p.pri(r3), p.pri(r0) ; p^.pri <= p1^.pri
+     25	000030	003002 				bgt	20$		;
+     26	000032	011000 				mov	(r0), r0	; do p1:=p1^.succ
+     27	000034	000770 				br	10$		;
+     28	000036				20$:				;
+     29	000036	010001 				mov	r0, r1		;
+     30					;	put(p, p1)		;
+     31					;------------------------------------------------
+     32					; put	-	 inserts process p before q in its queue
+     33					; p	- r3	- pointer to process p
+     34					; q	- r1	- pointer to process q
+     35					; destroyed	- none
+     36					;................................
+     37	000040	011300 			put::   mov	(r3), r0	; is he in any queue ?
+     38	000042	001414 				beq	10$		; no
+     39	000044	032763 	000400 	000046 		bit	#m.tio, p.mask(r3) ; is he in time-queue ?
+     40	000052	001420 				beq	99$		; no !!!!!!
+     41	000054	020037 	100026 			cmp	r0, timeque	; is there anybody after him ?
+     42	000060	001403 				beq	2$		; no
+     43	000062	066360 	000052 	000052 		add	p.tim(r3), p.tim(r0) ;;;;;
+     44	000070				2$:				;
+     45	000070	004737 	000000'			call	remove		;
+     46	000074				10$:				;
+     47	000074	010113 				mov	r1, (r3)	; p^.succ:=q
+     48	000076	016163 	000002 	000002 		mov	2(r1), 2(r3)	; p^.pred:=q^.pred
+     49	000104	010371 	000002 			mov	r3, @2(r1)	; p^.pred^.succ:=p
+     50	000110	010361 	000002 			mov	r3, 2(r1)	; q^.pred:=p
+     51	000114	000207 			99$:	return			;
+     52					;------------------------------------------------
+     53					; mapadr	- returns in r1 pointer to user map (may be creates it)
+     54					; on enter:	r3	- pointer to current proc's descriptor
+     55					;	c=0
+     56					;		r1	- addr of user map
+     57					;	c=1	- no memory to create map
+Bisubr	- internal bios subrout	MACRO V05.06R Friday 30-Nov-18 09:49  Page 4-1
+Common definitions for bios monitor
+
+     58					; destroyed	- r1
+     59
+     60	000116				mapadr::
+     61	000116	000241 				clc			;
+     62	000120	016301 	000056 			mov	p.mem(r3), r1	;
+     63	000124	001033 				bne	40$		; ok
+     64	000126	013701 	100012 			mov	freemap, r1	;
+     65	000132	001403 				beq	10$		; no free maps
+     66	000134	011137 	100012 			mov	(r1), freemap	; take a free map and correct pointer
+     67	000140	000415 				br	20$		;
+     68	000142				10$:
+     69	000142	013701 	100000 			mov	heap, r1	;
+     70	000146	013700 	100002 			mov	maplen, r0	; len of map in bytes
+     71	000152	060037 	100000 			add	r0, heap	; correct heap-pointer
+     72	000156	023737 	100034 	100000 		cmp	top$$, heap	;
+     73	000164	103003 				bcc	20$		;
+     74	000166	010137 	100000 			mov	r1, heap	; restore heap
+     75	000172	000410 				br	40$		; return with c=1
+     76	000174				20$:
+     77	000174	010163 	000056 			mov	r1, p.mem(r3)	; init user map
+     78	000200	013700 	100002 			mov	maplen, r0	;
+     79	000204	060001 				add	r0, r1		;
+     80	000206				30$:
+     81	000206	112741 	177777 			movb	#-1, -(r1)	;
+     82	000212	077003 				sob	r0, 30$ 	;
+     83	000214				40$:
+     84	000214	000207 				return
+     85
+     86					; prdadr	- creates proc's descriptor block
+     87					; on enter:	r3	- current proc
+     88					;returned:	r3	- new proc
+     89					;		r2	- current (old) proc
+     90					;	executes $exit on no memory
+     91
+     92	000216				prdadr::
+     93	000216	010302 				mov	r3, r2		; save cur proc for later
+     94	000220	013703 	100006 			mov	freepr, r3	; any old descriptors ?
+     95	000224	001404 				beq	10$		; yes, use it
+     96	000226	000241 				clc			;
+     97	000230	011337 	100006 			mov	(r3), freepr	; correct list of free descriptors
+     98	000234	000433 				br	35$		; fin
+     99	000236				10$:
+    100	000236	013703 	100000 			mov	heap, r3	; no, to take from heap
+    101	000242	062737 	000106 	100000 		add	#prolen, heap	;
+    102	000250	023737 	100034 	100000 		cmp	top$$, heap	; is there enough mem ?
+    103	000256	103003 				bcc	20$		; yes, ok
+    104	000260	010337 	100000 			mov	r3, heap	; no, restore heap
+    105	000264	000207 				return  		; and exit with c-set
+    106	000266				20$:
+    107	000266	013700 	100572 			mov	pdptr,	r0
+    108	000272	001005 				bne	24$
+    109	000274	010337 	100572 			mov	r3,	pdptr
+    110	000300	000411 				br	35$
+    111	000302				22$:
+    112	000302	016000 	000104 			mov	p.dsucc(r0),	r0
+    113	000306				24$:
+    114	000306	005760 	000104 			tst	p.dsucc(r0)
+Bisubr	- internal bios subrout	MACRO V05.06R Friday 30-Nov-18 09:49  Page 4-2
+Common definitions for bios monitor
+
+    115	000312	001373 				bne	22$
+    116
+    117	000314	010360 	000104 			mov	r3,	p.dsucc(r0)
+    118	000320	005063 	000104 			clr	p.dsucc(r3)	; p.dsucc
+    119	000324				35$:
+    120	000324	005063 	000100 			clr	p.tim0(r3)	; p.tim0
+    121	000330	005063 	000102 			clr	p.tim1(r3)	; p.tim1
+    122	000334	000207 				return
+    123
+    124					; set.int               - set request for vectored int
+    125					; on enter:	r5	- vector
+    126					; destroyed:	r0
+    127
+    128	000336				set.int::
+    129	000336	052737 	000010 	100036 	        bis     #c.irq, vrqflg  ; enable vector request
+    130	000344	011500 				mov	(r5), r0	; request for this vector...
+    131	000346	001012 				bne	10$		;  already exists
+    132	000350	013700 	100146 			mov	vrqtbl, r0	;
+    133	000354	010015 				mov	r0, (r5)	;
+    134	000356	016065 	000002 	000002 		mov	2(r0), 2(r5)	;
+    135	000364	010570 	000002 			mov	r5, @2(r0)	;
+    136	000370	010560 	000002 			mov	r5, 2(r0)	;
+    137	000374	000207 			10$:	return
+    138
+    139					; res.int		- resets (clears) request for vectored int
+    140					; on enter:	r5	- vector
+    141					; destroyed:	r0
+    142
+    143	000376				res.int::
+    144	000376	012500 				mov	(r5)+, r0	; this vector's request
+    145	000400	001411 			        beq     20$		;   is not set (nothing to reset)
+    146	000402	021500 			        cmp     (r5), r0	;
+    147	000404	001003 			        bne     10$             ;
+    148	000406	042737 	000010 	100036 	        bic	#c.irq,vrqflg   ;
+    149	000414				10$:
+    150	000414	010035 				mov	r0, @(r5)+	;
+    151	000416	014560 	000002 			mov	-(r5), 2(r0)	;
+    152	000422	005045 				clr	-(r5)		;
+    153	000424	000207 			20$:	return
+    154
+Bisubr	- internal bios subrout	MACRO V05.06R Friday 30-Nov-18 09:49  Page 5
+Common definitions for bios monitor
+
+      1					;=======
+      2	000426				initsem::       ;174142
+      3	000426	013701 	100010 		        mov     freesem, r1     ; take pointer to free list
+      4	000432	001012 			        bne     10$             ; use sem being in use
+      5	000434	012712 	100000 			mov	#heap,	(r2)	;
+      6	000440	011201 			        mov     (r2),    r1     ; take sem from heap
+      7	000442	062712 	000010 			add	#semlen, (r2)	; correct heap-pointer
+      8	000446	021237 	100034 			cmp	(r2), top$$	; ok ?
+      9	000452	103404 			        blo     20$             ; yes
+     10	000454	010112 				mov	r1, (r2)	; restore heap pointer
+     11	000456	000415 			        br      30$             ; and exit
+     12	000460				10$:
+     13	000460	011137 	100010 		        mov     (r1), freesem   ; correct pointer to free sems
+     14	000464				20$:
+     15	000464	010511 			        mov     r5, (r1)        ; put ival in sem counter
+     16	000466	010163 	000004 		        mov     r1, p.r0(r3)    ; returned pointer to sem in r0
+     17	000472	010102 			        mov     r1, r2          ; init sem queue
+     18	000474	062701 	000004 		        add     #s.succ, r1     ; init sem's queue
+     19	000500	010102 			        mov     r1, r2          ;
+     20	000502	005742 			        tst     -(r2)           ;
+     21	000504	010122 			        mov     r1, (r2)+       ;
+     22	000506	010122 			        mov     r1, (r2)+       ;
+     23	000510	010122 			        mov     r1, (r2)+       ;
+     24	000512				30$:
+     25	000512	000570 			        br	$exit           ; set/clear c-bit
+     26
+     27					;=======
+     28	000514				relsem::        ;174144
+     29	000514	013715 	100010 		        mov     freesem, (r5)   ; link sem to
+     30	000520	010537 	100010 		        mov     r5, freesem     ;  free list
+     31	000524	000566 			        br      exit$
+     32
+     33					;=======
+     34	000526				waitsem::       ;174146
+     35	000526	005715 			        tst     (r5)            ; if counter<=0
+     36	000530	100010 			        bpl     10$             ; then begin
+     37	000532	004737 	000000'		        call    remove          ; remove(running)
+     38	000536	016501 	000002 		        mov     s.frst(r5), r1  ;
+     39	000542	004737 	000014'		        call    putpri          ; putpriority (running, waiting)
+     40	000546	000137 	000000G		        jmp     schedule        ; schedule end
+     41	000552				10$:                            ; else
+     42	000552	005315 			        dec     (r5)            ; counter:=counter-1
+     43	000554	000552 			        br      exit$           ;
+     44
+     45					;=======
+     46	000556				sigsem::        ;174150
+     47	000556	026565 	000002 	000004 	        cmp     s.frst(r5), s.succ(r5) ; if sem^.waiting<>waiting then
+     48	000564	001403 			        beq     10$             ; <> waiting then
+     49					                                ; begin [put first waiting in readyqueue]
+     50	000566	016503 	000004 		        mov     s.succ(r5), r3  ; p:=waiting^.succ
+     51					;;;;	call	remove		; remove (p)
+     52	000572	000411 				br	setp
+     53	000574				10$:                            ; else
+     54	000574	005215 			        inc     (r5)            ; counter:=counter+1
+     55	000576	000541 			        br      exit$            ;
+     56
+     57					;=======
+Bisubr	- internal bios subrout	MACRO V05.06R Friday 30-Nov-18 09:49  Page 5-1
+Common definitions for bios monitor
+
+     58	000600				setpri::        ;174152
+     59	000600	016301 	000054 		        mov     p.pri(r3), r1   ; save process's priority
+     60	000604	010563 	000054 		        mov     r5, p.pri(r3)   ; set it's new priority
+     61	000610	020105 			        cmp     r1, r5          ; priold<=prinew ?
+     62	000612	003001 			        bgt     10$             ;
+     63	000614	000532 			        br      exit$           ; yes
+     64	000616				10$:
+     65	000616				setp:
+     66	000616	004737 	000000'		        call    remove          ; no, then remove process
+     67	000622	000137 	000000G			jmp	put.sched
+     68
+     69					;=======
+     70	000626				provec::        ;174154
+     71	000626	016301 	000004 			mov	p.r0(r3),r1
+     72	000632	005063 	000004 		        clr     p.r0(r3)        ;
+     73	000636	020527 	100062 		        cmp     r5,#v.cpuh      ; test for legal vector
+     74	000642	103412 			        bcs     20$             ; invalid
+     75	000644	022705 	100146 		        cmp     #v.cpuh+veclen,r5       ;
+     76	000650	103407 			        bcs     20$             ; invalid
+     77	000652	011563 	000004 		        mov     (r5), p.r0(r3)  ; vector busy ?
+     78	000656	001402 			        beq     10$             ; yes
+     79	000660	000261 			        sec                     ;
+     80	000662	000402 			        br      20$             ;
+     81	000664				10$:
+     82	000664	010325 			        mov     r3, (r5)+       ; set vector !!!
+     83	000666	010115 			        mov     r1, (r5)
+     84	000670				20$:
+     85	000670	000501 			        br	$exit           ;set/clear c-bit
+     86
+     87					;=======
+     88	000672				unpvec::        ;174156
+     89	000672	020527 	100062 		        cmp     r5,#v.cpuh      ; test for legal vector
+     90	000676	103404 			        bcs     10$             ; invalid
+     91	000700	022705 	100146 		        cmp     #v.cpuh+veclen,r5       ;
+     92	000704	103401 			        bcs     10$             ; invalid
+     93	000706	005015 			        clr     (r5)            ;
+     94	000710				10$:
+     95	000710	000471 			        br	$exit           ;
+     96
+     97					;=======
+     98	000712				proreg::        ;174160
+     99	000712				        mfus                    ; take 1-st word (reg-addr)
+    100	000714	012704 	100000 			mov	#heap,	r4
+    101	000720	042700 	170000 		        bic     #170000, r0     ;
+    102	000724	016002 	150000 		        mov     l.rda(r0), r2   ;
+    103	000730	001052 			        bne     30$             ; reg is busy !!!
+    104	000732	013701 	100004 		        mov     freereg, r1     ; create reg-descriptor
+    105	000736	001011 			        bne     10$             ; take spare one
+    106	000740	011401 				mov	(r4), r1	;
+    107	000742	062714 	000014 			add	#reglen, (r4)	;
+    108	000746	021437 	100034 			cmp	(r4), top$$	;
+    109	000752	103405 			        blo     20$             ; ok
+    110	000754	010114 				mov	r1, (r4)	; restore heap
+    111	000756	005002 			        clr     r2              ;
+    112	000760	000440 			        br      32$             ;
+    113	000762				10$:
+    114	000762	011137 	100004 		        mov     (r1), freereg   ; correct pointer
+Bisubr	- internal bios subrout	MACRO V05.06R Friday 30-Nov-18 09:49  Page 5-2
+Common definitions for bios monitor
+
+    115	000766				20$:
+    116	000766	010160 	150000 		        mov     r1, l.rda(r0)   ; set pointer to reg-descriptor
+    117	000772	010004 			        mov     r0, r4          ;
+    118	000774				        mfus                    ;
+    119	000776	010021 			        mov     r0, (r1)+       ; r.mask
+    120	001000	010102 			        mov     r1, r2          ; r2 := ^r.copy
+    121	001002				        mfus                    ;
+    122	001004	010064 	140000 		        mov     r0, l.reg(r4)   ;
+    123	001010	010021 			        mov     r0, (r1)+       ; r.copy
+    124	001012				        mfus                    ;
+    125	001014	010021 			        mov     r0, (r1)+       ; r.stat+r.rqst
+    126	001016	032700 	000400 			bit	#400,	r0	; p.hlt*400 ?
+    127	001022	001407 				beq	22$
+    128	001024					mfus
+    129	001026	020027 	040000 			cmp	r0,     #40000
+    130	001032	103001 				bcc	21$
+    131	001034	011000 				mov	(r0),	r0
+    132	001036	010021 			21$:	mov	r0,	(r1)+
+    133	001040	000401 				br	24$
+    134	001042	010321 			22$:    mov     r3, (r1)+       ; r.proc  set link to current process
+    135	001044				24$:    mfus                    ;
+    136	001046	010021 			        mov     r0, (r1)+       ; r.strt
+    137	001050				        mfus
+    138	001052	010011 			        mov     r0, (r1)
+    139	001054	000405 			        br      40$             ;  and exit
+    140	001056				30$:
+    141	001056	016202 	000006 		        mov     r.proc(r2),r2
+    142	001062				32$:
+    143	001062				        rcps
+    144	001064	005200 			        inc     r0              ; set c=1
+    145	001066				        wcps
+    146	001070				40$:
+    147	001070	010263 	000004 		        mov     r2, p.r0(r3)    ; returned r0
+    148					;       br      exit$           ;
+    149					;--------------------------------
+    150	001074				$exit:  rcps			;
+    151	001076	005500 			        adc     r0              ;
+    152	001100				        wcps                    ;
+    153	001102	000137 	000000G		exit$:  jmp     exit            ;
+    154					;--------------------------------
+    155
+    156					;=======
+    157	001106				unpreg::        ;174162
+    158	001106	042705 	170000 		        bic     #170000, r5     ;
+    159	001112	016500 	150000 		        mov     l.rda(r5), r0   ;
+    160	001116	001406 			        beq     10$             ; reg is free !!!
+    161	001120	005065 	150000 		        clr     l.rda(r5)       ; make it free
+    162	001124	013710 	100004 		        mov     freereg, (r0)   ; link descriptor
+    163	001130	010037 	100004 		        mov     r0, freereg     ;  to free list
+    164	001134				10$:
+    165	001134	000762 			        br      exit$           ;
+    166
+    167					;=======
+    168	001136				waitint::       ;174164
+    169	001136	042763 	157777 	000046 		bic	#^C20000,p.mask(r3) ; m.hlt
+    170	001144	050563 	000046 		        bis     r5, p.mask(r3)  ; save mask for later (disable ints)
+    171	001150	040537 	161002 		        bic     r5, picmr       ; enable ints
+Bisubr	- internal bios subrout	MACRO V05.06R Friday 30-Nov-18 09:49  Page 5-3
+Common definitions for bios monitor
+
+    172	001154	004737 	000000'		        call    remove          ; take process out of readyqueue
+    173	001160	032705 	000400 		        bit     #m.tio, r5      ; does he need time-out (tio) ?
+    174	001164	001432 			        beq     30$             ; no
+    175	001166	042737 	000040 	161002 		bic	#m.scrn, picmr	;
+    176	001174	016305 	000012 		        mov     p.r3(r3), r5    ; take interval
+    177	001200	013701 	100030 		        mov     tmsucc, r1      ; take pointer to the first waiting
+    178	001204				10$:
+    179	001204	020561 	000052 		        cmp     r5, p.tim(r1)   ; is he to wake up later ?
+    180	001210	101407 			        blos    20$             ; yes, its our place
+    181	001212	020137 	100026 		        cmp     r1, timeque     ; at end of queue ?
+    182	001216	001404 			        beq     20$             ; yes, its our place
+    183	001220	166105 	000052 		        sub     p.tim(r1), r5   ; our time is relative to previous...
+    184	001224	011101 			        mov     (r1), r1        ; take the next sleepping process
+    185	001226	000766 			        br      10$             ;and go on...
+    186	001230				20$:
+    187	001230	010563 	000052 		        mov     r5, p.tim(r3)   ; store our's relative time
+    188	001234	004737 	000040'		        call    put             ; and seat before proc (r1)
+    189	001240	020137 	100026 		        cmp     r1, timeque     ; is it end of queue
+    190	001244	001402 			        beq     30$             ; yes, exit
+    191	001246	160561 	000052 		        sub     r5, p.tim(r1)   ; correct the relative timer for next proc
+    192	001252				30$:
+    193	001252	000137 	000000G		        jmp     schedule
+    194
+    195					;=======
+    196	001256				newromp::       ;174166
+    197	001256	004737 	000216'		        call    prdadr          ; create proc's descriptor (exit on no mem)
+    198	001262	103001 			        bcc     10$             ;
+    199	001264	000703 			        br	$exit
+    200	001266				10$:                        ;and now r3 points to new process
+    201					                        ; r2 - old process
+    202	001266	012701 	000004 		        mov     #p.r0, r1       ;
+    203	001272	060102 			        add     r1, r2          ; r2 = ^p.r0 old
+    204	001274	060301 			        add     r3, r1          ; r1 = ^p.r0 new
+    205	001276	010321 			        mov     r3, (r1)+       ; p.r0
+    206	001300	010322 			        mov     r3, (r2)+       ; p.r0 - old process
+    207	001302	012700 	000006 		        mov     #6, r0          ;
+    208	001306				30$:
+    209	001306	012221 			        mov     (r2)+, (r1)+    ; p.r1-p.r6
+    210	001310	077002 			        sob     r0, 30$         ;
+    211	001312	010521 			        mov     r5,(r1)+        ; pc
+    212	001314	005021 			        clr     (r1)+           ; ps
+    213	001316	012702 	161220 		        mov     #ur0,r2
+    214	001322	012700 	000010 		        mov     #8., r0         ;
+    215	001326				40$:
+    216	001326	012221 			        mov     (r2)+, (r1)+    ; p.ur0-p.ur7
+    217	001330	077002 			        sob     r0, 40$         ;
+    218	001332	005021 			        clr     (r1)+           ; p.mask
+    219	001334	005021 			        clr     (r1)+           ; p.cprc
+    220	001336	005021 			        clr     (r1)+           ; p.tim
+    221	001340	012721 	077777 		        mov     #77777,(r1)+    ; p.pri
+    222	001344	005011 			        clr     (r1)            ; p.mem
+    223	001346	000137 	000000G		        jmp     put.sched       ; put process in readyqueue
+    224
+    225					;=======
+    226	001352				setint::
+    227	001352	004737 	000336'		        call    set.int
+    228	001356	000651 				br	exit$
+Bisubr	- internal bios subrout	MACRO V05.06R Friday 30-Nov-18 09:49  Page 5-4
+Common definitions for bios monitor
+
+    229					;=======
+    230	001360				resint::
+    231	001360	004737 	000376'		        call    res.int         ;
+    232	001364	000646 			        br      exit$           ;
+    233					;=======
+    234	001366				get4k::
+    235	001366				        .push   r5
+    236	001370				        .push   r3
+    237	001372	013701 	100014 		        mov     memuse, r1      ; take ptr to system map
+    238	001376	013700 	100002 		        mov     maplen, r0      ; len of map in bytes
+    239	001402	060100 			        add     r1, r0          ;
+    240	001404	012704 	000001 		        mov     #1,r4           ; initial mask
+    241	001410	005305 			        dec     r5              ;
+    242	001412	100412 			        bmi     19$             ; illegal len...
+    243	001414	072405 			        ash     r5, r4          ; shift mask to proper place
+    244	001416	001410 			        beq     19$             ; illegal len...
+    245	001420	010405 			        mov     r4, r5
+    246	001422				10$:
+    247	001422	020001 			        cmp     r0, r1          ; end of map ?
+    248	001424	103417 			        bcs     90$             ; yes ...
+    249	001426	005002 			        clr     r2              ;
+    250	001430	012103 			        mov     (r1)+,r3        ; take next map-word
+    251	001432	001773 			        beq     10$             ; no free blocks
+    252	001434	000261 			        sec
+    253	001436	000403 			        br      25$
+    254	001440				19$:
+    255	001440	000261 			        sec                     ; set for error exit
+    256	001442	000410 			        br      90$             ; go to common part
+    257	001444				20$:
+    258	001444	010405 			        mov     r4, r5
+    259	001446				25$:
+    260	001446	006003 			        ror     r3              ; end of word ?
+    261	001450	001764 			        beq     10$             ; yes, try to take the next one
+    262	001452	005202 			        inc     r2
+    263	001454	103373 			        bcc     20$
+    264	001456	006005 			        ror     r5              ; end of search ?
+    265	001460	103372 			        bcc     25$             ; no
+    266	001462	005004 			        clr     r4              ; ok
+    267	001464				90$:
+    268	001464				        .pop    r3
+    269	001466	103424 			        bcs     99$             ; return with c-set
+    270	001470	073402 			        ashc    r2, r4          ; mask in r4-r5
+    271	001472	160216 			        sub     r2,     (sp)
+    272	001474	040441 			        bic     r4,-(r1)        ; set busy bits in currend word of sys-map
+    273	001476	010102 			        mov     r1, r2
+    274	001500	040541 			        bic     r5,-(r1)        ; set busy bits in prev word of sys-map
+    275	001502	004737 	000116'		        call    mapadr          ; returns addr of user map in r0
+    276	001506	103414 			        bcs     99$             ; cannot allocate map !!!
+    277	001510	163702 	100014 		        sub     memuse,r2
+    278	001514	060201 			        add     r2, r1
+    279	001516	040411 			        bic     r4, (r1)        ; the same for proc's map
+    280	001520	040541 			        bic     r5, -(r1)
+    281	001522	072227 	000003 		        ash     #3,r2           ; convert block number
+    282	001526	161602 			        sub     (sp),r2         ;  to
+    283	001530	072227 	000004 		        ash     #4, r2          ;   mmu-reg
+    284	001534	010263 	000004 		        mov     r2,p.r0(r3)     ; return it to proc in r0
+    285	001540				99$:
+Bisubr	- internal bios subrout	MACRO V05.06R Friday 30-Nov-18 09:49  Page 5-5
+Common definitions for bios monitor
+
+    286	001540				        .pop    r5
+    287	001542	000503 				br	$$exit           ;
+    288
+    289					;=======
+    290	001544				get8k::
+    291	001544	005063 	000004 		        clr     p.r0(r3)        ;
+    292	001550	004737 	000116'		        call    mapadr          ;
+    293	001554	103476 			        bcs     99$             ;
+    294	001556	006305 			        asl     r5              ; needed blocks 4k
+    295	001560	013701 	100002 		        mov     maplen, r1      ;
+    296	001564	063701 	100014 		        add     memuse, r1      ; points to end of sys-map
+    297	001570	010346 			        mov     r3, -(sp)       ; save pointer to current process
+    298	001572	005003 			        clr     r3              ; counter of free blocks
+    299	001574	005004 			        clr     r4              ; max value for r3
+    300	001576				10$:
+    301	001576	014100 			        mov     -(r1), r0       ; take next word from map
+    302	001600	012702 	000020 		        mov     #16., r2        ; num of blocks in word of map
+    303	001604				20$:
+    304	001604	006100 			        rol     r0              ;
+    305	001606	103005 			        bcc     30$             ; busy block
+    306	001610	005203 			        inc     r3              ; free block
+    307	001612	020305 			        cmp     r3, r5          ; is it enouph
+    308	001614	001420 			        beq     50$             ; ok
+    309	001616	077206 			        sob     r2, 20$         ;
+    310	001620	000405 			        br      45$             ;
+    311	001622				30$:
+    312	001622	020304 			        cmp     r3, r4          ; store max free zone ?
+    313	001624	103401 			        blo     40$             ;
+    314	001626	010304 			        mov     r3, r4          ; yes
+    315	001630				40$:
+    316	001630	005003 			        clr     r3              ; reset free block counter
+    317	001632	077214 			        sob     r2, 20$         ;
+    318	001634				45$:
+    319	001634	020137 	100014 		        cmp     r1, memuse      ; end of map ?
+    320	001640	001356 			        bne     10$             ; no
+    321	001642	012603 			        mov     (sp)+, r3       ; restore process pointer
+    322	001644	006204 			        asr     r4              ; length of max free  zone in 8k blocks
+    323	001646	010463 	000004 		        mov     r4, p.r0(r3)    ; store it for return
+    324	001652	000261 			        sec                     ;
+    325	001654	000436 			        br      99$             ;
+    326	001656				50$:            ; it is found at last
+    327	001656	012603 			        mov     (sp)+, r3       ; restore process pointer
+    328	001660	010100 			        mov     r1, r0          ; calculate block# of the first one
+    329	001662	163700 	100014 		        sub     memuse, r0      ;
+    330	001666	010004 			        mov     r0, r4          ; pointer to process's map
+    331	001670	066304 	000056 		        add     p.mem(r3), r4   ;  in r4 (for later)
+    332	001674	072027 	000003 		        ash     #3, r0          ;
+    333	001700	005302 			        dec     r2              ; rel blk [1..16] => [0..15]
+    334	001702	060200 			        add     r2, r0          ;
+    335	001704	072027 	000004 		        ash     #4, r0          ; got it at last !!!
+    336	001710	010063 	000004 		        mov     r0, p.r0(r3)    ;
+    337					                ; set bits in system and process's map
+    338	001714	012700 	000001 		        mov     #1, r0          ;
+    339	001720	072002 			        ash     r2, r0          ; move it to the proper position
+    340	001722				60$:
+    341	001722	040014 			        bic     r0, (r4)        ;
+    342	001724	005305 			        dec     r5              ; all blocks marked ?
+Bisubr	- internal bios subrout	MACRO V05.06R Friday 30-Nov-18 09:49  Page 5-6
+Common definitions for bios monitor
+
+    343	001726	001403 			        beq     70$             ; yes
+    344	001730	006100 			        rol     r0              ; shift the mask; end of word ?
+    345	001732	103373 			        bcc     60$             ; not end of word
+    346	001734	006100 			        rol     r0              ; shift the block mask in the first position
+    347	001736				70$:
+    348	001736	012402 			        mov     (r4)+, r2       ; get process's map-word
+    349	001740	005102 			        com     r2              ;
+    350	001742	040221 			        bic     r2, (r1)+       ; set the system map-word
+    351	001744	005705 			        tst     r5              ; all blocks ?
+    352	001746	001365 			        bne     60$             ; not yet !!!
+    353	001750				80$:
+    354	001750	000241 			        clc                     ; normal exit
+    355	001752				99$:
+    356	001752	000137 	001074'		$$exit:	jmp	$exit
+    357
+    358					;=======
+    359	001756				fremem::
+    360	001756	006305 			        asl     r5              ; blocks 4k to free
+    361	001760				free4k::
+    362	001760	005763 	000056 		        tst     p.mem(r3)       ; proc has any mem ?
+    363	001764	001446 			        beq     40$             ; no ...
+    364	001766	016304 	000004 		        mov     p.r0(r3), r4    ;
+    365	001772	072427 	177774 		        ash     #-4, r4         ; starting block num (in 4k)
+    366	001776	013700 	100002 		        mov     maplen, r0      ; boundary check...
+    367	002002	072027 	000003 		        ash     #3, r0          ;
+    368	002006	020400 			        cmp     r4, r0          ;
+    369	002010	103034 			        bhis    40$             ; starting block is out of ram !!!
+    370	002012	010401 			        mov     r4, r1          ;
+    371	002014	042704 	177760 		        bic     #177760, r4     ; block num in word
+    372	002020	072127 	177775 		        ash     #-3, r1         ; offset in map for the first word
+    373	002024	010102 			        mov     r1, r2          ;
+    374	002026	066301 	000056 		        add     p.mem(r3), r1   ; pointer to user map
+    375	002032	013703 	100002 		        mov     maplen, r3      ;
+    376	002036	013700 	100014 		        mov     memuse, r0      ;
+    377	002042	060003 			        add     r0, r3          ; high limit...
+    378	002044	060002 			        add     r0, r2          ; pointer to system map
+    379	002046	012700 	000001 		        mov     #1, r0          ; mask
+    380	002052	072004 			        ash     r4, r0          ;  ...for the first block
+    381	002054				20$:
+    382	002054	030011 			        bit     r0, (r1)        ;
+    383	002056	001004 			        bne     30$             ;
+    384	002060	050011 			        bis     r0, (r1)        ; mark in user map
+    385	002062	050012 			        bis     r0, (r2)        ; mark in system map
+    386	002064	005305 			        dec     r5              ; all blocks done ?
+    387	002066	003405 			        ble     40$             ; yes
+    388	002070				30$:
+    389	002070	006100 			        rol     r0              ;
+    390	002072	103370 			        bcc     20$             ;
+    391	002074	032122 			        bit     (r1)+, (r2)+    ;
+    392	002076	020203 			        cmp     r2, r3          ;
+    393	002100	103773 			        blo     30$             ;
+    394	002102				40$:
+    395	002102	000514 				br	exit$$
+    396					;=======
+    397	002104				putbmap::
+    398	002104	004737 	000116'		        call    mapadr          ;
+    399	002110	103431 			        bcs     putb1           ;
+Bisubr	- internal bios subrout	MACRO V05.06R Friday 30-Nov-18 09:49  Page 5-7
+Common definitions for bios monitor
+
+    400	002112	013702 	100002 		        mov     maplen, r2      ;
+    401	002116	006202 			        asr     r2
+    402	002120				10$:
+    403	002120				        mfus                    ;
+    404	002122	010021 			        mov     r0, (r1)+       ;
+    405	002124	077203 			        sob     r2, 10$         ;
+    406	002126	000422 			        br      putb1           ;
+    407
+    408					;=======
+    409	002130				getbmap::
+    410	002130	016301 	000056 		        mov     p.mem(r3), r1   ;
+    411	002134	001004 			        bne     getmap          ; mem-map exists !!!
+    412	002136	000261 			        sec                     ;
+    413	002140	000415 			        br      putb1           ;
+    414
+    415					;=======
+    416	002142				getsmap::
+    417	002142	013701 	100014 		        mov     memuse, r1      ;
+    418	002146				getmap:
+    419	002146	013702 	100002 		        mov     maplen, r2      ;
+    420	002152	010263 	000004 		        mov     r2, p.r0(r3)    ;
+    421	002156	060205 			        add     r2, r5          ;
+    422	002160	060201 			        add     r2, r1          ;
+    423	002162	006202 			        asr     r2
+    424	002164				10$:
+    425	002164	014100 			        mov     -(r1), r0       ;
+    426	002166				        mtus                    ;
+    427	002170	077203 			        sob     r2, 10$         ;
+    428	002172	000241 			        clc                     ;
+    429	002174				putb1:
+    430	002174	000666 			        br	$$exit           ;
+    431
+    432					;=======
+    433	002176				himpri::
+    434	002176	016303 	000004 		        mov     p.r0(r3), r3    ; new process
+    435	002202	010563 	000054 		        mov     r5, p.pri(r3)   ; set him new priority
+    436	002206	013701 	100020 		        mov     readyque, r1    ;
+    437	002212	010102 			        mov     r1, r2          ;
+    438	002214				10$:                    ; is he in readyqueue
+    439	002214	011202 			        mov     (r2), r2        ; next process
+    440	002216	020102 			        cmp     r1, r2          ; end of queue ?
+    441	002220	001001 			        bne     20$             ; no
+    442	002222	000444 			        br      exit$$          ; he is not ready, nothing to do
+    443	002224				20$:
+    444	002224	020203 			        cmp     r2, r3          ; is it he ?
+    445	002226	001372 			        bne     10$             ; no
+    446	002230	000137 	000616'		        jmp     setp            ; goto setpri common part
+    447
+    448					;=======
+    449	002234				newproc::
+    450	002234	004737 	000216'		        call    prdadr          ; create new descriptor
+    451	002240	103427 			        bcs     40$             ; cannot allocate mem !!!
+    452					                        ; r2 - pointer to old proc
+    453					                        ; r3 - pointer to new proc
+    454	002242	010301 			        mov     r3, r1          ;
+    455	002244	012704 	000040 		        mov     #prolen/2-3, r4   ;
+    456	002250				10$:                    ; copy descriptor from user (excl p.tim..p.dsucc)
+Bisubr	- internal bios subrout	MACRO V05.06R Friday 30-Nov-18 09:49  Page 5-8
+Common definitions for bios monitor
+
+    457	002250				        mfus                    ;
+    458	002252	010021 			        mov     r0, (r1)+       ;
+    459	002254	077403 			        sob     r4, 10$         ;
+    460	002256	010363 	000004 			mov	r3,	p.r0(r3); r0/new := desc.addr
+    461	002262	004737 	000116'		        call    mapadr          ;
+    462	002266	103412 			        bcs     30$             ; error exit
+    463	002270	016205 	000004 		        mov     p.r0(r2), r5    ;
+    464	002274	013704 	100002 		        mov     maplen, r4      ;
+    465	002300	006204 			        asr     r4              ;
+    466	002302				20$:                    ; copy map from user
+    467	002302				        mfus                    ;
+    468	002304	010021 			        mov     r0, (r1)+       ;
+    469	002306	077403 			        sob     r4, 20$         ;
+    470	002310	000137 	000000G		        jmp     put.sched       ;
+    471	002314				30$:                    ; failure.......................
+    472	002314	013713 	100006 		        mov     freepr, (r3)    ; free proc's descriptor
+    473	002320				40$:
+    474	002320	000614 			        br	$$exit           ;
+    475
+    476					;--------------------------------------------------
+    477	002322				mthlt::
+    478	002322	016315 	000004 			mov	p.r0(r3),(r5)
+    479	002326	000402 				br	exit$$
+    480					;--------------------------------------------------
+    481	002330				mfhlt::
+    482	002330	011563 	000004 			mov	(r5),	p.r0(r3)
+    483	002334	000137 	000000G		exit$$:	jmp      exit           ;
+    484					;--------------------------------------------------
+    485	002340				kilproc::
+    486	002340	013703 	100572 			mov	pdptr,	r3
+    487	002344	005305 				dec	r5
+    488	002346	001404 				beq	4$
+    489	002350				3$:
+    490	002350	016303 	000104 			mov	p.dsucc(r3),	r3
+    491	002354	001505 				beq	99$
+    492	002356	077504 				sob	r5,	3$
+    493	002360				4$:
+    494	002360	013700 	100006 			mov	freepr,	r0
+    495	002364	001404 				beq	7$
+    496	002366				5$:
+    497	002366	020003 				cmp	r0,	r3
+    498	002370	001477 				beq	99$
+    499	002372	011000 				mov	(r0),	r0
+    500	002374	001374 				bne	5$
+    501	002376				7$:
+    502	002376	011300 				mov	(r3),	r0		;
+    503	002400	001414 				beq	10$			;
+    504	002402	032763 	000400 	000046 		bit	#m.tio,	p.mask(r3)	;
+    505	002410	001406 				beq	8$			;
+    506	002412	020037 	100026 			cmp	r0,	timeque		;
+    507	002416	001403 				beq	8$			;
+    508	002420	066360 	000052 	000052 		add	p.tim(r3),p.tim(r0)	;
+    509	002426				8$:					;
+    510	002426	004737 	000000'			call	remove			;
+    511	002432				10$:
+    512	002432	013713 	100006 			mov	freepr,	(r3)		;
+    513	002436	010337 	100006 			mov	r3,	freepr		;
+Bisubr	- internal bios subrout	MACRO V05.06R Friday 30-Nov-18 09:49  Page 5-9
+Common definitions for bios monitor
+
+    514
+    515	002442	016300 	000056 			mov	p.mem(r3),r0		;freemem
+    516	002446	001414 				beq	27$			;
+    517	002450	010002 				mov	r0,	r2		;
+    518	002452	013701 	100014 			mov	memuse,	r1		;
+    519	002456	013705 	100002 			mov	maplen,	r5		;
+    520	002462				20$:					;
+    521	002462	105110 				comb	(r0)			;
+    522	002464	152021 				bisb	(r0)+,	(r1)+		;
+    523	002466	077503 				sob	r5,	20$		;
+    524	002470	013712 	100012 			mov	freemap,(r2)		;
+    525	002474	010237 	100012 			mov	r2,	freemap		;
+    526
+    527	002500				27$:
+    528	002500	056337 	000046 	161002 		bis	p.mask(r3),@#picmr	;disable ints
+    529	002506	012700 	100062 			mov	#v.cpuh,r0		;
+    530	002512	012705 	000015 			mov	#veclen/4,	r5	;
+    531	002516				30$:					;unpvec
+    532	002516	020310 				cmp	r3,	(r0)		;
+    533	002520	001001 				bne	33$			;
+    534	002522	005010 				clr	(r0)			;
+    535	002524				33$:					;
+    536	002524	022020 				cmp	(r0)+,	(r0)+		;next vector
+    537	002526	077505 				sob	r5,	30$		;
+    538
+    539	002530	012700 	154000 			mov	#l.rda+4000,	r0	;unpreg
+    540	002534	012705 	002000 			mov	#2000,	r5		;
+    541	002540				40$:					;
+    542	002540	012001 				mov	(r0)+,	r1		;
+    543	002542	001411 				beq	46$			;
+    544	002544	020361 	000006 			cmp	r3,	r.proc(r1)	;
+    545	002550	001006 				bne	46$			;
+    546	002552	005060 	177776 			clr	-2(r0)			;
+    547	002556	013711 	100004 			mov	freereg,	(r1)
+    548	002562	010137 	100004 			mov	r1,	freereg
+    549	002566				46$:
+    550	002566	077514 				sob	r5,	40$
+    551	002570				99$:
+    552	002570	000661 				br	exit$$
+    553
+    554	002572				getpds::
+    555	002572	016302 	000004 			mov	p.r0(r3),  r2
+    556	002576	001002 				bne	1$
+    557	002600	016302 	000050 			mov	p.cprc(r3),r2
+    558	002604				1$:
+    559	002604	020227 	100602 			cmp	r2,	#heap$$
+    560	002610	103413 				blo	99$
+    561	002612	020602 				cmp	sp,	r2
+    562	002614	103411 				blo	99$
+    563	002616	012704 	000106 			mov	#prolen, r4
+    564	002622	060405 				add	r4,	r5
+    565	002624	060402 				add	r4,	r2
+    566	002626	006204 				asr	r4
+    567	002630				2$:
+    568	002630	014200 				mov	-(r2),	r0
+    569	002632					mtus
+    570	002634	077403 				sob	r4,	2$
+Bisubr	- internal bios subrout	MACRO V05.06R Friday 30-Nov-18 09:49  Page 5-10
+Common definitions for bios monitor
+
+    571	002636	000241 				clc
+    572	002640				99$:
+    573	002640	000443 				br	$$$exit
+    574
+    575	002642				putpds::
+    576	002642	016302 	000004 			mov	p.r0(r3),  r2
+    577	002646	001002 				bne	1$
+    578	002650	016302 	000050 			mov	p.cprc(r3),r2
+    579	002654				1$:
+    580	002654	020227 	100602 			cmp	r2,	#heap$$
+    581	002660	103410 				blo	99$
+    582	002662	020602 				cmp	sp,	r2
+    583	002664	103406 				blo	99$
+    584	002666	012704 	000043 			mov	#prolen/2, r4
+    585	002672				2$:
+    586	002672					mfus
+    587	002674	010022 				mov	r0,	(r2)+
+    588	002676	077403 				sob	r4,	2$
+    589	002700	000241 				clc
+    590	002702	000422 			99$:	br	$$$exit
+    591
+    592	002704				getrds::
+    593	002704	016302 	000004 			mov	p.r0(r3),  r2
+    594	002710	020227 	170000 			cmp	r2,	#170000
+    595	002714	103415 				blo	99$
+    596	002716	000261 				sec
+    597	002720	016202 	160000 			mov	-20000(r2), r2
+    598	002724	001411 				beq	99$
+    599	002726	012704 	000014 			mov	#reglen, r4
+    600	002732	060405 				add	r4,	r5
+    601	002734	060402 				add	r4,	r2
+    602	002736	006204 				asr	r4
+    603	002740				2$:
+    604	002740	014200 				mov	-(r2),	r0
+    605	002742					mtus
+    606	002744	077403 				sob	r4,	2$
+    607	002746	000241 				clc
+    608	002750				99$:
+    609	002750	000137 	001074'		$$$exi:	jmp	$exit
+    610
+    611	002754				putrds::
+    612	002754	016302 	000004 			mov	p.r0(r3),  r2
+    613	002760	020227 	170000 			cmp	r2,	#170000
+    614	002764	103412 				blo	99$
+    615	002766	000261 				sec
+    616	002770	016202 	160000 			mov	-20000(r2), r2
+    617	002774	001406 				beq	99$
+    618	002776	012704 	000006 			mov	#reglen/2, r4
+    619	003002				2$:
+    620	003002					mfus
+    621	003004	010022 				mov	r0,	(r2)+
+    622	003006	077403 				sob	r4,	2$
+    623	003010	000241 				clc
+    624	003012	000756 			99$:	br	$$$exit
+    625
+    626	003014				getpar::
+    627	003014	016302 	000004 			mov	p.r0(r3),  r2
+Bisubr	- internal bios subrout	MACRO V05.06R Friday 30-Nov-18 09:49  Page 5-11
+Common definitions for bios monitor
+
+    628	003020	001002 				bne	1$
+    629	003022	016302 	000050 			mov	p.cprc(r3),r2
+    630	003026				1$:
+    631	003026	020227 	100602 			cmp	r2,	#heap$$
+    632	003032	103414 				blo	99$
+    633	003034	020602 				cmp	sp,	r2
+    634	003036	103412 				blo	99$
+    635	003040	012704 	000010 			mov	#10,	r4
+    636	003044	062705 	000020 			add	#20,	r5
+    637	003050	062702 	000046 			add	#p.ur7+2,r2
+    638	003054				2$:
+    639	003054	014200 				mov	-(r2),	r0
+    640	003056					mtus
+    641	003060	077403 				sob	r4,	2$
+    642	003062	000241 				clc
+    643	003064				99$:
+    644	003064	000731 				br	$$$exit
+    645
+    646	003066				putpar::
+    647	003066	016302 	000004 			mov	p.r0(r3),  r2
+    648	003072	001002 				bne	1$
+    649	003074	016302 	000050 			mov	p.cprc(r3),r2
+    650	003100				1$:
+    651	003100	020227 	100602 			cmp	r2,	#heap$$
+    652	003104	103412 				blo	99$
+    653	003106	020602 				cmp	sp,	r2
+    654	003110	103410 				blo	99$
+    655	003112	012704 	000010 			mov	#10,	r4
+    656	003116	062702 	000026 			add	#p.ur0,	r2
+    657	003122				2$:
+    658	003122					mfus
+    659	003124	010022 				mov	r0,	(r2)+
+    660	003126	077403 				sob	r4,	2$
+    661	003130	000241 				clc
+    662	003132	000706 			99$:	br	$$$exit
+    663
+    664		000001 			.end
+Errors detected:  0
+
+*** Assembler statistics
+
+
+Work  file  reads: 0
+Work  file writes: 0
+Size of work file: 9792 Words  ( 39 Pages)
+Size of core pool: 15872 Words  ( 62 Pages)
+Operating  system: RT-11
+
+Elapsed time: 00:00:00.12
+DK:P16CAL,DK:P16CAL=DK:P16,DK:P16SUB,DK:P16CAL

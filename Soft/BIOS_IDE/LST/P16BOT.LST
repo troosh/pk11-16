@@ -1,0 +1,865 @@
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49
+Table of contents
+
+    2- 462	common definitions for bios monitor
+    5-   1	common definitions for WINDOW-monitor
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 1
+
+
+      1					.enabl  lc
+      2					.enabl	ama
+      3					.enabl  gbl
+      4					.mcall	.push,.pop
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 3
+Common definitions for bios monitor
+
+      2
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 4
+Common definitions for bios monitor
+
+      1					.include /wdc.mac/
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 5
+Common definitions for WINDOW-monitor
+
+						.sbttl	common definitions for WINDOW-monitor
+      2
+      3		177530 			wcsr	= 177530	;reg for WINDOW control
+      4		147530 			xwcsr	= <wcsr & 7777> + l.reg
+      5		177532 			wmaph	= wcsr+2	;reg for WINDOW mapping info (static+dynamic)
+      6		147532 			xwmaph	= <wmaph & 7777> + l.reg
+      7		177534 			wmapl	= wcsr+4	;reg for WINDOW mapping info (TAS+PAL+ELINE+TAO)
+      8		147534 			xwmapl	= <wmapl & 7777> + l.reg
+      9		140004 			palreg	= 140004	;PAL-reg
+     10		140010 			tasreg	= 140010	;TAS-reg
+     11		040000 			wpri	= 40000		;normal priority of this process
+     12		000454 			scrlins	= 300.		;num of scr lines
+     13		000640 			scrdots	= elen*8.	;num of scr dots (for cursor)
+     14		000004 			nvll	= 4		;num of v-lines in one log-line
+     15		000113 			loglins	= scrlins/nvll	;num of log-lines
+     16		000064 			elen	= 52.		;len of empty (eline0+eline1) in words
+     17		000036 			ptlen	= 8.+8.+8.+4+2	;tot num of pals
+     18		000032 			bmax	= 26.		;tot num of bands on screen
+     19		000100 			wtl	= 64.		;max num of known windows !!!!!!!!!!!!!!!
+     20								;window nums = 0, 2, 4, ... 176
+     21		000100 			atl	= 64.		;max num of known areas !!!!!!!!!!!!!!!!!
+     22								;area nums = 0, 2, 4, ... 176
+     23		001717 			lspat	= loglins*bmax/2;length of screen-pattern in words
+     24
+     25					; VDP defs
+     26
+     27		002000 			nb	= 2000		;mul-const for length of "otrezka"
+     28		001400 			vd208	= 1400		;video-density
+     29		001000 			vd104	= 1000		;
+     30		000400 			vd52	= 0400		;
+     31		000000 			vd52s	= 0000		;
+     32					;------------------------------------------------------------------------
+     33					;log TAS defs
+     34		000000 			vm1	= 0		;video-mode (bits per point)
+     35		000001 			vm2	= 1		;
+     36		000002 			vm40	= 2		;
+     37		000003 			vm41	= 3		;
+     38		000007 			vm8	= 7		;
+     39		000000 			pl0	=      0	;pal number
+     40		040000 			pl1	=  40000	;
+     41		100000 			pl2	= 100000	;
+     42		140000 			pl3	= 140000	;
+     43		000004 			plb	= 4		; pal bank#
+     44
+     45		007774 			..addr	= 7774		;ADDR bits in first TAS-word
+     46		037760 			..par	= 37760		;PAR bits in second TAS-word
+     47					;----------------------------------------------------------------------
+     48					; window	#0	- program
+     49					;		#1	- data
+     50					;		#2	- ....
+     51		000002 			hinum	= 2	;num of 8K-blocks for data
+     52					;		#3	- TAS
+     53					;		#4	-	+ PAL
+     54					;		#5	-		+ TAO
+     55					;		#6	-
+     56		000010 			lonum	= 8.	;num of 4K-blocks for ^
+     57
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 5-1
+Common definitions for WINDOW-monitor
+
+     58		020000 				win1	= 20000		;start of data
+     59		060000 				win3	= 60000		;start of TAS...
+     60
+     61					;==================================================
+     62	000000				dsect		;VIEW descriptor
+     63
+     64	000000				dw	VW.SUCC		;
+     65	000000				dw	VW.PRED		;
+     66					;--------------------------------------------------
+     67	000000				dw	VW.AREA		;addr of area-descriptor
+     68	000000				dw	VW.ARY		;# of 1st line on area
+     69	000000				dw	VW.ARX		;offset from start of line on area in bytes
+     70	000000				dw	VW.SY1		;# of 1st line on scr
+     71	000000				dw	VW.SY2		;# of last line on scr
+     72	000000				dw	VW.SX1		;# of first band on line for USER
+     73	000000				dw	VW.SX2		;# of last band
+     74	000000				dw	VW.DEN		;.BYTE HD,VD [0,1,2]
+     75					;--------------------------------------------------
+     76	000000				dw	VW.TAR		;pointer to real start of TAS
+     77	000000				dw	VW.HD		;.byte [0,1,2], .byte[vd52,vd104,vd108]
+     78	000000				dw	VW.XOF		; ( SX1 shl HD ) - ( ARX / 2 )
+     79	000000				db	VW.VD		;.byte [0,1,2]
+     80	000000				db	VW.NUM		;.byte [2,4,...126.]
+     81	000000				dw	VW.YOF		; ( SY1 shl VD ) - ARY
+     82	000000				dw	VW.DY1		;off to line 1
+     83	000000				dw	VW.DY2		;off to line 2
+     84	000000				dw	VW.DY3		;off to line 3
+     85		000044 			VWLEN	= $$		;len of descriptor
+     86
+     87					;===================================================
+     88	000000				dsect		;AREA descriptor
+     89
+     90	000000				dw	AR.SUCC		;
+     91	000000				dw	AR.LEN		;
+     92	000000				dw	AR.LINS		;# of lines
+     93	000000				dw	AR.SLEN		;len of line in bytes
+     94	000000				dw	AR.TAS		;start of TAS
+     95
+     96					;===================================================
+     97	000000				dsect		;FONT descriptor
+     98
+     99	000000				dw	FN.SUCC		;-pointer to next FONT
+    100								;-pointer to next FONT descr in list of FNFREE
+    101	000000				dw	FN.PAR		;PAR to map FONT
+    102		000004 			FNLEN	= $$		;len of descriptor
+    103
+    104					;---------------------------------------------------
+    105	000000				dsect		;FONT's file format
+    106	000000				dw	fn.tb, 256.	;addr's of shapes for [0..255] char codes
+    107	000000				dw	fn.hi		;hight of shape in v-lines {10.}
+    108	000000				dw	fn.wi		;width of shape in bits {8.}
+    109	000000				dw	fn.id		;.ascii "PC"	;identifier for checks
+    110	000000				dw	fn.nam, 7	;name of font:	.asciz	"string"
+    111	000000				dw	fn.beg, 0	;start of shape's zone
+    112
+    113					;================================================================
+    114	000000				dsect	win1		; WINDOW static table
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 5-2
+Common definitions for WINDOW-monitor
+
+    115	000000				dw	WHEAP     ;heap pointer
+    116
+    117	000000				dw	SCREEN    ;v-adr to head of view-list (-> VWSUCC)
+    118	000000				dw	VWSUCC,0  ;pointer to first view
+    119	000000				dw	BVIEW,vwlen/2 ;descriptor of BACK view
+    120	000000				dw	VWFREE    ;pointer to list of free views
+    121	000000				dw	ARFREE    ;pointer to list of free areas
+    122	000000				dw	FNSUCC	  ;pointer to list of FONTs
+    123	000000				dw	FNFREE	  ;pointer to list of free font descrs
+    124	000000				dw	PALTBL,ptlen ;tbl of PAL's usage
+    125	000000				dw	WDTBL,wtl ;window table of descr's addrs + VW.TAR
+    126	000000				dw	ARTBL,atl ;area table of descr's addrs
+    127	000000				dw	proadr    ;pointer to addr of descr of our CALLER
+    128	000000				dw	SPAT,lspat;screen pattern table
+    129	000000				dw	spatzz	  ;the last word (always = 177777)
+    130	000000				dw	TAS0D,4	  ;start of W0 area-descr
+    131	000000				dw	TAS0, 2   ;tas for area0				;*******
+    132	000000				dw	CTAS,     ;tas for cursor (1 line)
+    133	000000				dw	SXCUR	  ;save  pointer for cursor (=0 - no cursor)
+    134	000000				dw	STAS, 2	  ;save area for curs-tas (addr,tas)
+    135	000000				dw	XCUR	  ;
+    136	000000				dw	YCUR	  ;
+    137	000000				dw	PLPAR	  ;par for PAL
+    138
+    139		024450 			 WTOP	= $$	; end of WINDOW static table
+    140
+    141	000000				dsect	win3
+    142	000000				dw	wstack	  ; bottom of INIT-stack
+    143
+    144	000000				dsect	win3
+    145	000000				dw 	TAS,0		;tas area
+    146	000000				dsect	$$+<scrlins*2*2>
+    147	000000				dw	tas312,<13.*2>
+    148					;----------------------------------------
+    149	000000				db	xxxxxx,56.
+    150					;----------------------------------------
+    151
+    152		060000 				PAL	= 60000	;
+    153					;dw	PAL,0		;pal area
+    154	000000				dsect	$$+<16.*8.*2>
+    155
+    156	000000				dw	CTAO,2		;tao for cursor
+    157
+    158	000000				dw	TAO,0		;tao area
+    159	000000				dsect	$$+<scrlins*bmax*4>
+    160					.iif ne $$-160000	.error	$$	;illegal LO-mem area
+    161
+    162					;------------------------
+    163					.MACRO CM5...	SRC,cod
+    164					.if nb <src>
+    165					.if dif <src>, r0
+    166						mov	src, %0
+    167					.endc
+    168					.endc
+    169					.if nb <src>
+    170					.if nb <cod>
+    171						mov	#cod, (0)
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 5-3
+Common definitions for WINDOW-monitor
+
+    172					.endc
+    173					.endc
+    174					.ENDM
+    175
+    176					.MACRO CM2...	ARG,OFFSE,INS,BB
+    177					.IF NB <ARG>
+    178					  .IF IDN <ARG>,#0
+    179						CLR'BB	OFFSE(0)
+    180					  .IFF
+    181						MOV'BB	ARG,OFFSE(0)
+    182					  .ENDC
+    183					.ENDC
+    184					.IF NB <INS>
+    185						mov	r0, @#wcsr
+    186						NOP	;!!!
+    187					.ENDC
+    188					.ENDM
+    189					;------------------------
+    190		000000 			ARINST	= 0	;inform W-monitor to registrate area (install area) if anum = #0
+    191							;modify TAS of area	if anum<> #0
+    192					.macro	ARINST	area,anum,lins,slen
+    193						cm5...	area,arinst
+    194						cm2...	anum, ar.len
+    195						cm2...	lins,ar.lins
+    196						cm2...	slen,ar.slen,x
+    197					.endm
+    198					;------------------------
+    199		000002 			ARKILL	= 2	;kill area and associated views
+    200					.macro	ARKILL	area,anum
+    201						cm5...	area,arkill
+    202						cm2...	anum,ar.len,x
+    203					.endm
+    204					;------------------------
+    205		000004 			VWCRE	= 4	;create view if desc =  #0 or
+    206							;modify view if desc <> #0
+    207					.macro	VWCRE	area,wnum,anum,ary,arx,sy1,sy2,sx1,sx2,den
+    208						cm5...	area,vwcre
+    209						cm2...	wnum,2.
+    210						cm2...	anum,vw.area
+    211						cm2...	ary,vw.ary
+    212						cm2...	arx,vw.arx
+    213						cm2...	sy1,vw.sy1
+    214						cm2...	sy2,vw.sy2
+    215						cm2...	sx1,vw.sx1
+    216						cm2...	sx2,vw.sx2
+    217						cm2...	den,vw.den,x
+    218					.endm
+    219					;------------------------
+    220		000006 			VWKILL	= 6	;kill view
+    221					.macro	VWKILL	area,wnum
+    222						cm5...	area,vwkill
+    223						cm2...	wnum,2.,x
+    224					.endm
+    225					;-------------------------
+    226		000010 			VWTAKE	= ^O10	;take window's descr from system
+    227					.macro	VWTAKE	area,wnum
+    228						cm5...	area,vwtake
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 5-4
+Common definitions for WINDOW-monitor
+
+    229						cm2...	wnum,2.,x
+    230					.endm
+    231					;-------------------------
+    232		000012 			VWFORE	= ^O12	;make view foreground
+    233					.macro	VWFORE	area,wnum
+    234						cm5...	area,vwfore
+    235						cm2...	wnum,2.,x
+    236					.endm
+    237					;-------------------------
+    238		000014 			VWBACK	= ^O14	;make view background
+    239					.macro	VWBACK	area,wnum
+    240						cm5...	area,vwback
+    241						cm2...	wnum,2.,x
+    242					.endm
+    243					;-------------------------
+    244		000016 			PLCRE	= ^O16	;allocate pal
+    245					.macro	PLCRE	area,mod
+    246						cm5...	area,plcre
+    247						cm2...  mod,2.,x
+    248					.endm
+    249					;-------------------------
+    250		000020 			PLFRE	= ^O20	;make pal free
+    251					.macro	PLFRE	area,modnum
+    252						cm5...	area,plfre
+    253						cm2...	modnum,2.,x
+    254					.endm
+    255					;-------------------------
+    256		000022 			PLMOD	= ^O22	;modify pal
+    257					.macro	PLMOD	area,modnum
+    258						cm5...	area,plmod
+    259						cm2...	modnum,2.,x
+    260					.endm
+    261					;-------------------------
+    262		000024 			PLSAV	= ^O24	;save pal
+    263					.macro	PLSAV	area,modnum
+    264						cm5...	area,plsav
+    265						cm2...	modnum,2.,x
+    266					.endm
+    267					;-------------------------
+    268		000017 			PLCREx	= ^O17	;allocate pal
+    269					.macro	PLCREx	area,mod
+    270						cm5...	area,plcrex
+    271						cm2...  mod,2.,x
+    272					.endm
+    273					;-------------------------
+    274		000021 			PLFREx	= ^O21	;make pal free
+    275					.macro	PLFREx	area,modnum
+    276						cm5...	area,plfrex
+    277						cm2...	modnum,2.,x
+    278					.endm
+    279					;-------------------------
+    280		000023 			PLMODx	= ^O23	;modify pal
+    281					.macro	PLMODx	area,modnum
+    282						cm5...	area,plmodx
+    283						cm2...	modnum,2.,x
+    284					.endm
+    285					;-------------------------
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 5-5
+Common definitions for WINDOW-monitor
+
+    286		000025 			PLSAVx	= ^O25	;save pal
+    287					.macro	PLSAVx	area,modnum
+    288						cm5...	area,plsavx
+    289						cm2...	modnum,2.,x
+    290					.endm
+    291					;-------------------------
+    292		000026 			CRSET	= ^O26	;set cursor (or move cursor previously set)
+    293					.macro	CRSET	area,xcur,ycur
+    294						cm5...	area,crset
+    295						cm2...	xcur,2.
+    296						cm2...	ycur,4.,x
+    297					.endm
+    298					;-------------------------
+    299		000030 			CRERA	= ^O30	;erase cursor
+    300					.macro	CRERA	area
+    301						cm5...	area,crera
+    302						cm2...	,,x
+    303					.endm
+    304					;-------------------------
+    305		000032 			FNINST	= ^O32	;install font
+    306					.macro	FNINST	area,par
+    307						cm5...	area,fninst
+    308						cm2...	par,fn.par,x
+    309					.endm
+    310					;-------------------------
+    311		000034 			FNKILL	= ^O34	;kill font
+    312					.macro	FNKILL	area,par
+    313						cm5...	area,fnkill
+    314						cm2...	par,fn.par,x
+    315					.endm
+    316					;-------------------------
+    317		000036 			FNFIND	= ^O36	;find font due to it's name
+    318					.macro	FNFIND	area
+    319						cm5...	area,fnfind
+    320						cm2...	,,x
+    321					.endm
+    322					;-------------------------
+    323		000040 			FNLOOK	= ^O40	;looks for the 1st (xpar = #0) or next to xpar<>#0 font's name
+    324					.macro	FNLOOK	area,xpar
+    325						cm5...	area,fnlook
+    326						cm2...	xpar,fn.par,x
+    327					.endm
+    328					;-------------------------
+    329		000042 			VWLOOK	= ^O42	;looks for the 1st (wnum = #0)
+    330							; or next to wnum<>#0 view's descriptor
+    331					.macro	VWLOOK	area,wnum
+    332						cm5...	area,vwlook
+    333						cm2...	wnum,2.,x
+    334					.endm
+    335					;-------------------------
+    336		000044 			WPRINT	= ^O44	;prints text on area.num
+    337					.macro	WPRINT	area,anum,y0,x0,sadr
+    338						cm5...	area,wprint
+    339						cm2...	anum,2.
+    340						cm2...	y0,4.
+    341						cm2...	x0,6.
+    342						cm2...	sadr,8.,x
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 5-6
+Common definitions for WINDOW-monitor
+
+    343					.endm
+    344					;------------------------
+    345		000046 			ARCRE	= ^o46	;creates and registrates area (install area)
+    346							;adr - start of area
+    347					.macro	ARCRE	area,adr,lins,slen,mdpl
+    348						cm5...	area,arcre
+    349						cm2...	adr, ar.len
+    350						cm2...	lins,ar.lins
+    351						cm2...	slen,ar.slen
+    352						cm2...	mdpl,ar.slen+2,x
+    353					.endm
+    354					;============================================================
+    355					;
+    356					;	cmd format
+    357					;------------------------------------------
+    358		000200 			v.mask	=^o200	; mask
+    359		000100 			v.dx	=^O100	; dir. x = back
+    360		000040 			v.dy	=^O040	; dir. y = up
+    361		000030 			v.vp	=^O030	; vram to process ram
+    362		000020 			v.vv	=^O020	; vram to vram
+    363		000010 			v.pv	=^O010	; process ram to vram
+    364		000000 			v.cv	=^O000	; const to vram
+    365		000006 			v.bic	=^O006	; dst:=dst and not src
+    366		000004 			v.bis	=^O004	; dst:=dst or src
+    367		000002 			v.xor	=^O002	; dst:=dst xor src
+    368		000000 			v.mov	=^O000	; dst:=src
+    369		000001 			v.byte	=^O001	; move byte
+    370					;----------------------------------------
+    371					;	request format
+    372					;----------------------------------------
+    373					;	.byte	ar1num,	cmd	;
+    374					;	.word	ar1y		; dst
+    375					;	.word	ny		;
+    376					;	.word	ar1x		;
+    377					;	.word	nx		;
+    378					;	.word	ar2num	/ buf addr / const	; src
+    379					;	.word	ar2y	/ buf len		;
+    380					;	.word	ar2x	/ buf wid		;
+    381
+    382		000050 			HBMOVE	= ^O50	;high-speed video-block move
+    383					.macro	HBMOVE	area,ar1num,cmd,ar1y,ny,ar1x,nx,ar2num,ar2y,ar2x
+    384						cm5...	area,hbmove
+    385						cm2...	ar1num,2.
+    386						cm2...	cmd,3.,,b
+    387						cm2...	ar1y,4.
+    388						cm2...	ny,6.
+    389						cm2...	ar1x,8.
+    390						cm2...	nx,10.
+    391						cm2...	ar2num,12.
+    392						cm2...	ar2y,14.
+    393						cm2...	ar2x,16.,x
+    394					.endm
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 6
+Common definitions for WINDOW-monitor
+
+      2	000000				.asect
+      3		000004 			.=4
+      4	000004	000014 	000001 			.word	trrr, 1
+      5	000010	000014 	000002 			.word	trrr, 2
+      6	000014	106766 	000002 		trrr:	mfps	2(sp)
+      7	000020	000002 				rti
+      8		000110 			.=110
+      9	000110	   117 	   160 	   145 		.asciz	/Operating system/
+	000113	   162 	   141 	   164
+	000116	   151 	   156 	   147
+	000121	   040 	   163 	   171
+	000124	   163 	   164 	   145
+	000127	   155 	   000
+     10		000140 			.=140
+     11	000140	177776 	010000 			.word	-2, 10000
+     12		000200 			.=200
+     13	000200	041113 	000000G			.word	"KB, t$tbl 	;
+     14	000000				.psect
+     15					;----------------------------------------
+     16	000000				ROMBOOT:			;
+     17	000000					SETPRI	#3		;
+	000000	012737 	000003 	174152 	        mov     #3,@#^o174152
+	000006	000240 			        nop
+     18	000010	012702 	001016'			mov	#str,	r2	;
+     19	000014	010706 				mov	pc,	sp	;
+     20	000016	004737 	001002'			call	wname		;
+     21					;................................
+     22	000022	005000 				clr	r0		;
+     23	000024	012702 	020000 			mov	#20000,	r2	;
+     24	000030				5$:				;
+     25	000030	066000 	000050 			add	50(r0),	r0	; romboot top
+     26	000034	062700 	000777 			add	#777,	r0	;
+     27	000040	042700 	000777 			bic	#777,	r0	;
+     28	000044	012701 	100000 			mov	#100000,r1	;
+     29	000050	060100 				add	r1,	r0	;
+     30	000052	160200 				sub	r2,	r0	;
+     31	000054				10$:				;
+     32	000054	014041 				mov	-(r0),	-(r1)	;
+     33	000056	020201 				cmp	r2,	r1	;
+     34	000060	001375 				bne	10$		;
+     35	000062	010200 				mov	r2,	r0	;
+     36	000064	060202 				add	r2,	r2	;
+     37	000066	005127 	000000 			com	#0		;
+     38	000072	001356 				bne	5$		;
+     39					;................................
+     40	000074					NEWROM	#RSTINI		;
+	000074	012737 	000000G	174166 	        mov     #RSTINI,@#^o174166
+	000102	000240 			        nop
+     41	000104					NEWROM	#KBEINI		;
+	000104	012737 	000000G	174166 	        mov     #KBEINI,@#^o174166
+	000112	000240 			        nop
+     42	000114					NEWROM	#hdcini		;
+	000114	012737 	000000G	174166 	        mov     #hdcini,@#^o174166
+	000122	000240 			        nop
+     43					;--------------------------------
+     44	000124	012702 	020040 			mov	#20040,	r2	;
+     45	000130	012703 	000002 			mov	#2,	r3	;
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 6-1
+Common definitions for WINDOW-monitor
+
+     46	000134	004737 	000640'			call	creproc		;
+     47	000140	012702 	040040 			mov	#40040,	r2	;
+     48	000144	012703 	000004 			mov	#4,	r3	;
+     49	000150	004737 	000640'			call	creproc		;
+     50					;----------------------------------------
+     51	000154				boot00:				; RT
+     52	000154	012702 	000140 			mov	#140,	r2	;
+     53	000160	012703 	000016 			mov	#14.,	r3	;
+     54	000164	004737 	000640'			call	creproc		;
+     55	000170					SETPRI	#1		;
+	000170	012737 	000001 	174152 	        mov     #1,@#^o174152
+	000176	000240 			        nop
+     56					;................................
+     57	000200	012700 	000524'			mov	#vdarea,r0	;
+     58	000204					ARCRE			;
+	000204					cm5...	,arcre
+					.if nb <>
+					.if dif <>, r0
+						mov	, %0
+					.endc
+					.endc
+					.if nb <>
+					.if nb <arcre>
+						mov	#arcre, (0)
+					.endc
+					.endc
+	000204					cm2...	, ar.len
+					.IF NB <>
+					  .IF IDN <>,#0
+						CLR	ar.len(0)
+					  .IFF
+						MOV	,ar.len(0)
+					  .ENDC
+					.ENDC
+					.IF NB <>
+						mov	r0, @#wcsr
+						NOP	;!!!
+					.ENDC
+	000204					cm2...	,ar.lins
+					.IF NB <>
+					  .IF IDN <>,#0
+						CLR	ar.lins(0)
+					  .IFF
+						MOV	,ar.lins(0)
+					  .ENDC
+					.ENDC
+					.IF NB <>
+						mov	r0, @#wcsr
+						NOP	;!!!
+					.ENDC
+	000204					cm2...	,ar.slen
+					.IF NB <>
+					  .IF IDN <>,#0
+						CLR	ar.slen(0)
+					  .IFF
+						MOV	,ar.slen(0)
+					  .ENDC
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 6-2
+Common definitions for WINDOW-monitor
+
+					.ENDC
+					.IF NB <>
+						mov	r0, @#wcsr
+						NOP	;!!!
+					.ENDC
+	000204					cm2...	,ar.slen+2,x
+					.IF NB <>
+					  .IF IDN <>,#0
+						CLR	ar.slen+2(0)
+					  .IFF
+						MOV	,ar.slen+2(0)
+					  .ENDC
+					.ENDC
+					.IF NB <x>
+	000204	010037 	177530 			mov	r0, @#wcsr
+	000210	000240 				NOP	;!!!
+					.ENDC
+     59	000212	013737 	000526'	000620'		mov	vdarea+2,vdvw+4	;
+     60	000220	012700 	000614'			mov	#vdvw,	r0	;
+     61	000224					VWCRE			;
+	000224					cm5...	,vwcre
+					.if nb <>
+					.if dif <>, r0
+						mov	, %0
+					.endc
+					.endc
+					.if nb <>
+					.if nb <vwcre>
+						mov	#vwcre, (0)
+					.endc
+					.endc
+	000224					cm2...	,2.
+					.IF NB <>
+					  .IF IDN <>,#0
+						CLR	2.(0)
+					  .IFF
+						MOV	,2.(0)
+					  .ENDC
+					.ENDC
+					.IF NB <>
+						mov	r0, @#wcsr
+						NOP	;!!!
+					.ENDC
+	000224					cm2...	,vw.area
+					.IF NB <>
+					  .IF IDN <>,#0
+						CLR	vw.area(0)
+					  .IFF
+						MOV	,vw.area(0)
+					  .ENDC
+					.ENDC
+					.IF NB <>
+						mov	r0, @#wcsr
+						NOP	;!!!
+					.ENDC
+	000224					cm2...	,vw.ary
+					.IF NB <>
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 6-3
+Common definitions for WINDOW-monitor
+
+					  .IF IDN <>,#0
+						CLR	vw.ary(0)
+					  .IFF
+						MOV	,vw.ary(0)
+					  .ENDC
+					.ENDC
+					.IF NB <>
+						mov	r0, @#wcsr
+						NOP	;!!!
+					.ENDC
+	000224					cm2...	,vw.arx
+					.IF NB <>
+					  .IF IDN <>,#0
+						CLR	vw.arx(0)
+					  .IFF
+						MOV	,vw.arx(0)
+					  .ENDC
+					.ENDC
+					.IF NB <>
+						mov	r0, @#wcsr
+						NOP	;!!!
+					.ENDC
+	000224					cm2...	,vw.sy1
+					.IF NB <>
+					  .IF IDN <>,#0
+						CLR	vw.sy1(0)
+					  .IFF
+						MOV	,vw.sy1(0)
+					  .ENDC
+					.ENDC
+					.IF NB <>
+						mov	r0, @#wcsr
+						NOP	;!!!
+					.ENDC
+	000224					cm2...	,vw.sy2
+					.IF NB <>
+					  .IF IDN <>,#0
+						CLR	vw.sy2(0)
+					  .IFF
+						MOV	,vw.sy2(0)
+					  .ENDC
+					.ENDC
+					.IF NB <>
+						mov	r0, @#wcsr
+						NOP	;!!!
+					.ENDC
+	000224					cm2...	,vw.sx1
+					.IF NB <>
+					  .IF IDN <>,#0
+						CLR	vw.sx1(0)
+					  .IFF
+						MOV	,vw.sx1(0)
+					  .ENDC
+					.ENDC
+					.IF NB <>
+						mov	r0, @#wcsr
+						NOP	;!!!
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 6-4
+Common definitions for WINDOW-monitor
+
+					.ENDC
+	000224					cm2...	,vw.sx2
+					.IF NB <>
+					  .IF IDN <>,#0
+						CLR	vw.sx2(0)
+					  .IFF
+						MOV	,vw.sx2(0)
+					  .ENDC
+					.ENDC
+					.IF NB <>
+						mov	r0, @#wcsr
+						NOP	;!!!
+					.ENDC
+	000224					cm2...	,vw.den,x
+					.IF NB <>
+					  .IF IDN <>,#0
+						CLR	vw.den(0)
+					  .IFF
+						MOV	,vw.den(0)
+					  .ENDC
+					.ENDC
+					.IF NB <x>
+	000224	010037 	177530 			mov	r0, @#wcsr
+	000230	000240 				NOP	;!!!
+					.ENDC
+     62					;................................
+     63	000232	013737 	000444'	161226 		mov	desc+p.ur0, ur3	;
+     64					;-------------------------------- READ	#60000(BUF), #256.(WCN), #0(BLK)
+     65	000240				boot:				;
+     66	000240	005737 	157130 			tst	@#157130	; hard-disk ready ?
+     67	000244	001775 				beq	boot		;
+     68	000246	012700 	000411'			mov	#170$+3,r0	;
+     69	000252	012701 	177130 			mov	#177130,r1	; hdcsr
+     70	000256	112710 	000010 			movb	#10,	(r0)	; dev.num
+     71	000262				15$:				;
+     72					;................................
+     73	000262	005227 				inc	(pc)+		;
+     74	000264	177777 			17$:	.word	-1		;
+     75	000266	001002 				bne	20$		;
+     76	000270	111127 				movb	(r1),	(pc)+	;
+     77	000272	000000 			18$:	.word	0		;
+     78					;................................
+     79	000274				20$:				;
+     80	000274	122710 	000012 			cmpb	#12,	(r0)	;
+     81	000300	001011 				bne	40$		;
+     82	000302	113710 	000272'			movb	18$,	(r0)	;
+     83	000306	100004 				bpl	30$		;
+     84	000310	111110 				movb	(r1),	(r0)	;
+     85	000312	106010 				rorb	(r0)		;
+     86	000314	106010 				rorb	(r0)		;
+     87	000316	106010 				rorb	(r0)		;
+     88	000320				30$:				;
+     89	000320	042710 	174000 			bic	#^c7*400,(r0)	;
+     90					;................................
+     91	000324				40$:				;
+     92	000324	012711 	000406'			mov	#170$,	(r1)	;
+     93	000330	000240 				nop			;
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 6-5
+Common definitions for WINDOW-monitor
+
+     94	000332				50$:				;
+     95	000332	105711 				tstb	(r1)		;
+     96	000334	100376 				bpl	50$		;
+     97	000336	032711 	177400 			bit	#177400,(r1)	;
+     98	000342	001405 				beq	120$		;
+     99	000344	132710 	000010 			bitb	#10,	(r0)	;
+    100	000350	001733 				beq	boot		;
+    101	000352	105210 				incb	(r0)		;
+    102	000354	000742 				br	15$		;
+    103					;--------------------------------
+    104	000356				120$:				;
+    105	000356	112737 	177777 	000272'		movb	#-1,	18$	;
+    106	000364					SETPRI	#-12345		;
+	000364	012737 	165433 	174152 	        mov     #-12345,@#^o174152
+	000372	000240 			        nop
+    107	000374					SETPRI	#1		;
+	000374	012737 	000001 	174152 	        mov     #1,@#^o174152
+	000402	000240 			        nop
+    108	000404	000663 				br	boot00		;
+    109					;--------------------------------------------------
+    110	000406	000000 	000000 	060000 	170$:	.word	0, 0, 60000, 400; area for read-disk request
+	000414	000400
+    111	000416				desc:	.blkb	prolen		; area for descriptor
+    112	000524	000000 	000000 	000014 	vdarea:	.word	0,	0,	12.,	40.
+	000532	000050
+    113		143150 			..xx=142400+360.
+    114	000534	143150 	000000 			.word	..xx,	vm1+pl0 ; 1
+    115	000540	143150 	000000 			.word	..xx,	vm1+pl0 ; 2
+    116		142400 			..x=142400
+    117	000544	142400 	000000 			.word	..x,	vm1+pl0 ; 3
+    118		142450 			..x=..x+40.
+    119	000550	142450 	000000 			.word	..x,	vm1+pl0 ; 4
+    120		142520 			..x=..x+40.
+    121	000554	142520 	000000 			.word	..x,	vm1+pl0 ; 5
+    122	000560	142520 	000000 			.word	..x,	vm1+pl0 ; 6
+    123		142570 			..x=..x+40.
+    124	000564	142570 	000000 			.word	..x,	vm1+pl0 ; 7
+    125		142640 			..x=..x+40.
+    126	000570	142640 	000000 			.word	..x,	vm1+pl0 ; 8
+    127		142710 			..x=..x+40.
+    128	000574	142710 	000000 			.word	..x,	vm1+pl0 ; 9
+    129	000600	142710 	000000 			.word	..x,	vm1+pl0 ;10
+    130		142760 			..x=..x+40.
+    131	000604	142760 	000000 			.word	..x,	vm1+pl0 ;11
+    132
+    133	000610	143150 	000000 			.word	..xx,	vm1+pl0 ;12
+    134	000614	000004 	000000 	000000 	vdvw:	.word	vwcre,0,0,0,0,8.,300,17.,30.,1001
+	000622	000000 	000000 	000010
+	000630	000300 	000021 	000036
+	000636	001001
+    135					;vdvw:	.word	vwcre,0,0,0,0,14.,300,17.,30.,1001
+    136					;--------------------------------------------------
+    137	000640				creproc:			;
+    138	000640	012700 	000524'			mov	#desc+prolen,r0	;
+    139	000644	012701 	000043 			mov	#prolen/2,r1	;
+    140	000650				10$:				;
+    141	000650	005040 				clr	-(r0)		;
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 6-6
+Common definitions for WINDOW-monitor
+
+    142	000652	077102 				sob	r1,	10$	;
+    143					;................................
+    144	000654	062712 	000002 			add	#2,	(r2)	;
+    145	000660	001403 				beq	15$		;
+    146	000662	012737 	000002 	000472'		mov	#2,   desc+p.pri;
+    147	000670				15$:				;
+    148	000670	012237 	000440'			mov	(r2)+,desc+p.pc ; PC+2
+    149	000674	001003 				bne	16$		;
+    150	000676	012737 	120000 	000464'		mov	#120000,desc+p.mask	;m.irq+m.hlt
+    151	000704				16$:				;
+    152	000704	011237 	000436'			mov	(r2), desc+p.sp ; SP
+    153					;................................
+    154	000710	062702 	177746 			add	#10-42,	r2	;
+    155	000714	004737 	001002'			call	wname		;
+    156					;................................
+    157	000720					GET4K	r3		;
+	000720	010337 	174176 		        mov	r3, @#^o174176
+	000724	000240 			        nop
+    158	000726	006203 				asr	r3		;
+    159	000730	012701 	000444'			mov	#desc+p.ur0, r1	;
+    160	000734				30$:				;
+    161	000734	010021 				mov	r0,	(r1)+	;
+    162	000736	062700 	000040 			add	#40,	r0	;
+    163	000742	077304 				sob	r3,	30$	;
+    164					;--------------------------------
+    165	000744	013700 	100016 			mov	runnin,	r0	;
+    166	000750	016000 	000036 			mov	p.mem-p.sp(r0), r0
+    167	000754	010001 				mov	r0,	r1	;
+    168	000756					NEWPROC	#desc		;
+	000756	012737 	000416'	174214 		mov	#desc, @#^o174214
+	000764	000240 				nop
+    169	000766	013702 	100002 			mov	maplen,	r2	;
+    170	000772				40$:				;
+    171	000772	112721 	177777 			movb	#-1,	(r1)+	;
+    172	000776	077203 				sob	r2,	40$	;
+    173	001000	000207 				return			;
+    174					;--------------------------------
+    175	001002				wname::
+    176	001002	010001 				mov	r0,	r1
+    177	001004	062701 	000060 			add	#p.name,r1
+    178	001010				10$:
+    179	001010	112221 				movb	(r2)+,	(r1)+
+    180	001012	001376 				bne	10$
+    181	001014	000207 				return
+    182	001016	   122 	   117 	   115 	str:	.asciz	/ROM-proc loader /
+	001021	   055 	   160 	   162
+	001024	   157 	   143 	   040
+	001027	   154 	   157 	   141
+	001032	   144 	   145 	   162
+	001035	   040 	   000
+    183		000000'			.end romboot
+Errors detected:  0
+
+*** Assembler statistics
+
+
+Work  file  reads: 0
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 6-7
+Common definitions for WINDOW-monitor
+
+Work  file writes: 0
+Size of work file: 11088 Words  ( 44 Pages)
+Size of core pool: 15616 Words  ( 61 Pages)
+Operating  system: RT-11
+
+Elapsed time: 00:00:00.12
+DK:P16BOT,DK:P16BOT=DK:P16,DK:P16BOT

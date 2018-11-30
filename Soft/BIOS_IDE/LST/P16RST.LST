@@ -1,0 +1,61 @@
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49
+Table of contents
+
+    2- 462	common definitions for bios monitor
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 1
+
+
+      1					.enabl  lc
+      2					.enabl	ama
+      3					.enabl  gbl
+      4					.mcall	.push,.pop
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 3
+Common definitions for bios monitor
+
+      2
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 4
+Common definitions for bios monitor
+
+      1
+      2	000000				rstini::
+      3	000000	012702 	000120'			mov	#pname,	r2
+      4	000004	004737 	000000G			call	wname
+      5	000010					provec	#v.init
+      6	000020					setpri	#10000
+      7	000030	010706 				mov	pc,	sp
+      8
+      9	000032				rst::   waitint #m.init
+     10	000042	012737 	000000 	177546 		mov	#0,	@#177546;system clock
+     11	000050	000240 				nop			;
+     12	000052					resint	#100		;
+     13	000062	012705 	154000 			mov	#l.rda+4000, r5	; from 174000
+     14	000066	012704 	001700 			mov	#1700,  r4	; (177600-174000)/2
+     15	000072	012500 			10$:	mov	(r5)+,	r0
+     16	000074	100007 				bpl	20$
+     17	000076	016001 	000012 			mov	r.reset(r0),r1
+     18	000102	022701 	177777 			cmp	#-1,    r1
+     19	000106	001402 				beq	20$
+     20	000110	010165 	017776 			mov	r1,	170000-l.rda-2(r5)
+     21	000114	077412 			20$:	sob	r4,	10$
+     22	000116	000745 				br	rst
+     23	000120	   122 	   145 	   163 	pname:	.asciz	/Reset process   /
+	000123	   145 	   164 	   040
+	000126	   160 	   162 	   157
+	000131	   143 	   145 	   163
+	000134	   163 	   040 	   040
+	000137	   040 	   000
+     24					.even
+     25		000001 			.end
+Errors detected:  0
+
+*** Assembler statistics
+
+
+Work  file  reads: 0
+Work  file writes: 0
+Size of work file: 9753 Words  ( 39 Pages)
+Size of core pool: 15616 Words  ( 61 Pages)
+Operating  system: RT-11
+
+Elapsed time: 00:00:00.06
+DK:P16RST,DK:P16RST=DK:P16,DK:P16RST

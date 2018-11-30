@@ -1,0 +1,90 @@
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49
+Table of contents
+
+    2- 462	common definitions for bios monitor
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 1
+
+
+      1					.enabl  lc
+      2					.enabl	ama
+      3					.enabl  gbl
+      4					.mcall	.push,.pop
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 3
+Common definitions for bios monitor
+
+      2
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 4
+Common definitions for bios monitor
+
+      1					; clock - process
+      2		177546 				clkcsr  = 177546
+      3		000100 				clkvec  = 100
+      4		147546 				clk.csr = <clkcsr & 7777>+l.reg
+      5		157700 				clkcnt	= 157700
+      6					;------------------------------------------------
+      7	000000				clkini::
+      8	000000	012737 	000022'	157546 		mov	#clkreg,<clkcsr & 7777>+l.rda
+      9	000006	012737 	000074'	100132 		mov	#clkint,v.scrn
+     10		100134 			c.cs0=v.scrn+2
+     11		100135 			c.cs1=c.cs0+1
+     12	000014	005037 	100134 			clr	c.cs0
+     13	000020	000207 				return
+     14					;------------------------------------------------
+     15	000022	042737 	000040 	161002 	clkreg: bic	#m.scrn,picmr	;
+     16	000030	042737 	177677 	147546 		bic	#^c100, clk.csr	;
+     17	000036	113700 	147546 			movb	clk.csr,r0	;
+     18	000042	106300 				aslb	r0		;
+     19	000044	120037 	100134 			cmpb	r0,	c.cs0	;
+     20	000050	001407 				beq	c.exit		;
+     21	000052	110037 	100134 			movb	r0,	c.cs0	;
+     22	000056	001004 				bne	c.exit		;
+     23	000060	012705 	100172 		        mov     #clkvec+vrqtbl-v.low+4, r5
+     24	000064	004737 	000000G		     	call	res.int		;
+     25	000070	000137 	000000G		c.exit: jmp	exit		;
+     26					;------------------------------------------------
+     27	000074				clkint:                         ; wait for clock-interrupt
+     28	000074	062737 	142250 	157700 		add	#50344., clkcnt	;
+     29	000102	103043 				bcc	c.ret		;
+     30	000104	105737 	100134 			tstb	c.cs0		;
+     31	000110	100004 				bpl	15$		;
+     32	000112	012705 	100172 		        mov     #clkvec+vrqtbl-v.low+4, r5
+     33	000116	004737 	000000G			call	set.int		;
+     34	000122				15$:				;
+     35	000122	052737 	000200 	147546 		bis	#200,   clk.csr	;
+     36	000130	012702 	000001 			mov	#1,	r2	;
+     37					;................................
+     38	000134				18$:				;
+     39	000134	013703 	100030 			mov	tmsucc, r3	;
+     40	000140	020337 	100026 			cmp	r3, timeque	; anybody in queue ?
+     41	000144	001414 				beq	29$		; no
+     42	000146	160263 	000052 			sub	r2,	p.tim(r3)
+     43	000152	001017 				bne	c.ret 		; still sleepping...
+     44	000154				20$:				;
+     45	000154	016363 	000014 	000010 		mov	p.r4(r3),p.r2(r3)
+     46	000162	013701 	100020 			mov	readyque, r1	;
+     47	000166	004737 	000000G			call	putpri		; put him to readyqueue
+     48	000172	005002 				clr	r2		;
+     49	000174	000757 				br	18$		;
+     50					;................................
+     51	000176	105737 	100134 		29$:	tstb	c.cs0		;
+     52	000202	100403 				bmi	c.ret		;
+     53	000204	052737 	000040 	161002 		bis	#m.scrn,picmr	;
+     54	000212	000207 			c.ret:  return			;
+     55					;------------------------------------------------
+     56		000001 			.end
+Errors detected:  0
+.MAIN.	MACRO V05.06R Friday 30-Nov-18 09:49  Page 4-1
+Common definitions for bios monitor
+
+
+*** Assembler statistics
+
+
+Work  file  reads: 0
+Work  file writes: 0
+Size of work file: 9468 Words  ( 37 Pages)
+Size of core pool: 15872 Words  ( 62 Pages)
+Operating  system: RT-11
+
+Elapsed time: 00:00:00.06
+DK:P16CLK,DK:P16CLK=DK:P16,DK:P16CLK
