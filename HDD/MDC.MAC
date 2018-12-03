@@ -1,0 +1,213 @@
+.enabl ama			;
+.include	"sy:p16mac"	;
+;--------------------------------------------------
+mdcsr	=177144			;
+mdbuf	=mdcsr+2		;
+mdsiz	=mdcsr+4		;
+;--------------------------------------------------
+md.csr	=mdcsr -30000		;
+md.buf	=md.csr+2		;
+md.siz	=md.csr+4		;
+;--------------------------------------------------
+mdvec	=164			;
+pri	=47000			;
+;--------------------------------------------------
+.asect						;
+.=0						;
+	.word	"PC,0,0,-1			;
+.asciz	/Ram-disk process/			;
+;--------------------------------------------------
+.=1776
+MSIZ:	.word	0	; 376
+CPRC:	.word	0	; 400
+DBUF:	.word	0	; 402
+DCSR:	.word	0	; 404
+CS0:	.BYTE	0	; 406
+CS1:	.BYTE	0	; 407
+XMAP:	.BLKW	7	; 410,12,14,16,20,22,24
+Q.BLK:	.WORD	0	; 426 
+Q.DEV:	.WORD	0	; 430
+Q.BUF:	.WORD	0	; 432
+Q.CNT:	.WORD	0	; 434
+M.ERR:	.WORD	0	; 436
+tcsr:	.word	mdcsr, 177677, 200, 2000, s.csr, 0
+tbuf:	.word	mdbuf,	    0,	 0, 2000, s.buf, 177777
+tsiz:	.word	mdsiz,	    0,	 0, 2000, s.siz, 177777
+;--------------------------------------------------
+start:: EMT	350		;
+	mov	#TCSR/2,r5	;
+	clr	r4		;
+10$:	clr	(r4)+		;
+	sob	r5,	10$	;
+	clr	UR6		;
+	mov	HR5,	UR5	;
+	mov	HR4,	UR4	;
+	PROREG	#TCSR		;
+	mov	R0,	DCSR	;
+	add	#4,	r0	;
+	mov	@r0,	CPRC	;
+	add	#P.CPRC,CPRC	;
+	PROREG	#TBUF		;
+	mov	r0,	DBUF	;
+	PROREG	#TSIZ		;
+	SETPRI	#PRI		;
+;--------------------------------------------------
+loop:				;
+	mov	#loop,	sp	;
+	mov	#ret,	r0	;
+	mov	r0,	r1	;
+	WAITINT #0		;
+	mov	#loop,	-(sp)	;
+	jsr	r0,	(r1)	;
+ret:	RETURN			;
+;--------------------------------
+s.siz:				;
+	mov	MSIZ,	r5	;
+	ash	#177774,r5	;
+	asl	r5		;
+	add	#17,	MD.SIZ	;
+	bic	#17,	MD.SIZ	;
+10$:	cmp	MSIZ,	MD.SIZ	;
+	beq	30$		;
+	bcc	20$		;
+				;
+	GET8K	#1		;
+	bcs	30$		;
+	add	#20,	MSIZ	;
+	mov	r0,	(r5)+	;
+	br	10$		;
+20$:	tst	r5		;
+	beq	30$		;
+	mov	-(r5),	r0	;
+	FREMEM	#1		;
+	sub	#20,	MSIZ	;
+	clr	@r5		;
+	br	10$		;
+30$:	mov	MSIZ,	md.siz	;
+	return			;
+;-------------------------------------------------
+s.csr:				;
+	mov	MD.CSR,r0	;
+	aslb	r0		;
+	cmpb	r0,	CS1	;
+	beq	99$		;
+	movb	r0,	CS1	;
+	movb	r0,	CS0	;
+	bne	s.int		;
+	RESINT	#MDVEC		;
+99$:	return			;
+;--------------------------------------------------
+s.buf:				;
+	clr	M.ERR		;
+	clr	@DCSR		;
+	bic	#177677,MD.CSR	;
+	movb	CS1,	CS0	;
+	mov	@CPRC,	r1	;
+	add	#P.UR0,	r1	;
+	mov	#XMAP,	r5	;
+	mov	#7,	r0	;
+10$:	mov	(r1)+,	(r5)+	;
+	sob	r0,	10$	;
+	mov	DBUF,	r0	;
+	mov	#-1,	-2(r0)	;
+	mov	MD.BUF,r1	;
+	mov	r1,	(r0)+	;
+	clr	@r0		;
+	clr	-(sp)		;
+	call	setmap		;
+	mov	(r1)+,	(r5)+	;
+	mov	(r1)+,	(r5)+	;
+	mov	(r1)+,	(r5)+	;
+	mov	(r1)+,	(r5)	;
+	bpl	20$		;
+	neg	(r5)		;
+	com	(sp)		;
+;--------------------------------------------------
+20$:				;
+	tst	Q.CNT		;
+	beq	60$		;
+				;
+	call	setadr		;
+	tstb	Q.CNT+1		;
+	beq	40$		;
+	decb	Q.CNT+1		;
+	inc	Q.BLK		;
+	add	#1000,	Q.BUF	;
+	mov	#20,	r5	;
+30$:				;
+.rept	16.			;
+	mov	(r0)+,	(r1)+	;
+.endr				;
+	sob	r5,	30$	;
+	br	20$		;
+40$:	mov	Q.CNT,	r5	;
+	beq	60$		;
+50$:	mov	(r0)+,	(r1)+	;
+	sob	r5,	50$	;
+60$:	tst	(sp)+		;
+	beq	s.exit		;
+	negb	Q.CNT		;
+	beq	s.exit		;
+70$:	clr	(r1)+		;
+	decb	Q.CNT		;
+	bne	70$		;
+s.exit:				;
+	mov	M.ERR,	r0	;
+	bis	#200,	r0	;
+	mov	r0,	@DCSR	;
+	mov	r0,	md.csr	;
+	mov	DBUF,	r0	;
+	clr	-2(r0)		;
+	clr	(r0)+		;
+	mov	#2000,	@r0	;
+s.int:	bitb	CS0,	@DCSR	;
+	beq	99$		;
+	setint	#mdvec		;
+	clrb	CS0		;
+99$:	return			;
+;--------------------------------------------------
+setmap:	clr	r0		;
+	ashc	#3,	r0	;
+	asl	r0		;
+	ror	r1		;
+	sec			;
+	ror	r1		;
+	ror	r1		;
+	mov	XMAP(r0),ur2	;
+	mov	XMAP+2(r0),ur3	;
+	return			;
+;--------------------------------------------------
+setadr:	mov	Q.BUF,	r1	;
+	mov	Q.CNT,	r0	;
+	add	r0,	r0	;
+	add	r1,	r0	;
+	cmp	#160000,r0	;
+	bhis	10$		;
+	bis	#110000,M.ERR	;
+	br	99$		;
+10$:	call	setmap		;
+	mov	Q.BLK,	r0	;
+	cmp	MSIZ,	r0	;
+	bcc	20$		;
+	bis	#120000,M.ERR	;
+	br	99$		;
+20$:	ash	#177774,r0	;
+	asl	r0		;
+	mov	@r0,	ur1	;
+	bne	30$		;
+	bis	#140000,M.ERR	;
+	br	99$		;
+30$:	mov	Q.BLK,	r0	;
+	ash	#11,	r0	;
+	bic	#140000,r0	;
+	bis	#20000, r0	;
+	tst	2(sp)		;
+	beq	88$		;
+	xor	r0,	r1	;
+	xor	r1,	r0	;
+	xor	r0,	r1	;
+88$:	return			;
+99$:	add	#4,	sp	;
+	br	s.exit		;
+;--------------------------------------------------
+	.end	start
