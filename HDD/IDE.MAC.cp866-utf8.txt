@@ -1,0 +1,1993 @@
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;
+;			FDD+HDD(MFM+IDE) driver
+;
+;		All arund the world you can't find beter...
+;
+;		Special driver for PC-11/16 only
+;		All rights reserved
+;
+;				  Сильно переделан в 1994 году
+;
+;		Сапроновым Максимом и Абкаировым Николаем
+;	──────────────────────────────────────────────────────────
+;
+; КОММЕНТАРИЙ К МЕХАНИЗМУ	При инициализации драйвера warm-boot не 
+;    COOL/WARM BOOT:		играет роли, а cool описывается следующим 
+; 				образом:
+;
+;
+;   151413121110 9 8 7 6 5 4 3 2 1 0 
+;   ┌─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┐
+;   └─┴─┴─┴─┴─┴─┴─┴─┴°┴x┴x┴°┴°┴°┴°┴°┘
+;		     │	   │ │ ╘═╪═╛
+;   driver ready ────┘	   │ │	 └────────── cool boot device
+;   IDE device (*) ────────┘ └────────────── cool boot device doesn't exist
+;
+;   				Как только проходит cool_boot, само понятие
+;				теряет смысл и, следовательно, биты 0..3 
+;   				можно использовать в др. целях. С битом #3
+;   				так и происходит. А вот бит #0 - это
+;				добавление для работы с IDE.
+;
+;   151413121110 9 8 7 6 5 4 3 2 1 0 
+;   ┌─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┐
+;   └─┴─┴─┴─┴─┴─┴─┴─┴°┴°┴°┴°┴°┴x┴x┴°┘
+;		     │ │ ╘═╪═╛	   │
+;   driver ready ────┘ │   │	   └──────── IDE drive (*)
+;		       │   └──────────────── warm boot device
+;		       └──────────────────── warm boot device doesn't exist
+;
+;   (*) - добавление, сделанное в 1994 году для расширения возможностей
+;	  драйвера.
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+;	.enabl		AMA
+	.mcall		.exit,push,pop
+	.dsabl		GBL
+
+	.Title	Hard Disk Controller
+
+	.include "sy:p16mac"
+
+;	$BIOS		=   0
+
+.if	DF	$BIOS
+	ADD.REG		=  l.reg
+	IDEcash		=  16.
+.iff
+	ADD.REG		=  140000		; UR6
+	IDEcash		=  32.
+.endc
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+; WD1010-05 map description
+;
+	id.buff  = 161120	;  data buffer
+	id.err	 = id.buff+2	;  wr. precomp cyl.
+	id.scnt  = id.buff+4	;  Sector count rg.
+	id.snum  = id.buff+6	;  Sector number rg.
+	id.cnlo  = id.buff+10	;  Cylinder addr lo.
+	id.cnhi  = id.buff+12	;  Cylinder addr hi.
+	id.sdh	 = id.buff+14	;  Sector:Disk:Head
+	id.csr	 = id.buff+16	;  Command & status reg
+	id.irq	 = 161114	;  interrupt, 4th bit of the head number
+				;   and software reset
+
+	ide.add	= <id.err-hd.err>
+
+	ide$cnt	=  1		;
+	ide$num =  1		;
+	AutoPD	= 342		; = E2h Auto Power Down
+
+	hd.buff = 161040	;  data buffer
+	hd.err	= 161042	;  wr. precomp cyl.
+		e.dmnf	= 1	; data mark not found
+		e.tr0	= 2	; track 000 not found
+		e.ac	= 4	; cmd aborted
+		e.idnf	=20	; ident not found or crc error
+		e.crc	=100	; crc error /data field
+		e.bad	=200	; bad-block detected
+	hd.scnt = 161044	;  Sector count rg.
+	hd.snum = 161046	;  Sector number rg.
+	hd.cnlo = 161050	;  Cylinder addr lo.
+	hd.cnhi = 161052	;  Cylinder addr hi.
+	hd.sdh	= 161054	;  Sector:Disk:Head
+		sdh0	= 1	; head 0 / side
+		sdh1	= 2	; head 1 / dens.lo
+		dens.lo = sdh1	;
+		sdh2	= 4	; head 2 / f1sel
+		f1sel	= sdh2	;
+		sd0h	=10	; hdsel
+		run	=20	; run
+		s256	= 0	; sector size	= 256
+		s512	=40	;		= 512
+		s1024	=100	;		= 1024
+		s128	=140	;		= 128
+		x.ecc	=200	; ext for ECC
+		i.sfree =340
+		i.s512	=240
+
+	hd.csr	= 161056	;  Command & status reg
+		s.err	= 1	;  error
+		s.cmd	= 2	;  cmd in progress
+		s.drq	=10	; sgl 'DRQ'
+		s.sc	=20	; sgl 'SEEK COMPLETE'
+		s.wf	=40	; sgl 'WRITE FAULT'
+		s.rdy	=100	; sgl 'DISK READY'
+		s.busy	=200	; busy
+;─────────────────────────────────────────────────────────────
+	fdcsr	= 161070	;
+	fdbuf	= 161072	;
+	fdcnt	= 161076	;
+		ba9	= 1	;
+		ba10	= 2	;
+		fd.ini	= 20	;
+
+	T1copy	= 177132			; ёёёёё
+	T2copy	= 177134			; ёёёёё
+	T1.copy	= <T1copy & 7777> + ADD.REG	; ёёёёё
+	T2.copy	= <T2copy & 7777> + ADD.REG	; ёёёёё
+
+;═════════════════════════════════════════════════════════════
+; Command`s format
+;═════════════════════════════════════════════════════════════
+;
+	RESTORE =  20	;RESTORE + rate
+	SEEK	= 160	;SEEK	 + rate
+	RDSECT	=  40	;RDSECT  ! I ! M ! T
+	WRSECT	=  60	;WRSECT      ! M ! T
+	SCAN	= 100	;SCAN		 ! T
+	FORMAT	= 120
+		I  = 10 ; interrupt at end of cmd
+		M  =  4 ; multiple sectors
+		T  =  1 ; dis. retries
+		r0.035	= 0
+		r0.5	= 1
+		R1.0	= 2
+		r7.5	= 17
+
+;─────────────────────────────────────────────────────────────
+;
+	HDCBUF	== 177130
+	HDCVEC	== 230
+	FDCVEC	== 234
+	IDEVEC	== 240
+	M.HD	=  M.flop
+	V.HD	=  V.flop
+	M.IDE	=  M.HD
+	V.IDE	=  V.HD
+
+	HDC.BUF = <HDCBUF & 7777> + ADD.REG
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+.macro	fcmd,	cmd		;
+	jsr	R5,	wrcmd	;
+	.word	cmd		;
+.endm				;
+;─────────────────────────────────────────────────────────────
+.macro	ERROR,	cod		;
+	jsr	R5,	p.err	;
+	.byte	5*16.+0,cod	;
+.endm				;
+;─────────────────────────────────────────────────────────────
+.macro	WHI.ONLY  mask,?l1	;если читают регистр, то не реагируем !
+	.push	<R0,R1>
+l1:	clr	R0
+	clr	R1
+	WAITINT mask		; ждем прерываний по маске
+	tst	R0
+	bne	l1
+	tst	R1
+	bne	l1
+	.pop	<R1,R0>
+.endm
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+	.asect
+	. = 0
+	.word	"PC, 0, 0, 0
+	.asciz	"IDE+MFM (2804.4)"
+	.psect
+
+bootd		:  .word	10		; no boot partition
+bootw		:  .word	100		; no warm boot partition
+		   .byte	0		; motor on
+bcnt		:  .byte	0
+h.fail		:  .word	0
+i.fail		:  .word	0
+;─────────────────────────────────────────────────────────────
+f.read		= 106*400+9.			; читать сектор(а)
+f.write 	= 105*400+9.			; писать сектор(а)
+f.form  	= 115*400+6.			; форматировать
+f.rec		=   7*400+2			; установка на 0 дорожку
+f.seek		=  17*400+3			; поиск дорожки
+f.sds		=   4*400+2			; чтение состояния
+f.sis		=  10*400+1
+;─────────────────────────────────────────────────────────────
+f.spec		:  .byte	3,   12.*20+1, 2
+;─────────────────────────────────────────────────────────────
+f.cmd		:  .byte	106
+f.hds		:  .byte	0
+f.cyl		:  .byte	0
+f.head		:  .byte	0
+f.sect		:  .byte	1
+f.len		:  .byte	2
+f.eot		:  .byte	37
+f.gpl		:  .byte	5.
+f.dtl		:  .byte	377
+;─────────────────────────────────────────────────────────────
+s.st0		:  .blkb	1
+s.st1		:  .blkb	1
+s.st2		:  .blkb	1
+s.cyl		:  .blkb	1
+s.hd		:  .blkb	1
+s.sec		:  .blkb	1
+s.len		:  .blkb	1
+s.sp		:  .blkb	1
+;─────────────────────────────────────────────────────────────
+rdstat: 				; 7346
+	mov	#s.st0, R0		; регистр состояния
+	clr	2$			; пауза, что ли?
+1$:	add	#1, (pc)+		;
+2$:	.word	0			;
+	bcs	3$			;
+	tstb	@#fdcsr			; а как там винт?
+	bpl	1$			; не выставил, пока что...
+	cmpb	#277, @#fdcsr		; fdcsr < 277 ? да ...
+	bcc	3$			;
+	movb	@#fdbuf, (R0)+		; пишем регистры состояния...
+	cmp	#s.st0+8., R0		; все регистры?
+	bcc	1$			; нет
+3$:	return				;
+
+;─────────────────────────────────────────────────────────────
+f.reset:				;
+	mov	#20, @#fdcnt		;
+	mov	#2000, R1		;
+	clr	@#fdcnt			;
+	sob	R1, .			;
+
+f.set:	mov	#f.spec, R0		;
+	mov	#3, R1			;
+	br	wrcmd1			;
+
+;─────────────────────────────────────────────────────────────
+wrcmd:	mov	#f.cmd, R0		;
+	movb	(R5)+, R1		; cnt
+	movb	(R5)+, (R0)		; cmd
+
+wrcmd1:	clr	2$			;
+
+1$:	add	R1, (pc)+		;
+2$:	.word	0			;
+	bcs	4$			;
+	tstb	@#fdcsr			;
+	bpl	1$			;
+	cmpb	#277, @#fdcsr		;
+	bcs	4$			;
+	movb	(R0)+, (pc)+		;
+3$:	.word	0			;
+	mov	3$, @#fdbuf		;
+	sob	R1, 1$			;
+4$:	rts	R5			;
+
+;─────────────────────────────────────────────────────────────
+p.err:	mov	(R5)+, ierr		;
+	DSTRIN	#ierr			;
+	rts	R5			;
+
+ierr:	.byte	0,0,22,172,263,233
+
+;─────────────────────────────────────────────────────────────
+
+s.t1:	return					; ёёёёё
+
+s.t2:	cmp	@#T1.copy, #123456		; ёёёёё
+	<nop>
+	bne	1$				; ёёёёё
+	mov	@#T2.copy, R0			; ёёёёё
+	<nop>
+	mov	R0, @#HDC.BUF			; ёёёёё
+	<nop>
+1$:	clr	@#T1.copy			; ёёёёё
+	<nop>
+	clr	@#T2.copy			; ёёёёё
+	<nop>
+	return
+
+xread:
+xwr:	mov	#xerr,	 R2
+	mov	#hd.err, R5
+	movb	xsdh,	D955$
+	bic	#^C17,	D955$ 
+	clr	-(sp)
+	movb	xsdh,	 (sp)
+	bit	#10,	 (sp)
+	beq	1$
+	bis	#177400, (sp)
+	br	2$
+
+1$:	bic	#i.sfree, (sp)
+2$:	bis	#<s512+sd0h>, (sp)
+	bitb	#10,	h.err+1		; dev 10..17 ?
+	beq	3$
+	bic	#sd0h,	(sp)		; select flop
+
+3$:	movb	(R2)+,	(R5)+
+	inc	R5
+	cmp	#<hd.sdh-2>, R5
+	bcc	3$
+
+	movb	(sp),	(R2)+
+	mov	(sp)+,	(R5)+
+
+;	─────────────────────
+
+	mov	xcyl,	D95$
+	bitb	#10,	h.err+1
+	beq	4$
+	bic	#^C1,	D955$
+	br	F.RW
+
+4$:	bitb	#20,	(R2)
+	beq	5$
+	decb	bcnt
+	bicb	#^C3,	bcnt
+
+5$:	movb	bcnt, @#fdcnt		; buf.addr
+	movb	(R2), (R5)
+	DSTRING #D96$
+	DVAL	#D95$
+	DVAL	#D955$
+
+	WHI.ONL #M.HD
+;	WAITINT #M.HD
+	movb	bcnt,	@#fdcnt		; buf.addr
+	<sec>
+	bit	#s.err,	(R5)
+	bne	6$
+	<clc>
+6$:	bit	#e.crc, @#hd.err	;hd.err
+	return
+
+;─────────────────────────────────────────────────────────────
+f.rw:	.push	<R0,R1,R3>
+	mov	f.hds, R2
+	clrb	f.hds
+	movb	xsdh, R0
+	rorb	R0
+	rolb	f.hds
+	movb	f.hds, f.head
+	rolb	f.hds
+	rorb	R0
+	rorb	R0
+	movb	#333, d97$+2
+	bcc	1$
+	movb	#73, d97$+2
+
+1$:	rolb	f.hds
+	movb	xcyl, f.cyl
+	sub	f.hds, R2
+	movb	xsnum, f.sect
+	bic	#376, R2
+	beq	2$
+;	────────────────────────
+	FCMD	f.seek			;
+	mov	#50, R3			;
+	WHI.ONL	#m.hd+m.tio		;
+;	WAITINT #m.hd+m.tio		;
+	FCMD	f.sis			;
+	call	rdstat			;
+;	────────────────────────
+
+2$:	movb	bcnt, @#fdcnt		; buf.addr
+	cmpb	#rdsect+m, xcsr		;
+	bne	3$			;
+	FCMD	f.read			;
+	br	5$			;
+;	────────────────────────
+3$:	cmpb	#wrsect+m, xcsr		;
+	bne	4$			;
+	tst	(R5)			; hd.csr
+	FCMD	f.write			;
+	br	5$			;
+;	────────────────────────
+4$:	cmpb	#format, xcsr		;
+	bne	8$			;
+	.push	f.hds			;
+	movb	#2, f.cyl		;
+	movb	p$sn(R4), f.head	;
+	movb	p$rl(R4), f.sect	;
+	movb	p$rl+2(R4), f.len	;
+	tst	(R5)			; hd.csr
+	FCMD	f.form			;
+	movb	#2, f.len		;
+	.pop	f.hds			;
+;	────────────────────────	
+5$:	DSTRING #D97$			;
+	DVAL	#D95$			;
+	DVAL	#D955$
+	mov	#50., R3		;
+	WHI.ONL	#<m.hd+m.tio>		;
+;	WAITINT #<m.hd+m.tio>		;
+	tst	R2			;
+	beq	7$			;
+;	────────────────────────
+	mov	#1000, R2		;
+
+6$:	clr	@#fdcnt			;
+	sob	R2, 6$			;	
+	bis	#10, h.err		;
+;	────────────────────────
+7$:	call	rdstat			;
+	movb	bcnt, @#fdcnt		; buf.addr
+	tst	(R5)			; hd.csr
+8$:	cmpb	#77, s.st0		;
+	bcc	10$			;
+9$:	movb	#-1, f.cyl		;
+	<nop>
+
+10$:	.pop	<R3,R1,R0>		;
+	return				;
+
+;─────────────────────────────────────────────────────────────
+D95$		:  .WORD	0,10.*400+<3*16.>
+D955$		:  .WORD	0,10.*400+<2*16.+5>
+D96$		:  .BYTE	3*16.+2,2,263,233
+D97$		:  .BYTE	3*16.+2,2,333,132
+D98$		:  .BYTE	3*16.+2,2,072,153
+D100$		:  .WORD	0
+;	────────────────────────
+
+		   .byte	 0
+xerr		:  .byte	-1		; прекомп/ошибка
+xscnt		:  .byte	 0		; число секторов
+xsnum		:  .byte	-1		; номер сектора
+xcyl		:  .word	 0		; цилиндр
+xsdh		:  .byte	 s512		; головка
+xcsr		:  .byte	 rdsect		; команда
+;─────────────────────────────────────────────────────────────
+
+T1tbl		:  .word	 T1copy, 0, 0, 2000,   s.t1,-1	; ёёёёё
+T2tbl		:  .word	 T2copy, 0, 0, 2000,   s.t2,-1	; ёёёёё
+HDBTBL		:  .word	 HDCBUF, 0, 0, 2000, H.WBUF,-1
+pname		:  .asciz	"IDE+MFM (2804.4)"
+.EVEN
+
+;─────────────────────────────────────────────────────────────
+hdcini::
+	.exit
+
+	SETPRI	#30
+	UNPVEC	#V.HD
+	clr	R0
+	PROVEC	#V.HD
+
+	UNPREG	#hdcbuf
+	PROREG	#hdbtbl 		;
+	UNPREG	#T1copy			; ёёёёё
+	UNPREG	#T2copy			; ёёёёё
+	PROREG	#T1tbl			; ёёёёё
+	PROREG	#T2tbl			; ёёёёё
+
+	clr	@#HDC.BUF
+	tst	(R0)+			;
+	mov	R0, hb.copy 		;
+
+.if	DF	$BIOS
+	CALL	PROT.A			; ++++++++++++++++++++++ Сделано
+.endc
+
+	mov	@#HR4,	@#UR4
+	mov	@#HR5,	@#UR5
+	clr	@#UR6
+					; При поиске ошибке - неожиданное
+					; зависание
+;	────────────────────────
+
+93$:	mov	#hd.csr, R5		; регистр состояния - в R5
+	tst	(R5)			; reset h.int
+	clr	-(R5)			; select flop
+	jsr	R5, f.reset 		; init FDC
+	mov	#2*50., R3		; wait 
+	mov	#f.cb0, R4		; параметр при T/O
+
+1$:	mov	p$hb(R4), (R5)		; выбираем некий флоп
+	FCMD	f.rec			; на ноль
+	WHI.ONL	#<M.TIO+M.HD>		;+ ждать только прерывания
+	FCMD	f.sis			; ставим бит читаем состояния
+	call	rdstat			; читаем состояние
+	com	#0			; &&'&%%% с флопом...
+	bne	1$			; не все закончилось...
+	tst	R2			; а что случилось?
+	bne	2$			; прерывание...
+	bitb	#300,	s.st0		; ошибка чтения?
+	bne	2$			; да...
+	mov	#pm.off, (R4)		; ставим, что флоп работает...
+
+2$:	add	#par.len, R4		; берем следующий флоп
+	com	#0			; и так до №1
+	bne	1$			; ...
+
+;	────────────────────────
+	mov	#sd0h, (R5)+		; hd.sdh, select hd0
+	mov	#20., R4		; ждем 20 раз по секунде...
+3$:	mov	#10., R3		; ждем секунду...
+	WHI.ONL	#M.TIO			;+ ждать только прерывания
+	bit	#s.rdy, (R5)		; hd.csr - выставлен?
+	bne	4$			; да!
+	sob	R4, 3$			; подождем, пока не T/O
+	ERROR	201			; err #1
+	br	fail			; поставим h.fail
+
+;	────────────────────────
+4$:	mov	#RESTORE, (R5)		; установим на 0
+	mov	#5.*50., R3		; 5 (20) секунд - максимум
+	WHI.ONL	#<M.HD+M.TIO>		;+ ждать только прерывания
+	bit	#s.err, (R5)		; hd.csr
+	beq	ok.MFM			; нет ошибки - на "OK:"
+	ERROR	362			; err #2
+
+fail:	inc	h.fail			; нет хард'а
+
+;	────────────────────────	  проверим IDE
+
+ok.MFM:	call	IDE.res
+	call	IDE.skip
+	bne	1$
+	mov	#RESTORE, @#id.csr	; установим на 0
+	mov	#<4.*50.>, R3		; 5 (20) секунд - максимум
+	mov	#-1,	R4		; Просто число не равное M.IDE
+	WHI.ONL	#<M.IDE+M.TIO>		;+ ждать только прерывания
+	cmp	R4,	R2		; Это есть копия R4?
+	beq	1$			;  а раз так ,то IDE отсутствует...
+	bit	#s.err, @#id.csr	; id.csr
+	beq	ok			; нет ошибки - на "OK:"
+1$:	ERROR	301			; err #7
+
+fail.IDE:
+	inc	i.fail
+	tst	h.fail
+	beq	OK
+	jmp	loop0
+
+;═══════════════════════════════════════
+ok:	mov	#xread, R4		;
+	call	(R4)			;
+	bcs	foreign 		;
+1$:	mov	#par.fre, R0		;
+	mov	#hd.buff, R1		;
+2$:	tst	(R1)			;
+	sob	R0, 2$			;
+
+;	────────────────────────
+	mov	#par.siz, R0		;
+	mov	R0, R3			;
+	mov	#h0.sec, R2		;
+3$:	movb	(R1), (R2)+		;
+	sob	R0, 3$			;
+	cmp	-2(R2), #123456		; signature
+	beq	5$			;
+	ERROR	343			; err #3
+4$:	clrb	-(R2)			; clear both par. tab !
+	sob	R3, 4$			;
+	jmp	loop0			;
+
+;	────────────────────────
+5$:	mov	h0.sec, R0		;
+	beq	bad			;
+	mul	h0.head, R0		;
+	mov	R1, R0			;
+	beq	bad			;
+	mul	h0.track,R0		; R1 - lo, R0 - hi
+	cmp	R1, h0.size 		;
+	bne	bad			;
+	cmp	R0, h0.size+2
+	beq	cont			;
+bad:	ERROR	213			; ERR #4
+
+;─────────────────────────────────────────────────────────────
+; total disk space OK!
+; now test all partitions to be correct
+
+cont:	clr	R3			;
+	mov	#p.cb0, R2		; part # * size
+1$:	bic	#pm.off, p$cb(R2)	; part. off
+	mov	p$sn(R2), R0		;
+	beq	3$			;
+	mul	p$hn(R2), R0		;
+	mov	R1, R0			;
+	beq	3$			;
+	mul	p$cn(R2), R0		;
+	cmp	R1, p$sz(R2)		;
+	bne	3$			;
+	cmp	R0, p$sz+2(R2)
+	bne	3$			;
+	bis	#pm.off, p$cb(R2)	; size OK -> part. on
+	bit	#pm.nb, (R2)		;
+	beq	2$			;
+	mov	R3, bootd		;
+2$:	bit	#pm.wb, (R2)		;
+	beq	3$			;
+	mov	R3, R4			;
+	ash	#3, R4			;
+	mov	R4, bootw		;
+3$:	add	#par.len, R2		;
+	inc	R3			;
+	cmp	#8., R3			;
+	bne	1$			;
+	br	loop0			;
+;	────────────────────────────────
+foreign:				;
+	mov	#xsnum,R3		; hd.snum
+	incb	(R3)			;
+	bmi	loop0			;
+	call	(R4)			;
+	bcc	1$			;
+	beq	foreign 		;
+;	────────────────────────────────
+1$:	movb	(R3),	p.sb0		;
+2$:	incb	(R3)			;
+	call	(R4)			;
+	bcc	2$			;
+	bne	2$			;
+	movb	(R3),	p.sn0		;
+	sub	p.sb0,	p.sn0		;
+	decb	(R3)			;
+;	────────────────────────────────
+	mov	#xsdh,	R3		; hd.sdh
+	movb	#<s512+sd0h>, (R3)
+3$:	decb	(R3)			;
+	call	(R4)			;
+	bcc	4$			;
+	beq	3$			;
+4$:	bicb	#^C7,	(R3)		;
+	incb	(R3)			;
+	movb	(R3),	p.hn0		;
+	mov	#1024., p.cn0		;
+	mov	#177770,p.sz0		;
+	bis	#pm.off,p.cb0		;
+
+;─────────────────────────────────────────────────────────────
+;
+loop0:	tst	i.fail			; IDE_hard_disk_drive exists?
+	beq	1$			; Да
+	jmp	i.loop0			; Нет - выйдем с ошибкой
+
+1$:	clrb	xerr			; Прекомпенсация = 0, т.к. дорожка =0
+	movb	#ide$cnt, xscnt		; Номер сектора  (ide$cnt=1)
+	movb	#ide$num, xsnum		; Число секторов (ide$num=1)
+	clr	xcyl			; Цилиндр = 0
+	movb	#i.s512, xsdh		; Не принципиально IDE.xxx поправит
+	movb	#rdsect, xcsr		; Читать сектора
+	movb	#20, h.err+1		; Устройство  - IDE_hdd
+
+	call	IDE.send		; Загрузить регистры контроллера
+	bne	i.foreign		; Ошибка? -> i.foreign
+
+	WHI.ONL	#M.IDE			; Прочитали Partition?
+	bit	#s.err,	@#id.csr	; Да - без ошибок?
+	bne	i.foreign		; Были ошибки =(
+
+	mov	#<par.fre/2>, R0	;
+	mov	#id.buf, R1		;
+
+	clr	-(sp)
+2$:	mov	(R1), (sp)		;
+	sob	R0, 2$			;
+	tst	(sp)+
+
+;	────────────────────────
+
+	mov	#<ipar.add/2>, R0	;
+	mov	#i0.sec, R2		;
+3$:	mov	(R1), (R2)+		;
+	sob	R0, 3$			;
+	mov	#<ipar.siz/2>, R0	;
+	mov	#ip.CB0, R2		;
+4$:	mov	(R1), (R2)+		;
+	sob	R0, 4$			;
+	cmp	-2(R2), #123456		; signature
+	beq	7$			;
+	ERROR	153			; err #5
+	mov	#<ipar.siz/2>, R0	;
+5$:	clr	-(R2)			; clear both par. tab !
+	sob	R0, 5$			;
+	mov	#<ipar.add/2>, R0	;
+	mov	#i0.sec, R2		;
+6$:	clr	(R2)+			;
+	sob	R0, 6$			;
+	jmp	i.foreign		;
+
+;	────────────────────────
+7$:	mov	i0.sec, R0		;
+	beq	i.bad			;
+	mul	i0.head, R0		;
+	mov	R1, R0			;
+	beq	i.bad			;
+	mul	i0.track, R0		; R1 - lo, R0 - hi
+	cmp	R1, i0.size 		;
+	bne	i.bad			;
+	cmp	R0, i0.size+2
+	beq	i.caunt			;
+i.bad:	ERROR	173			; ERR #6
+
+i.caunt:
+	clr	R3			;
+	mov	#ip.cb0, R2		; part # * size
+1$:	bic	#pm.off, p$cb(R2)	; part. off
+	mov	p$sn(R2), R0		;
+	beq	3$			;
+	mul	p$hn(R2), R0		;
+	mov	R1, R0			;
+	beq	3$			;
+	mul	p$cn(R2), R0		;
+	cmp	R1, p$sz(R2)		;
+	bne	3$			;
+	cmp	R0, p$sz+2(R2)
+	bne	3$			;
+	bis	#pm.off, p$cb(R2)	; size OK -> part. on
+	bit	#pm.nb, (R2)		;
+	beq	2$			;
+	mov	R3, bootd		;
+;	bis	#20, bootd
+2$:	bit	#pm.wb, (R2)		;
+	beq	3$			;
+	mov	R3, R4			;
+	ash	#3, R4			;
+	mov	R4, bootw		;
+;	bis	#1, bootw
+3$:	add	#ipar.len, R2		;
+	inc	R3			;
+	cmp	#8., R3			;
+	bne	1$			;
+	br	i.loop0			;
+;	────────────────────────────────
+
+i.foreign:
+	mov	#id.csr, R4
+	mov	#354, (R4)
+	mov	#177777, R5
+1$:	bit	#s.drq, (R4)
+	bne	2$
+	dec	R5
+	bne	1$
+	br	i.f.bad
+
+2$:	tst	@#id.buff			; лажа
+	mov	@#id.buff, ip.CN0		; число цилиндров
+	tst	@#id.buff			; бред
+	mov	@#id.buff, ip.HN0		; число головок
+	tst	@#id.buff			; буфер для дорожки
+	tst	@#id.buff			; число байт на сектор
+	mov	@#id.buff, ip.SN0		; число секторов
+3$:	bit	#s.drq, (R4)
+	beq	4$
+	tst	@#id.buff
+	br	3$
+
+4$:	mov	ip.SN0, R1
+	mul	ip.HN0, R1
+	mov	R1, R0
+	mul	ip.CN0, R0
+	mov	R0, ip.SZ0+2		; HIGH
+	mov	R1, ip.SZ0		; LOW
+i.f.bad:
+	bis	#<pm.off+pm.st1>, ip.cb0
+
+i.loop0:
+
+.if	DF	$BIOS
+	CALL	UNPR.A			;+++
+.endc
+	mov	bootd, @#HDC.BUF 	;	▓▓▓▓▓
+	bis	#200,  @#HDC.BUF 	;	▓▓▓▓▓
+
+.if	DF	$BIOS
+	CALL	PROT.A			;+++
+.endc
+
+loop:	clr	R5			;
+	bitb	#run, xsdh		;
+	beq	10$			;
+	mov	#100., R3		;
+	mov	#run, R4		;
+	mov	#m.tio,	R5		;
+
+10$:	mov	#ret, R0		;
+	mov	R0, R1			;
+	clr	R2			;
+	WAITINT R5			;
+	.push	#loop			;
+	bicb	R2, @#hd.sdh		;
+	bicb	R2, xsdh		;
+	jsr	R0, (R1)		;
+
+;─────────────────────────────────────────────────────────────
+;
+h.wbuf:
+.if	DF	$BIOS
+	CALL	UNPR.A			;+++
+.endc
+	clr	@hb.copy		; обнулим копию НАШЕГО регистра
+
+.if	DF	$BIOS
+	CALL	PROT.A			;+++
+.endc
+	.push	#h.exit 		; точка H.EXIT - в стек
+	movb	#3, bcnt		;
+	clr	h.err			; номер устройства - 0, hard
+	clr	R0			; карту обратившегося процесса
+	GETPAR	#hr.map 		;  хватаем
+
+.if	DF	$BIOS
+	mov	#10, hr.map+16		;+++ deny access for upper window
+	CALL	UNPR.A			;+++
+.endc
+
+	mov	hdc.buf, R1		; берем регистр
+	bic	#177776, hdc.buf 	; скинем хвост...
+
+.if	DF	$BIOS
+	CALL	PROT.A			;+++
+.endc
+
+	call	SETMAP			; пишем в UR'ы 
+	mov	#hr.blk, R2		; и вот параметры
+	mov	(R1)+, (R2)+		; hr.blk
+	mov	(R1)+, (R2)+		; hr.dev
+	mov	R2, R5			; hr.dev - в R5
+	mov	(R1)+, (R2)+		; hr.buf
+	movb	#RDSECT!M, xcsr		;
+	mov	(R1), (R2)		; hr.cntw
+	beq	8$			; 
+	bpl	1$			;
+	movb	#WRSECT!M, xcsr
+	neg	(R2)			;
+
+;	────────────────────────────────	
+1$:	movb	-(R5), R4		; hr.dev+1
+	bic	#^c37, R4		; 
+	cmp	R4, #20 		; ▌
+	blo	2$			; ▌
+	bic	#10, R4 		; ▌
+
+2$:	movb	R4, h.err+1		; dev.num for late..
+	mov	#par.len, R3		; блину информационной части
+	mul	R4, R3			; умножим на номер устр-ва
+	add	#p.cb0, R3		; прибавим смещение от начального
+	mov	R3, R4			; 
+	bitb	#10, h.err+1		;
+	bne	4$			;
+	bitb	#20, h.err+1		; ▌
+	beq	3$			; ▌
+	bicb	#17, xcsr
+	tst	i.fail			; ▌
+	beq	5$			; ▌
+	br	7$			; ▌
+3$:	tst	h.fail			;
+	beq	6$			;
+	br	7$			;
+
+;	────────────────────────────────
+4$:	tst	(R4)+			; skip sign
+	movb	p$rl+1(R4), f.spec+1	;
+	jsr	R5, f.set		; step rate
+	bitb	#run, xsdh		;
+	bne	6$			;
+	bisb	#run, xsdh		;
+	bisb	#run, @#hd.sdh		;
+	mov	#20, R3			;
+	WHI.ONL	#M.TIO			;
+	br	6$
+
+;	────────────────────────────────	
+5$:	tst	(R4)+			; skip sign
+6$:	mov	hr.buf,	R1		;
+	call	setmap			;
+	bit	#pm.off, (R4)		; а не выключен ли этот диск?
+	bne	9$			; да...
+	cmpb	-(R5), #360		; hr.dev
+	beq	14$			;
+7$:	bis	#10, h.err		;
+8$:	return				;
+
+;══════════════════════════════════════════════════════
+
+9$:	tstb	-(R5)			; hr.dev
+	bne	10$			; read/write
+	jmp	34$
+10$:	cmpb	#373, (R5)		; spfun getsize
+	bne	13$			;
+	mov	p$sz(R4), (R1)		;
+	tst	p$cb(R4)		;
+	bpl	11$			;
+	dec	(R1)			;
+11$:	return				;
+
+12$:	bis	#40, h.err		;
+	return				;
+;	────────────────────────────────
+
+13$:	cmpb	#360, (R5)		;
+	bne	23$			;
+14$:	dec	hr.cntw			;  
+	bne	12$			; key not match
+	mov	#par.len, R2		;
+	bitb	#10, h.err+1		;
+	bne	16$			;
+
+	bitb	#20, h.err+1		; ▌
+	beq	15$			; ▌
+	mov	#i0.sec, R4		; ▌
+	mov	#<i0.gap3-i0.sec+2>, R2 ; ▌
+	br	16$			; ▌
+
+15$:	mov	#h0.sec, R4		;
+	mov	#<h0.sign-h0.sec+2>, R2
+
+16$:	bitb	#20, xcsr		;
+	beq	20$			;
+
+17$:	movb	(R1)+, (R4)+		;
+	sob	R2, 17$			;
+	bitb	#20, h.err+1		; ▌
+	beq	19$			; ▌
+	mov	#ip.cb0, R4		; ▌
+	mov	#<ih0.sign-ip.cb0+2>, R2; ▌
+18$:	movb	(R1)+, (R4)+		; ▌
+	sob	R2, 18$ 		; ▌
+19$:	return				;
+
+20$:	movb	(R4)+, (R1)+		;
+	sob	R2,	20$		;
+	bitb	#20, h.err+1		; ▌
+	beq	22$			; ▌
+	mov	#ip.cb0, R4		; ▌
+	mov	#<ih0.sign-ip.cb0+2>, R2; ▌
+21$:	movb	(R4)+, (R1)+		; ▌
+	sob	R2, 21$ 		; ▌
+22$:	return				;
+
+;	────────────────────────────────
+
+23$:	cmpb	#362,	(R5)		;
+	beq	24$			;
+	jmp	30$
+
+24$:	cmp	#-123456, hr.cntw	;
+	bne	32$			;
+	mov	R1, R3			; 
+	mov	#xscnt, R2		;
+	movb	h0.sec, (R2)+		; xscnt
+	movb	h0.gap3, (R2)+		; xsnum
+
+25$:	mov	hr.blk, R1		; Format
+	clr	R0			;
+	div	p$hn(R4), R0		; R1 - head, R0 - cyl
+	add	p$hb(R4), R1		;
+	cmp	p$cn(R4), R0		;
+	blos	32$			;
+	add	p$cb(R4), R0		;
+	bic	#174000, R0		;
+;	────────────────────────────────
+	mov	R0, (R2)+		; xcyl
+	bicb	#17, (R2)		; xsdh
+	bicb	#i.sfree, (R2)
+	bisb	#s512, (R2)
+
+	bisb	R1, (R2)+		; xsdh !!!!
+	movb	#format, (R2)		; xcsr
+;	────────────────────────────────
+	mov	R3, R1			;
+	mov	#256., R3		;
+	mov	#hd.buf, R0		;
+
+	bitb	#20, h.err+1		; ▌
+	beq	28$			; ▌
+	call	sec.w
+
+26$:	tstb	@#id.csr		; ▌
+	bmi	26$			; ▌
+	<sec>				; ▌
+	bit	#s.err, @#id.csr	; ▌
+	bne	27$			; ▌
+	<clc>				; ▌
+27$:	bit	#e.crc, @#id.err	; ▌id.err
+	return
+
+28$:	movb	bcnt, @#fdcnt		;
+	tst	@#hd.sdh		;
+
+29$:	movb	(R1)+, (R0)		;
+	movb	(R1)+, (R0)		;
+	sob	R3, 29$			;
+	jmp	xwr			;
+;═══════════════════════════════════════
+30$:	cmpb	#361, (R5)		; hr.dev
+	bne	33$			;
+	dec	hr.cntw			;
+	bne	32$			;
+	cmp	#123456, hr.blk		;
+	bne	32$			;
+	mov	#hr.cntw, R5		;
+	clr	(R5)			;
+	mov	#400, R3		; cntw
+	mov	#xscnt, R0		;
+	bitb	#20, h.err+1		; ▌
+	beq	31$			; ▌
+	movb	#ide$cnt, (R0)+ 	; ▌
+	movb	#ide$num, (R0)+ 	; ▌
+	clr	(R0)+			; ▌
+	movb	#i.s512, (R0)+		; ▌
+	br	43$			; ▌
+
+31$:	mov	#177401, (R0)+		; xscnt, xsnum
+	clr	(R0)+			; xcyl
+	bicb	#17, (R0)		; xsdh	!!!!
+	br	43$			;
+;═══════════════════════════════════════
+32$:	bis	#40, h.err		;
+	return				;
+;═══════════════════════════════════════
+33$:	cmpb	#374, (R5)		; hr.dev - Auto Power Down
+	bne	32$
+	bitb	#20, h.err+1
+	beq	32$
+	mov	hr.blk,	R0
+	bic	#177400, R0
+;	clrb	xerr
+	movb	R0,	xscnt		; 1F2 - по 5 секунд задержка
+;	clrb	xsnum
+;	clr	xcyl
+;	clrb	xsdh
+	movb	#AutoPD, xcsr
+	call	IDE.send
+	bne	32$
+	return
+;═══════════════════════════════════════
+34$:	tst	(R4)			; start from 1 or 2: bypass part. sec
+	bpl	35$			;
+	inc	hr.blk			;
+35$:	bitb	#20, xcsr		; write cmd ?
+	beq	36$			;
+	bit	#pm.rw, (R4)		;
+	bne	32$			; read only err	
+
+;═══════════════════════════════════════
+
+36$:	clr	R0			;
+	mov	#xscnt, R2		;
+	mov	#hr.cntw+1,R5		;
+	movb	(R5), (R2)		;
+	cmpb	R0, -(R5)		;
+	adc	(R2)			;
+
+;	────────────────────────────────
+	mov	hr.blk,	R1		;
+	mov	p$sn(R4), R3		;
+	div	R3, R0			; R1 = rel sector adr, R0 = h*c
+	sub	R1, R3			;
+	add	p$sb(R4), R1		;
+;	────────────────────────────────
+	cmpb	R3, (R2)		;
+	bcc	37$			;
+	movb	R3, (R2)		;
+
+37$:	bitb	#20, h.err+1
+	bne	38$
+	cmpb	#4, (R2)		;
+	bhis	39$			;
+	movb	#4, (R2)		;
+	br	39$			;+++
+38$:	cmpb	#IDECASH, (R2)		;+++ ограничиваем кол. блоков
+	bhis	39$			;+++ длиной окна - 8 КБайт
+	movb	#IDECASH, (R2)		;+++ (надо сделать по-другому)
+39$:	movb	(R2)+, R3		; число секторов
+	bic	#^C377, R3
+	movb	R3, bcnt		;
+	negb	bcnt			;
+	bicb	#^C3, bcnt		;
+	add	R3, hr.blk		;
+	swab	R3			;
+	sub	R3, (R5)		; wcnt
+	bpl	40$			;
+	add	(R5), R3		;
+					;
+;	────────────────────────────────
+
+40$:	bitb	#20, h.err+1
+	beq	41$
+	add	i0.SBEG, R1
+
+41$:	movb	R1, (R2)+		; xsnum
+	mov	R0, R1			;
+	clr	R0			;
+	div	p$hn(R4),R0		; R1 = rel head adr, R0 = cyl
+	add	p$hb(R4),R1		;
+	cmp	p$cn(R4),R0		;
+	bgt	42$			;
+	comb	h.err			;
+	return				;
+					;
+42$:	add	p$cb(R4), R0		;
+	bic	#174000, R0		;
+	mov	R0, (R2)+		; xcyl
+	bicb	#17, (R2)		; xsdh !!!!
+	bisb	R1, (R2)		; xsdh
+;	────────────────────────────────
+43$:	mov	-(R5), R1		; hr.buf
+	add	R3, (R5)		;
+	add	R3, (R5)+		;
+	call	setmap			;
+;	────────────────────────────────
+44$:	mov	#hd.buf, R0		;
+	bitb	#20, xcsr		;
+	beq	49$			;
+;	────────────────────────────────
+
+	bitb	#20, h.err+1
+	beq	45$
+
+	call	sec.w
+	br	53$			;+
+
+45$:	movb	bcnt,	@#fdcnt		; write
+	tst	@#hd.sdh		; bdir := write
+
+46$:	movb	(R1)+,	(R0)		;
+	movb	(R1)+,	(R0)		;
+	sob	R3, 46$			;
+
+47$:	tst	(R5)			; wcnt
+	bpl	49$			;
+					;
+48$:	mov	R3, (R0)		;
+	mov	R3, (R0)		;
+	inc	(R5)			;
+	bmi	48$			;
+
+; ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+49$:	bitb	#20, h.err+1
+	beq	51$
+
+50$:	call	sec.r
+	br	53$
+
+51$:	call	xwr
+
+	bitb	#20, xcsr		;
+	bne	53$			;
+
+52$:	movb	(R0), (R1)+		;
+	movb	(R0), (R1)+		;
+	sob	R3, 52$			;
+					;
+53$:	bcs	55$			;
+	tst	hr.cntw			;
+	ble	54$			;
+	jmp	36$
+54$:	return				;
+
+55$:	bis	#377, h.err
+	return
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;                              SUBROUTINE
+;		Смотрим на результат выполнения пред. команды,
+;		 ставим/нет биты ошибок и выставляем прерывания
+;		 для RT-11.
+;
+;		Called from: entry point of the H.WBUF subroutine
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+h.exit:
+
+.if	DF	$BIOS
+	CALL	UNPR.A			;+++
+.endc
+
+	MOV	HDC.BUF, R1
+
+.if	DF	$BIOS
+	CALL	PROT.A			;+++
+.endc
+
+	mfps	R0			;+
+	bitb	#10,	h.err+1		; Flop ?
+	beq	3$			; Нет
+
+	bitb	#300,	s.st0		; Да, это - флоп, что с байтом
+	beq	1$			;  состояния?
+	bisb	s.st1,	h.err		; Есть ошибка...
+
+1$:	ror	R1			; Надо выставлять вектор?
+	bcc	7$			; Нет - пропустим
+	SETINT	#fdcvec			; Вектор флопа
+	br	7$			; И на выход
+
+;──────────────────────────────────────────────────────────────────────────
+
+3$:	bitb	#20, h.err+1		; А, может это - IDE?
+	beq	5$			; Нет - MFM hard_disk...
+	mov	#idevec, R5		;  ???
+	mtps	R0			;+┐
+	bcc	8$			;+│
+	mov	#4,	h.err		;+│
+	br	4$			;+│
+8$:	bit	#s.err, @#id.csr	; Есть ошибки при выполнении?
+	beq	4$			; Нет
+	bis	@#id.err, h.err		; Да - запишем в h.err
+4$:	ror	R1			; Нужны прерывания?
+	bcc	7$			; Нет
+	SETINT	#idevec			; Да - выставим вектор
+	br	7$			;  и выйдем
+
+;──────────────────────────────────────────────────────────────────────────
+
+5$:	mov	#hdcvec, R5		; ???
+	bit	#s.err, @#hd.csr	; Были ошибки?
+	beq	6$			; Нет
+	bis	@#hd.err, h.err		; Если были - запомним их
+6$:	ror	R1			; Прерывания?
+	bcc	7$			; Нет - не нужно
+	SETINT	#hdcvec			; Нужно - ставим вектор
+
+;──────────────────────────────────────────────────────────────────────────
+
+7$:	mov	h.err, R0		; Ошибку - в регистр,
+	swab	R0			;  в старший разряд
+	bis	#200, R0		;  и флаг завершения
+	bis	bootw, R0		; Холодная загрузка
+
+.if	DF	$BIOS
+	CALL	UNPR.A			;++++++++++++++++++++++++
+.endc
+
+	mov	R0, @#hdc.buf		; И напишем...
+	mov	#2000, @hb.copy		;
+
+.if	DF	$BIOS
+	CALL	PROT.A			;++++++++++++++++++++++++
+.endc
+
+ret:	return				;
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;	Boot record and Partition Table Stucture
+;
+i0.SBEG		:  .word	1	; Number of the first sector
+i0.SEC		:  .blkw	1	; Number of sectors per track
+i0.HEAD		:  .blkw	1	; Number of heads
+i0.TRACK	:  .blkw	1	; Number of cylinders
+i0.SIZE		:  .blkw	2	; Total size of disk in blocks
+i0.pcm		:  .blkw	1	; Precomp.
+i0.gap3		:  .blkw	1	; Gap 3 length
+;───────────────────────────────────────
+h0.SEC		:  .blkw	1	; Number of sectors per track
+h0.HEAD		:  .blkw	1	; Number of heads
+h0.TRACK	:  .blkw	1	; Number of cylinders
+h0.SIZE		:  .blkw	2	; Total size of disk in blocks
+h0.pcm		:  .blkw	1	; Precomp.
+h0.gap3		:  .blkw	1	; Gap 3 length
+;───────────────────────────────────────
+p.CB0		:  .blkw	1	; Number of first cylinder of the partition #0
+p.CN0		:  .blkw	1	; Number of cylinder`s in the partition #0
+p.HB0		:  .blkw	1	; Number of first head of the partition #0
+p.HN0		:  .blkw	1	; Number of heads in the partition #0
+p.SB0		:  .blkw	1	; Number of first sector of the partition #0
+p.SN0		:  .blkw	1	; Number of sectors in the partition #0
+p.RL0		:  .blkw	2	; Relative sector partition #0
+p.SZ0		:  .blkw	2	; Size of partition #0 in sector`s
+;───────────────────────────────────────
+	par.len = . - p.cb0
+;───────────────────────────────────────
+		   .blkb	par.len*7
+;───────────────────────────────────────
+h0.SIGN		:  .blkw	1	; signature 123456
+;───────────────────────────────────────
+	par.siz	= . - h0.sec		; total partition tables size
+	par.fre	= 1000 - par.siz	; empty
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;
+dsect	0		;
+dw	p$CB		; Number of first cylinder of the partition #0
+dw	p$CN		; Number of cylinder`s in the partition #0
+dw	p$HB		; Number of first head of the partition #0
+dw	p$HN		; Number of heads in the partition #0
+dw	p$SB		; Number of first sector of the partition #0
+dw	p$SN		; Number of sectors in the partition #0
+dw	p$RL,2		; Relative sector partition #0
+dw	p$SZ,2		; Size of partition #0 in sector`s
+
+;═════════════════════════════════════════════════════════════════════════
+; p.CB*
+;	b0-b10	: Cylinder number
+;	b15	: 0 - start from sector 1, 1 - from 2
+;	b14	: 0 - off,		   1 - on disk
+;	b13	: 0 - R/W,		   1 - read only
+;	b12	: 0 - non bootable,	   1 - bootable disk
+;	b11	: 0 - no warm boot	   1 - warm boot disk
+
+	pm.st1	= 100000
+	pm.off	= 040000
+	pm.rw	= 020000
+	pm.nb	= 010000
+	pm.wb	= 004000
+
+;═══════════════════════════════════════
+f.CB0		:  .word	0	; Number of first cylinder of the flop #0
+f.CN0		:  .word	82.	; Number of cylinder`s
+f.HB0		:  .word	2	; Number of first head
+f.HN0		:  .word	2	; Number of heads
+f.SB0		:  .word	1	; Number of first sector
+f.SN0		:  .word	10.	; Number of sectors
+f.RL0		:  .byte	30., 14.*20+1	; gap3, step rate
+		   .byte	123,	0	; filler byte
+f.SZ0		:  .word	82.*2*10., 0	; Size of partition
+;	────────────────────────────────
+f.CB1		:  .word	0	; Number of first cylinder of the flop #0
+f.CN1		:  .word	82.	; Number of cylinder`s
+f.HB1		:  .word	6	; Number of first head
+f.HN1		:  .word	2	; Number of heads
+f.SB1		:  .word	1	; Number of first sector
+f.SN1		:  .word	10.	; Number of sectors
+f.RL1		:  .byte	30., 14.*20+1	; gap3, step rate
+		   .byte	123,	0	; filler byte
+f.SZ1		:  .word	82.*2*10., 0	; Size of partition
+;	────────────────────────────────			  
+f.CB2		:  .word	40000	; Number of first cylinder of the flop #1
+f.CN2		:  .word	82.	; Number of cylinder`s
+f.HB2		:  .word	0	; Number of first head
+f.HN2		:  .word	2	; Number of heads
+f.SB2		:  .word	1	; Number of first sector
+f.SN2		:  .word	20.	; Number of sectors
+f.RL2		:  .byte	20., 13.*20+1	; gap3, step rate
+		   .byte	123,	0	; filler byte
+f.SZ2		:  .word	82.*2*20., 0	; Size of partition
+;	────────────────────────────────
+f.CB3		:  .word	40000	; Number of first cylinder of the flop #1
+f.CN3		:  .word	82.	; Number of cylinder`s
+f.HB3		:  .word	4	; Number of first head
+f.HN3		:  .word	2	; Number of heads
+f.SB3		:  .word	1	; Number of first sector
+f.SN3		:  .word	17.	; Number of sectors
+f.RL3		:  .byte	20., 13.*20+1	; gap3, step rate
+		   .byte	123,	0	; filler byte
+f.SZ3		:  .word	82.*17.*2,0 	; Size of partition
+;	────────────────────────────────
+f.CB4		:  .word	40000	; Number of first cylinder of the flop #1
+f.CN4		:  .word	80.	; Number of cylinder`s
+f.HB4		:  .word	0	; Number of first head
+f.HN4		:  .word	2	; Number of heads
+f.SB4		:  .word	1	; Number of first sector
+f.SN4		:  .word	18.	; Number of sectors
+f.RL4		:  .byte	20., 13.*20+1	; gap3, step rate
+		   .byte	125,	0	; filler byte
+f.SZ4		:  .word	80.*2*18., 0	; Size of partition
+;	────────────────────────────────
+f.CB5		:  .word	40000	; Number of first cylinder of the flop #1
+f.CN5		:  .word	80.	; Number of cylinder`s
+f.HB5		:  .word	4	; Number of first head
+f.HN5		:  .word	2	; Number of heads
+f.SB5		:  .word	1	; Number of first sector
+f.SN5		:  .word	15.	; Number of sectors
+f.RL5		:  .byte	20., 13.*20+1	; gap3, step rate
+		   .byte	125,	0	; filler byte
+f.SZ5		:  .word	80.*15.*2,0 	; Size of partition
+;	────────────────────────────────
+f.CB6		:  .word	40000	; Number of first cylinder of the flop #0
+f.CN6		:  .word	80.	; Number of cylinder`s
+f.HB6		:  .word	2	; Number of first head
+f.HN6		:  .word	2	; Number of heads
+f.SB6		:  .word	1	; Number of first sector
+f.SN6		:  .word	9.	; Number of sectors
+f.RL6		:  .byte	30., 14.*20+1	; gap3, step rate
+		   .byte	125,	0	; filler byte
+f.SZ6		:  .word	80.*2*9., 0	; Size of partition
+;	────────────────────────────────
+f.CB7		:  .word	40000	; Number of first cylinder of the flop #0
+f.CN7		:  .word	80.	; Number of cylinder`s
+f.HB7		:  .word	6	; Number of first head
+f.HN7		:  .word	2	; Number of heads
+f.SB7		:  .word	1	; Number of first sector
+f.SN7		:  .word	10.	; Number of sectors
+f.RL7		:  .byte	30., 14.*20+1	; gap3, step rate
+		   .byte	125,	0	; filler byte
+f.SZ7		:  .word	80.*2*10., 0	; Size of partition
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+ip.CB0		:  .blkw	1	; Number of first cylinder of the partition #0
+ip.CN0		:  .blkw	1	; Number of cylinder`s in the partition #0
+ip.HB0		:  .blkw	1	; Number of first head of the partition #0
+ip.HN0		:  .blkw	1	; Number of heads in the partition #0
+ip.SB0		:  .blkw	1	; Number of first sector of the partition #0
+ip.SN0		:  .blkw	1	; Number of sectors in the partition #0
+ip.RL0		:  .blkw	2	; Relative sector partition #0
+ip.SZ0		:  .blkw	2	; Size of partition #0 in sector`s
+;───────────────────────────────────────
+ipar.len 	=  . - ip.cb0		;
+;───────────────────────────────────────
+		   .blkb	ipar.len*7
+;───────────────────────────────────────
+ih0.SIGN	:  .blkw	1	; signature 123456
+;───────────────────────────────────────
+ipar.siz	=  . - ip.CB0			; total partition tables size
+ipar.add	=  i0.gap3 - i0.sec+2		;
+ipar.fre	=  1000 - ipar.siz-ipar.add	; empty
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+HDC.CPRC	:  .blkw	1		;
+HB.COPY		:  .blkw	1		;
+HR.MAP		:  .blkw	10		;
+HR.BLK		:  .blkw	1		;
+HR.DEV		:  .blkw	1		;
+HR.BUF		:  .blkw	1		;
+HR.CNTW		:  .blkw	1		;
+H.ERR		:  .word	0		;
+		   .word	54321
+;─────────────────────────────────────────────────────────────────────
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;                                 DATA
+;
+;		Данные для работы с IDE hard_disk'ом: КОНСТАНТЫ
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+
+	h.0C0		= 300		; 300 = 0C0h - BSY & RDY flags
+	h.0A0		= 240		; 240 = 0A0h - 512 bytes per sector
+	$IDE.TIME	= 50.*12.	; 12 sec - to read/write
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;                              SUBROUTINE
+;
+;	 Загружаем регистры контроллера IDE hard_disk'а
+;		 xerr   - precomp
+;		 xscnt  - number of sectors
+;		 xsnum  - first sector
+;		 xcyl   - cylinder number
+;		 xsdh   - head/...
+;		 xcsr   - command
+;		 x.076  - биты для тестирования
+;
+;
+;		Called from: IDE.send
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+IDE.xxx:
+	push	<R0,R1>
+	mov	#xerr, R1
+
+;?	movb	6(R1), R0		; xcsr
+;?	bic	#177400, R0
+;?	bit	#h.0C0, x.076		; биты проверить - RDY & BSY
+;?	beq	1$
+;?	cmp	R0, #117
+;?	bhi	1$
+;?	bis	#1, R0
+;?
+;? 1$:	movb	R0, 6(R1)		; command
+
+	mov	i0.pcm, R0
+	asr	R0
+	asr	R0
+	movb	R0, (R1)+		; precomp.
+
+	movb	4(R1), R0
+	bicb	#^C17, R0
+	bisb	#h.0A0, R0
+	movb	R0, 4(R1)
+
+;?	bic	#^C<h.0C0>, x.076
+;?	bis	offs.8, x.076
+
+	mov	x.076, @#id.irq
+	<nop>
+
+	movb	4(R1), D955$
+	bic	#^C17, D955$
+
+	mov	xcyl, D95$
+	DSTRING #D98$
+	DVAL	#D95$
+	DVAL	#D955$
+	pop	<R1,R0>
+	return
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;                              SUBROUTINE
+;
+;			Серьёзно сбрасываем винт.
+;			   Регистры сохраняются.
+;
+;				РЕЗУЛЬТАТ
+;		
+;				  нет
+;
+;		Called from: IDE.skip,IDE.hlt
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+IDE.res:
+	push	<R0>
+	mov	#4,	@#id.irq
+	clr	R0
+	sob	R0,	.
+	mov	x.076,	@#id.irq
+	sob	R0,	.
+	pop	<R0>
+	return
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;                              SUBROUTINE
+;
+;		Ожидаем, пока в регистре 1F1h не снимется бит #7
+;		 который означает, что команда в процессе.
+;		Максимальная задержка = (IDE.delay * FFFFh).
+;			Регистры сохраняются.
+;
+;				РЕЗУЛЬТАТ
+;
+;		Z = 0  - произошел timeout даже после сброса.
+;		Z = 1  - бит был снят.
+;
+;		Called from: IDE.send, sec.r, sec.w
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+IDE.skip:
+	push	<R0,R1,R2>
+	clr	R1
+	mov	#2, R2
+3$:	mov	IDE.delay, R0
+
+2$:	tstb 	@#id.csr
+	bpl	1$
+	sob	R1, 2$
+	sob	R0, 2$
+	call	IDE.res
+	sob	R2, 3$
+	pop	<R2,R1,R0>
+	<clz>
+	return
+1$:	pop	<R2,R1,R0>
+	<sez>
+	return
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;                              SUBROUTINE
+;
+;		Ожидаем, пока в регистре  1F1h не установится
+;		 комбинация, заданная в R4, маска для очистки
+;		 содержится в R3.
+;		Максимальная задержка = (IDE.delay * FFFFh).
+;			Регистры сохраняются.
+;
+;				РЕЗУЛЬТАТ
+;
+;		Z = 0  - произошел timeout.
+;		Z = 1  - комбинация совпала.
+;
+;		Called from: IDE.send, IDE.rb, IDE.wb
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+IDE.wait:
+	push	<R0,R1,R3,R5>
+	com	R3			; R3 - CUT  mask
+	mov	IDE.delay, R0		; R4 - TEST mask
+	clr	R1			; 177777 - cycle
+
+2$:	mov	@#id.csr, R5
+	bic	R3, R5
+	cmp	R5, R4
+	beq	1$
+
+	sob	R1, 2$
+	sob	R0, 2$
+	pop	<R5,R3,R1,R0>
+	<clz>
+	return
+
+1$:	pop	<R5,R3,R1,R0>
+	<sez>
+	return
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;                              SUBROUTINE
+;
+;		Готовим регистры для передачи в hard_disk,
+;		 пропускаем бит #7 в 1F7h,
+;		 загружаем регистры в hard_disk_registers,
+;			Регистры сохраняются.
+;
+;				РЕЗУЛЬТАТ
+;
+;		Z = 0  - произошел timeout.
+;		Z = 1  - все прошло нормально.
+;
+;		Called from : sec.r, sec.w
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+IDE.send:
+	push	<R0,R1,R2,R3,R4>
+	call	IDE.xxx
+	mov	#4, R2			; Всего 4 попытки
+1$:	call	IDE.skip
+	bne	4$
+
+	bit	#10, @#id.csr		; Ожидаем, пока не выставится бит,
+	beq	2$			;  сообщающий, что есть данные
+	mov	#RESTORE, @#id.csr	;  такого не случилось - рекалибр.
+	sob	R2, 1$			; Попытки кончились?
+	br	4$			; Да - ошибка...
+
+2$:	mov	#6, R2
+	mov	#id.err, R0
+	mov	#xerr, R1
+
+3$:	movb	(R1)+, (R0)+
+	inc	R0
+	sob	R2, 3$
+
+	mov	#360, R3		; AH
+	mov	#120, R4		; AL
+	call	IDE.wait
+	bne	4$
+	movb	(R1), (R0)
+
+	pop	<R4,R3,R2,R1,R0>
+	<sez>
+	return
+
+4$:	pop	<R4,R3,R2,R1,R0>
+	<clz>
+	return
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;                              SUBROUTINE
+;
+;				РЕЗУЛЬТАТ
+;
+;		Z = 0  - произошел timeout.
+;		Z = 1  - все прошло нормально.
+;
+;		Called from : IDE.rb,IDE.wb
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+IDE.hlt:
+	push	<R0,R1,R2>
+	mov	#id.csr, R1
+	clr	R2
+	mov	#IDE.del, R0
+1$:	tstb	(R1)
+	bmi	2$
+	bit	#1, (R1)
+	bne	3$
+	bit	#10, (R1)
+	bne	4$
+2$:	sob	R2, 1$
+	sob	R0, 1$
+	call	IDE.res
+3$:	pop	<R2,R1,R0>
+	<clz>
+	return
+4$:	pop	<R2,R1,R0>
+	<sez>
+	return
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;                              SUBROUTINE
+;
+;		Принимаем данные от hard_disk'а и передаем их 
+;		 в буфер "us.bufer", число слов для передачи
+;		 в "n.words", остаток от FFh проглатывается.
+;			Регистры _НЕ_ сохраняются.
+;
+;				РЕЗУЛЬТАТ
+;
+;		Z = 0  - произошел timeout.
+;		Z = 1  - все прошло нормально.
+;
+;		Called from : sec.r
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+IDE.rb:	mov	us.bufer, R1
+	mov	n.words, R2
+	mov	#id.buf, R5
+
+1$:	push	<R1,R2>
+	mov	#<$IDE.time>, R3	; За это время должно считаться (4s)
+	mov	#-1, R4			; Для проверки -> что произошло
+	WHI.ONL	#<M.IDE+M.TIO>		; Ждем...
+	cmp	R4, R2			; Что было?
+	bne	2$			; Был Time_Out
+	pop	<R2,R1>			; А это плохо - выходим с ошибкой
+	call	IDE.res			; Скинем состояние
+	br	14$			; Выходим
+
+2$:	pop	<R2,R1>			; Регистры...
+
+3$:	call	IDE.hlt			; *
+	bne	14$			; *
+
+4$:	mov	#256., R0
+	sub	R0, R2
+	bpl	7$
+
+	add	R0, R2
+	sub	R2, R0
+
+5$:	dec	R2
+	bmi	6$
+	mov	(R5), (R1)+
+	br	5$
+
+6$:	tst	(R5)
+	sob	R0, 6$
+	br	9$
+
+7$:	mov	#10, R0		; *
+8$:  .rept	40		; *
+	mov	(R5), (R1)+	; *
+     .endr			; *
+	sob	R0, 8$
+
+9$:	bitb	#2, xcsr
+	beq	11$
+
+	mov	#130, R3
+	mov	#130, R4
+	call	IDE.wait
+	bne	14$
+
+	mov	#4, R0
+10$:	mov	(R5), (R1)+
+	<nop>
+	sob	R0, 10$
+
+11$:	tstb	@#id.csr
+	bmi	1$
+	bit	#10, @#id.csr
+	bne	3$
+	tst	R2		; *
+	bgt	14$		; *
+
+12$:	tstb	@#id.scnt	; *
+	bne	14$		; *
+
+13$:	<sez>
+	return
+
+14$:	<clz>			; E R R O R !
+	return
+
+
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;                              SUBROUTINE
+;
+;		Передаем данные hard_disk'у из буфера
+;		 "us.bufer", число слов для передачи
+;		  в "n.words", остаток от FFh нулится.
+;			Регистры _НЕ_ сохраняются.
+;
+;				РЕЗУЛЬТАТ
+;
+;		Z = 0  - произошел timeout.
+;		Z = 1  - все прошло нормально.
+;
+;		Called from : sec.w
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+IDE.wb:	mov	us.bufer, R1
+	mov	n.words, R2
+	mov	#id.buf, R5
+
+1$:	call	IDE.hlt
+	bne	14$
+
+2$:	mov	#256., R0
+	sub	R0, R2
+	bpl	5$
+
+	add	R0, R2
+	sub	R2, R0
+
+3$:	dec	R2
+	bmi	4$
+	mov	(R1)+, (R5)
+	br	3$
+
+4$:	clr	(R5)
+	sob	R0, 4$
+;	clr	R2
+	br	7$
+
+5$:	mov	#10, R0
+6$:  .rept	40
+	mov	(R1)+, (R5)
+     .endr
+	sob	R0, 6$
+
+7$:	bitb	#2, xcsr
+	beq	9$
+
+	mov	#130, R3
+	mov	#130, R4
+	call	IDE.wait
+	bne	14$
+
+	mov	#4, R0
+8$:	mov	(R1)+, (R5)
+	<nop>
+	sob	R0, 8$
+
+9$:	push	<R1,R2>
+	mov	#<$IDE.TIME>, R3	;за это время должно записаться
+	mov	#-1, R4
+	WHI.ONL	#<M.IDE+M.TIO>
+	cmp	R4, R2
+	bne	10$
+	pop	<R2,R1>
+	call	IDE.res
+	br	14$
+
+10$:	pop	<R2,R1>
+	tstb	@#id.csr	; *
+	bmi	14$		; *
+
+11$:	bit	#10, @#id.csr
+	bne	2$
+
+	tst	R2		; *
+	bgt	14$		; *
+
+12$:	tstb	@#id.scnt	;+
+	bne	14$		;+
+
+13$:	<sez>
+	return
+
+14$:	<clz>
+	return
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;                              SUBROUTINE
+;
+;			Прием от hard_disk'а данных.
+;			Регистры сохраняются кроме R1.
+;
+;				РЕЗУЛЬТАТ
+;
+;			C = 1  - произошел timeout.
+;			C = 0  - все прошло нормально.
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+sec.r:	push	<R0,R2,R3,R4,R5>
+	mov	R3, n.words
+	mov	R1, us.buffer
+	call	IDE.send
+	bne	1$
+	call	IDE.rb
+	bne	1$
+	call	IDE.skip
+	bne	1$
+	pop	<R5,R4,R3,R2,R0>
+	<clc>
+	return
+
+1$:	pop	<R5,R4,R3,R2,R0>
+	<sec>
+	return
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;                              SUBROUTINE
+;
+;			Передача в hard_disk данных.
+;			Регистры сохраняются кроме R1.
+;
+;				РЕЗУЛЬТАТ
+;
+;			C = 1  - произошел timeout.
+;			C = 0  - все прошло нормально.
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+sec.w:	push	<R0,R2,R3,R4,R5>
+	mov	R3, n.words
+	mov	R1, us.buffer
+	call	IDE.send
+	bne	1$
+	call	IDE.wb
+	bne	1$
+	call	IDE.skip
+	bne	1$
+	pop	<R5,R4,R3,R2,R0>
+	<clc>
+	return
+
+1$:	pop	<R5,R4,R3,R2,R0>
+	<sec>
+	return
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;                              SUBROUTINE
+;		Настраиваемся на регистры диспетчера вызвавшего
+;		 прерывание процесса и переключаем окна #2,3
+;		R1 - начало области для операции.
+;
+;		Called from : ...
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+.if	DF	$BIOS
+
+SETMAP:	clr	R0
+	asl	R1			;	ashc	#3, R0
+	rol	R0			;
+	asl	R1			;
+	rol	R0			;
+	asl	R1			;
+	rol	R0			;
+	asl	R0
+	ror	R1
+	sec
+	ror	R1
+	ror	R1
+	mov	hr.map(R0), UR2
+	mov	hr.map+2(R0), UR3
+	return
+
+.iff
+
+SETMAP:	clr	R0
+
+	asl	R1			;	ashc	#3, R0
+	rol	R0			;
+	asl	R1			;
+	rol	R0			;
+	asl	R1			;
+	rol	R0			;
+
+	asl	R0
+
+	sec
+	ror	R1			; 1xxxxx
+	ror	R1			; 01xxxxx
+	ror	R1			; 001xxx
+	mov	hr.map(R0), UR1
+	mov	hr.map+2(R0), UR2
+	mov	hr.map+4(R0), UR3
+	return
+.endc
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;  Эти две подпрограммки сделаны при поиске ошибке - неожиданное зависание
+;
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+.if	DF	$BIOS
+UNPR.A:	mov	@#HR4,	@#UR4
+	mov	@#HR5,	@#UR5
+	clr	@#UR6
+	return
+
+PROT.A:	mov	#10, @#UR4
+	mov	#10, @#UR5
+	mov	#10, @#UR6
+	return
+.endc
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;                                 DATA
+;
+;		Данные для работы с IDE hard_disk'ом : ПЕРЕМЕННЫЕ.
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+offs.8		:  .word	0
+IDE.delay	:  .word	5		; 28h
+x.076		:  .word	0
+us.buffer	:  .word	0
+n.words		:  .word	0
+
+	.end	hdcini
