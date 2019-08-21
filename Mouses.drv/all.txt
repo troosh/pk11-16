@@ -1,0 +1,201 @@
+SRC:
+fe6d90d636a7efb0955d0d5f2b4b052c291c4552               ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/UTILIT.DSK.extracted/MSC16.MAC
+fe6d90d636a7efb0955d0d5f2b4b052c291c4552            ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/V2/UTILIT.DSK.extracted/MSC16.MAC
+fe6d90d636a7efb0955d0d5f2b4b052c291c4552          ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/SOUZ-NEON_HD4_CLIB11_P16VPO_IMG/V2/P16VP0.DSK.extracted/MSC16.MAC
+fe6d90d636a7efb0955d0d5f2b4b052c291c4552          ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/UTILIT.DSK.extracted/MSC16.MAC
+fe6d90d636a7efb0955d0d5f2b4b052c291c4552       ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/V2/UTILIT.DSK.extracted/MSC16.MAC
+fe6d90d636a7efb0955d0d5f2b4b052c291c4552     ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/SOUZ-NEON_HD4_CLIB11_P16VPO_IMG/V2/P16VP0.DSK.extracted/MSC16.MAC
+fe6d90d636a7efb0955d0d5f2b4b052c291c4552                   ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/disk4/MSC16.MAC
+fe6d90d636a7efb0955d0d5f2b4b052c291c4552  ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked.images/unpacked/UTILIT/MSC16.MAC
+fe6d90d636a7efb0955d0d5f2b4b052c291c4552                                                                                  ./neon-disks_rar/unpacked/disk4/MSC16.MAC
+fe6d90d636a7efb0955d0d5f2b4b052c291c4552                                   ./PK11-16_disks/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/UTILIT.DSK.extracted/MSC16.MAC
+fe6d90d636a7efb0955d0d5f2b4b052c291c4552                                ./PK11-16_disks/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/V2/UTILIT.DSK.extracted/MSC16.MAC
+fe6d90d636a7efb0955d0d5f2b4b052c291c4552                              ./PK11-16_disks/disk_images/SOUZ-NEON_HD4_CLIB11_P16VPO_IMG/V2/P16VP0.DSK.extracted/MSC16.MAC
+
+BIN:
+aff16b95ece84ff3d9a3daeb607e208be303fc0b               ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/UTILIT.DSK.extracted/MSC16.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b            ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/V2/UTILIT.DSK.extracted/MSC16.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b          ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/SOUZ-NEON_HD4_CLIB11_P16VPO_IMG/V2/P16VP0.DSK.extracted/MSC16.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b          ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/UTILIT.DSK.extracted/MSC16.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b       ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/V2/UTILIT.DSK.extracted/MSC16.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b     ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/SOUZ-NEON_HD4_CLIB11_P16VPO_IMG/V2/P16VP0.DSK.extracted/MSC16.PRC      1 aff16b95ece84ff3d9a3daeb607e208be303fc0b                                             ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/ASPekt_DOC_bootable/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                   ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/disk9/MSC16.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                   ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/diskA/MSC16.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b  ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked.images/unpacked/UTILIT/MSC16.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                   ./PK11-16_disks/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/UTILIT.DSK.extracted/MSC16.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                ./PK11-16_disks/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/V2/UTILIT.DSK.extracted/MSC16.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                              ./PK11-16_disks/disk_images/SOUZ-NEON_HD4_CLIB11_P16VPO_IMG/V2/P16VP0.DSK.extracted/MSC16.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                                                  ./neon-disks_rar/unpacked/disk9/MSC16.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                                                  ./neon-disks_rar/unpacked/diskA/MSC16.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                            ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/Games/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                            ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/SOUZ-NEON_ASPEKT_DOC_/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                  ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/SOUZ-NEON_DEMO_/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                            ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/SOUZ-NEON_INSTALL_/V2/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                          ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/SOUZ-NEON_SYSTEM_0B_IMG/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                           ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/System/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                             ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/Work/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                              ./20181121/UNPACK_DSK/PK11-16_disks/EmuStudio_(PK-11)_v0.15d/ASPekt/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                               ./20181121/UNPACK_DSK/PK11-16_disks/EmuStudio_(PK-11)_v0.15d/Games/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                              ./20181121/UNPACK_DSK/PK11-16_disks/EmuStudio_(PK-11)_v0.15d/System/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                           ./20181121/UNPACK_DSK/PK11-16_disks/EmuStudio_(PK-11)_v0.15d/V2/ASPekt/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                            ./20181121/UNPACK_DSK/PK11-16_disks/EmuStudio_(PK-11)_v0.15d/V2/Games/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                           ./20181121/UNPACK_DSK/PK11-16_disks/EmuStudio_(PK-11)_v0.15d/V2/System/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                             ./20181121/UNPACK_DSK/PK11-16_disks/EmuStudio_(PK-11)_v0.15d/V2/Work/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                ./20181121/UNPACK_DSK/PK11-16_disks/EmuStudio_(PK-11)_v0.15d/Work/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                         ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/ASPekt_DOC_bootable/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                       ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/Games/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                       ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/SOUZ-NEON_ASPEKT_DOC_/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                             ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/SOUZ-NEON_DEMO_/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                       ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/SOUZ-NEON_INSTALL_/V2/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                     ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/SOUZ-NEON_SYSTEM_0B_IMG/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                      ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/System/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                        ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/Work/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                         ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/EmuStudio_(PK-11)_v0.15d/ASPekt/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                          ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/EmuStudio_(PK-11)_v0.15d/Games/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                         ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/EmuStudio_(PK-11)_v0.15d/System/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                      ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/EmuStudio_(PK-11)_v0.15d/V2/ASPekt/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                       ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/EmuStudio_(PK-11)_v0.15d/V2/Games/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                      ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/EmuStudio_(PK-11)_v0.15d/V2/System/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                        ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/EmuStudio_(PK-11)_v0.15d/V2/Work/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                           ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/EmuStudio_(PK-11)_v0.15d/Work/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b     ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/ASPekt_DOC_bootable/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b              ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/SN2_system/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b          ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/SN3_ASPEKT_DOC/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b               ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/SN_system/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b   ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/SOUZ-NEON_ASPEKT_DOC_/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/SOUZ-NEON_ASPEKT_GAMES_/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b         ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/SOUZ-NEON_DEMO_/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b      ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/SOUZ-NEON_INSTALL_/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/SOUZ-NEON_SYSTEM_0B_IMG/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                                  ./PK11-16_disks/disk_images/ASPekt_DOC_bootable/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                                                ./PK11-16_disks/disk_images/Games/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                                ./PK11-16_disks/disk_images/SOUZ-NEON_ASPEKT_DOC_/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                                      ./PK11-16_disks/disk_images/SOUZ-NEON_DEMO_/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                                ./PK11-16_disks/disk_images/SOUZ-NEON_INSTALL_/V2/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                              ./PK11-16_disks/disk_images/SOUZ-NEON_SYSTEM_0B_IMG/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                                               ./PK11-16_disks/disk_images/System/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                                                 ./PK11-16_disks/disk_images/Work/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                                  ./PK11-16_disks/EmuStudio_(PK-11)_v0.15d/ASPekt/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                                   ./PK11-16_disks/EmuStudio_(PK-11)_v0.15d/Games/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                                  ./PK11-16_disks/EmuStudio_(PK-11)_v0.15d/System/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                               ./PK11-16_disks/EmuStudio_(PK-11)_v0.15d/V2/ASPekt/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                                ./PK11-16_disks/EmuStudio_(PK-11)_v0.15d/V2/Games/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                               ./PK11-16_disks/EmuStudio_(PK-11)_v0.15d/V2/System/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                                 ./PK11-16_disks/EmuStudio_(PK-11)_v0.15d/V2/Work/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                                    ./PK11-16_disks/EmuStudio_(PK-11)_v0.15d/Work/MSC.PRC
+aff16b95ece84ff3d9a3daeb607e208be303fc0b                                                                   ./ukncbtl-utils.MY/rt11dsk/ASPekt_DOC_bootable/MSC.PRC
+
+altBIN_v2:
+4b4f6498fac53c490e80b3ca951d792e0e9709c6                                                        ./20181121/UNPACK_DSK/PK11-16_disks.2.peg_neon.unpacked/F/MSC.PRC
+
+altBIN_v3:
+66389795e560bda231c55d15147638b1857f37a6                   ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/disk9/MSC.PRC
+66389795e560bda231c55d15147638b1857f37a6                   ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/diskA/MSC.PRC
+66389795e560bda231c55d15147638b1857f37a6                                                                                  ./neon-disks_rar/unpacked/disk9/MSC.PRC
+66389795e560bda231c55d15147638b1857f37a6                                                                                  ./neon-disks_rar/unpacked/diskA/MSC.PRC
+----------------------------------------
+
+
+SRC:
+a1bc7fd4283bfd620ef323305c5fe3696a01d3db                ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/UTILIT.DSK.extracted/MSCR.MAC
+a1bc7fd4283bfd620ef323305c5fe3696a01d3db             ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/V2/UTILIT.DSK.extracted/MSCR.MAC
+a1bc7fd4283bfd620ef323305c5fe3696a01d3db           ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/UTILIT.DSK.extracted/MSCR.MAC
+a1bc7fd4283bfd620ef323305c5fe3696a01d3db        ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/V2/UTILIT.DSK.extracted/MSCR.MAC
+a1bc7fd4283bfd620ef323305c5fe3696a01d3db                    ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/disk4/MSCR.MAC
+a1bc7fd4283bfd620ef323305c5fe3696a01d3db   ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked.images/unpacked/UTILIT/MSCR.MAC
+a1bc7fd4283bfd620ef323305c5fe3696a01d3db                                                                                   ./neon-disks_rar/unpacked/disk4/MSCR.MAC
+a1bc7fd4283bfd620ef323305c5fe3696a01d3db                                    ./PK11-16_disks/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/UTILIT.DSK.extracted/MSCR.MAC
+a1bc7fd4283bfd620ef323305c5fe3696a01d3db                                 ./PK11-16_disks/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/V2/UTILIT.DSK.extracted/MSCR.MAC
+
+BIN:
+410dce25e685de1ddb61149f8b85890a54ced40c                                                             ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/Games/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                             ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/SOUZ-NEON_INSTALL_/V2/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                           ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/SOUZ-NEON_SYSTEM_0B_IMG/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                                              ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/Work/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                                ./20181121/UNPACK_DSK/PK11-16_disks/EmuStudio_(PK-11)_v0.15d/Games/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                             ./20181121/UNPACK_DSK/PK11-16_disks/EmuStudio_(PK-11)_v0.15d/V2/Games/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                              ./20181121/UNPACK_DSK/PK11-16_disks/EmuStudio_(PK-11)_v0.15d/V2/Work/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                                 ./20181121/UNPACK_DSK/PK11-16_disks/EmuStudio_(PK-11)_v0.15d/Work/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                                        ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/Games/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                        ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/SOUZ-NEON_INSTALL_/V2/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                      ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/SOUZ-NEON_SYSTEM_0B_IMG/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                                         ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/Work/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                           ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/EmuStudio_(PK-11)_v0.15d/Games/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                        ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/EmuStudio_(PK-11)_v0.15d/V2/Games/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                         ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/EmuStudio_(PK-11)_v0.15d/V2/Work/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                            ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/EmuStudio_(PK-11)_v0.15d/Work/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/SN_system/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c  ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/SOUZ-NEON_ASPEKT_GAMES_/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c       ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/SOUZ-NEON_INSTALL_/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c  ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/SOUZ-NEON_SYSTEM_0B_IMG/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                                                                 ./PK11-16_disks/disk_images/Games/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                                                 ./PK11-16_disks/disk_images/SOUZ-NEON_INSTALL_/V2/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                                               ./PK11-16_disks/disk_images/SOUZ-NEON_SYSTEM_0B_IMG/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                                                                  ./PK11-16_disks/disk_images/Work/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                                                    ./PK11-16_disks/EmuStudio_(PK-11)_v0.15d/Games/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                                                 ./PK11-16_disks/EmuStudio_(PK-11)_v0.15d/V2/Games/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                                                  ./PK11-16_disks/EmuStudio_(PK-11)_v0.15d/V2/Work/MSCR.PRC
+410dce25e685de1ddb61149f8b85890a54ced40c                                                                     ./PK11-16_disks/EmuStudio_(PK-11)_v0.15d/Work/MSCR.PRC
+
+altBIN_v2:
+e2d0f50b8d4f307a7224516de7450d44503d9e0b                        ./20181121/UNPACK_DSK/PK11-16_disks.3.MAX_SAPR/PK11-16_disks.3.MAX_SAPR.unpacked/V2/ms_010/MSCR.PRC
+e2d0f50b8d4f307a7224516de7450d44503d9e0b                    ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/disk9/MSCR.PRC
+e2d0f50b8d4f307a7224516de7450d44503d9e0b                    ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/diskA/MSCR.PRC
+e2d0f50b8d4f307a7224516de7450d44503d9e0b                   ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/ms_010/MSCR.PRC
+e2d0f50b8d4f307a7224516de7450d44503d9e0b                                                                                   ./neon-disks_rar/unpacked/disk9/MSCR.PRC
+e2d0f50b8d4f307a7224516de7450d44503d9e0b                                                                                   ./neon-disks_rar/unpacked/diskA/MSCR.PRC
+----------------------------------------
+
+SRC:
+3929face74819a3fc80987e8a2f457c2760206ce               ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/UTILIT.DSK.extracted/MSCX.MAC
+3929face74819a3fc80987e8a2f457c2760206ce            ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/V2/UTILIT.DSK.extracted/MSCX.MAC
+3929face74819a3fc80987e8a2f457c2760206ce          ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/SOUZ-NEON_HD4_CLIB11_P16VPO_IMG/V2/P16VP0.DSK.extracted/MSCX.MAC
+3929face74819a3fc80987e8a2f457c2760206ce          ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/UTILIT.DSK.extracted/MSCX.MAC
+3929face74819a3fc80987e8a2f457c2760206ce       ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/V2/UTILIT.DSK.extracted/MSCX.MAC
+3929face74819a3fc80987e8a2f457c2760206ce     ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/SOUZ-NEON_HD4_CLIB11_P16VPO_IMG/V2/P16VP0.DSK.extracted/MSCX.MAC
+3929face74819a3fc80987e8a2f457c2760206ce                   ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/disk4/MSCX.MAC
+3929face74819a3fc80987e8a2f457c2760206ce  ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked.images/unpacked/UTILIT/MSCX.MAC
+3929face74819a3fc80987e8a2f457c2760206ce                                                                                  ./neon-disks_rar/unpacked/disk4/MSCX.MAC
+3929face74819a3fc80987e8a2f457c2760206ce                                   ./PK11-16_disks/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/UTILIT.DSK.extracted/MSCX.MAC
+3929face74819a3fc80987e8a2f457c2760206ce                                ./PK11-16_disks/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/V2/UTILIT.DSK.extracted/MSCX.MAC
+3929face74819a3fc80987e8a2f457c2760206ce                              ./PK11-16_disks/disk_images/SOUZ-NEON_HD4_CLIB11_P16VPO_IMG/V2/P16VP0.DSK.extracted/MSCX.MAC
+
+BIN:
+b4c6522363cd6e1aa4ce8d9ca04b2f881a3524cb  ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/UTILIT.DSK.extracted/MSCX.PRC
+b4c6522363cd6e1aa4ce8d9ca04b2f881a3524cb  ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/V2/UTILIT.DSK.extracted/MSCX.PRC
+b4c6522363cd6e1aa4ce8d9ca04b2f881a3524cb  ./20181121/UNPACK_DSK/PK11-16_disks/disk_images/SOUZ-NEON_HD4_CLIB11_P16VPO_IMG/V2/P16VP0.DSK.extracted/MSCX.PRC
+b4c6522363cd6e1aa4ce8d9ca04b2f881a3524cb  ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/UTILIT.DSK.extracted/MSCX.PRC
+b4c6522363cd6e1aa4ce8d9ca04b2f881a3524cb  ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/V2/UTILIT.DSK.extracted/MSCX.PRC
+b4c6522363cd6e1aa4ce8d9ca04b2f881a3524cb  ./20181121/UNPACK_DSK/Souz-neon_pk_11-16/disk_images/SOUZ-NEON_HD4_CLIB11_P16VPO_IMG/V2/P16VP0.DSK.extracted/MSCX.PRC
+b4c6522363cd6e1aa4ce8d9ca04b2f881a3524cb  ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked.images/unpacked/UTILIT/MSCX.PRC
+b4c6522363cd6e1aa4ce8d9ca04b2f881a3524cb  ./PK11-16_disks/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/UTILIT.DSK.extracted/MSCX.PRC
+b4c6522363cd6e1aa4ce8d9ca04b2f881a3524cb  ./PK11-16_disks/disk_images/SOUZ-NEON_HD3_MCC_HD4_UTILIT_/V2/UTILIT.DSK.extracted/MSCX.PRC
+b4c6522363cd6e1aa4ce8d9ca04b2f881a3524cb  ./PK11-16_disks/disk_images/SOUZ-NEON_HD4_CLIB11_P16VPO_IMG/V2/P16VP0.DSK.extracted/MSCX.PRC
+----------------------------------------
+
+
+SRC:
+eaf52f1659fa7f706bd0b4b2ed1f251d26119364       ./20181121/UNPACK_DSK/PK11-16_disks.3.MAX_SAPR/PK11-16_disks.3.MAX_SAPR.unpacked/V2/ms_002/GMOUSE.MAC
+eaf52f1659fa7f706bd0b4b2ed1f251d26119364  ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/ms_002/GMOUSE.MAC
+
+BIN:
+97fefb26473b86186140797d8ac023e1ec8da7c5  ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/ms_002/GMOUSE.SAV
+97fefb26473b86186140797d8ac023e1ec8da7c5       ./20181121/UNPACK_DSK/PK11-16_disks.3.MAX_SAPR/PK11-16_disks.3.MAX_SAPR.unpacked/V2/ms_002/GMOUSE.SAV
+
+1bff6449e7dfdbe1ec642bfeaa6c789dbdfc2f9b       ./20181121/UNPACK_DSK/PK11-16_disks.3.MAX_SAPR/PK11-16_disks.3.MAX_SAPR.unpacked/V2/ms_002/GMOUSE.PRC
+1bff6449e7dfdbe1ec642bfeaa6c789dbdfc2f9b  ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/ms_002/GMOUSE.PRC
+
+altBIN_v2:
+b301701f3def6e330f2654302fe4604abff5dc9e   ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/disk9/GMOUSE.PRC
+b301701f3def6e330f2654302fe4604abff5dc9e                                                                  ./neon-disks_rar/unpacked/disk9/GMOUSE.PRC
+
+---
+
+SRC:
+947ef7a00cb3e6af29d37294469ba553b025e428       ./20181121/UNPACK_DSK/PK11-16_disks.3.MAX_SAPR/PK11-16_disks.3.MAX_SAPR.unpacked/V2/ms_002/MSMOUS.MAC
+947ef7a00cb3e6af29d37294469ba553b025e428  ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/ms_002/MSMOUS.MAC
+
+BIN:
+01f06c876a49367ec39d47fe94ab3e8962fbbeaa  .     /20181121/UNPACK_DSK/PK11-16_disks.3.MAX_SAPR/PK11-16_disks.3.MAX_SAPR.unpacked/V2/ms_002/MSMOUS.SAV
+01f06c876a49367ec39d47fe94ab3e8962fbbeaa  ./Archive/archive.pdp-11.org.ru/ukdwk_archive/ukncbtlwebcomplekt/Other/unpacked/unpacked/ms_002/MSMOUS.SAV
+---

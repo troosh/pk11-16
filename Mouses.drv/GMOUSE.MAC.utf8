@@ -1,0 +1,893 @@
+﻿.REM %
+▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+			   GENIUS mouse driver
+
+		Have a nice game with a ... GENIUS mouse !
+
+		Special driver for PC-11/16 only
+		All rights reserved
+
+				 copyright (c) 1993,1994 Maxim V. Sapronov
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄%
+
+
+	 .title	  GMOUSE	-	Genius mouse driver [1708.4]
+	 .include "sy:p16mac"
+	 .dsabl	  GBL
+	 .mcall	  .exit,push,pop
+
+	 from.RT  =	1			; Allow prompt
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+	.asect
+	.=0
+	.word "PC,0,1,-1
+	.=10
+	.asciz	"GM/PCmouse 1708.4"
+	.even
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+	nclk	=    1
+	slow	=    0
+	SUPER1	=    12
+	SUPER2	=   -12
+
+.REM %
+──────────────────────────────────────────────────────────────────────────
+
+       COMMAND:
+
+	       D0 - 0=передача инф. невозможна/1=возможна
+	       D1 - 0=-/1=запрос о готовности передатчика ВУ передать данные
+	       D2 - 0=прием информации невозможен/1=возможен
+	       D3 - 0=-/1=пауза
+	       D4 - 0=-/1=сброс триггеров ошибок в исходное состояние
+	       D5 - 0=-/1=запрос о готовности приемника ВУ принять данные
+	       D6 - программный сброс УСАПП в исходное состояние
+	       D7 - 1=поиск синхросимволов
+
+       ВЫХОД МИКРОСХЕМЫ:
+
+	       D0 - TxRDY
+	       D1 - RxRDY
+	       D2 - TxEND
+	       D3 - ошибка в принятых данных
+	       D4 - переполнение
+	       D5 - нет стоп-бита
+	       D6 - SYNDET/BD состояние - пауза
+	       D7 - DSR - готовность внешнего устройства
+
+──────────────────────────────────────────────────────────────────────────%
+
+	gmX	= 176200		; регистр X
+	gmY	= 176202		; регистр Y
+	gmCSR	= 176204		; регистр состояния
+	gmCALL	= 176206		; регистр
+	gmXloc	= 176210		; координата X в окошке
+	gmYloc	= 176212		; координата Y в окошке
+
+	gm.X	= <gmX    & 7777>+l.reg	; реальные регистры
+	gm.Y	= <gmY    & 7777>+l.reg
+	gm.CSR	= <gmCSR  & 7777>+l.reg
+	gm.CALL	= <gmCALL & 7777>+l.reg
+	gm.Xloc	= <gmXloc & 7777>+l.reg
+	gm.Yloc	= <gmYloc & 7777>+l.reg
+
+	$TRon	=      2
+	$RxRDY	=      2		; есть данные для приема
+	$TxRDY	=      1		; есть данные для передачи
+	$ERRoff	=     20		; снять ошибку
+	$RTS	=     40		; RTS сигнал
+
+	DEFMOD	=    217		; 1 - stop, noparity, /64
+	DEFCMD	=   <5+$TRon+$RTS>	; TR=on, чтение разрешено, запись разрешена
+
+	HeapBot	=  TheHeap+WIN+20
+	HeapTop	=	20000+WIN
+
+	win	= 40000
+	rcvec	= 300
+	trvec	= 304
+
+;			▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+			L.but	=	      1
+			R.but	=	      2
+			M.but	=	      4
+			connect	=	     10
+			buttons	=	     20
+			M.reset	=	     40
+			inter	=	    100
+			modefy	=	    200
+			XS.SET	=	  40000
+			YS.SET	=	  20000
+			int.SET	=	 100000
+;			▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;                              MAIN PROGRAM
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+	.	= 1000
+
+start:	br	2$
+	br	3$
+2$:	mov	#PRCfossil, R0
+	emt	351
+	.exit					; если не процесс
+
+3$:	unpreg	#gmX				; овобождаем регистры
+	unpreg	#gmY
+	unpreg	#gmCSR
+	unpreg	#gmCALL
+	unpreg	#gmXloc
+	unpreg	#gmYloc
+
+	SETPRI	#123
+
+	proreg	#gmXtbl				; регистр состояния пр-ка
+	mov	R0,	gmX.cop
+	proreg	#gmYtbl				; регистр данных пр-ка
+	mov	R0,	gmY.cop
+	proreg	#gmStbl				; регистр состояния пер-ка
+	mov	R0,	gmS.cop
+	proreg	#gmCtbl				; регистр состояния пер-ка
+	mov	R0,	gmC.cop
+	proreg	#gmXlt				; регистр данных пр-ка
+	proreg	#gmYlt				; регистр данных пр-ка
+	
+	mov	#s.rcint+win,r0
+	mthlt	#v.rcrd				; подпрограммы - в HALT
+	mov	@#UR0,	R0			; начало - со 2-го регистра
+	mthlt	#HR2
+
+	mov	#124, @#161016			; делитель на 26
+	mov	#32,  @#161012			; 
+
+	bis	#2, @#161034
+;	──────────────────────
+	mov	#$ERRoff,@#DLCS			; скидываем триггер ошибок
+	mov	#0,	@#DLCS			; префикс
+	mov	#0,	@#DLCS
+	mov	#0,	@#DLCS
+	mov	#100,	@#DLCS
+	nop
+	nop
+	nop
+	mov	#defmod,@#DLCS			; режим
+	mov	#defcmd,@#DLCS			; команда
+;	──────────────────────
+
+	clr	GX
+	clr	GY
+	mov	Xmid, GXL
+	mov	Ymid, GYL
+	clr	gmXcop
+	mov	#connect, CSR
+	mov	GX, @#gm.X
+	mov	GY, @#gm.Y
+	mov	GXL, @#gm.Xloc
+	mov	GYL, @#gm.Yloc
+;	mov	CSR, @gmS.cop
+	mov	CSR, @#gm.CSR
+	mov	#-1, @#gm.CALL
+
+   .IF	NE	from.RT
+333$:	tstb	@#177564
+	<nop>
+	bpl	333$
+	mov	#GM.installed, @#177566
+	<nop>
+   .ENDC
+
+1$:	mov	#nclk, R3
+	waitint	#<M.RCRD+M.TIO>
+	tst	switch
+	beq	1$
+	tst	copy
+	beq	1$
+	mov	CSR, @$$copy
+	<nop>
+	<nop>
+	clr	switch
+	br	1$
+
+.REM %
+▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+                              SUBROUTINE
+
+		     Чтение из регистра координаты Y
+
+         Called from:   
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄%
+
+s.GY:	bic	#<modefy+buttons>, CSR
+	mov	CSR, @#gm.CSR
+	return
+
+.REM %
+▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+                              SUBROUTINE
+
+		     Запись в регистр координаты X
+
+         Called from:   
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄%
+
+s.GX:	mov	@#gm.X, R0
+	mov	gmXcop, @#gm.X
+	return
+
+.REM %
+▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+                              SUBROUTINE
+
+			  Готовность приемника
+
+         Called from:   halt mode, interrupt
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄%
+
+	.enabl 	LSB
+
+s.rcint:
+	bis	#M.RCRD,@#PICMR		; dis int
+	bit	#$RxRDY, @#DLCS
+	bne	2$
+
+	bit	#70,	@#DLCS
+	beq	1$
+	movb	#<DEFCMD+$ERRoff>,	@#DLCS
+
+1$:	bic	#M.RCRD,@#PICMR		; enable int
+	return
+
+2$:	movb	@#DLBUF, R0
+
+	bit	#70,	@#DLCS
+	beq	3$
+	movb	#<DEFCMD+$ERRoff>,	@#DLCS
+
+3$:	tst	counter
+	beq	4$
+	jmp	20$
+
+4$:	mov	#<movement+win>, move.pointer
+
+	clr	free
+
+	com	R0
+	bic	#^C7, R0
+	cmp	R0, #6
+	beq	9$
+	cmp	R0, #3
+	bne	14$
+
+	cmp	R0, StillPressed
+	beq	15$
+
+	mov	R0, StillPressed
+	mov	X0.scale, R1
+	dec	R1
+	cmp	R1, #-10
+	bge	5$
+	mov	#-10, R1
+5$:	tst	R1
+	ble	6$
+	clr	R1
+6$:	call	newX0
+	call	newX
+	mov	R1, X0.scale
+	mov	R1, X.scale
+
+	mov	Y0.scale, R1
+	dec	R1
+	cmp	R1, #-10
+	bge	7$
+	mov	#-10, R1
+7$:	tst	R1
+	ble	8$
+	clr	R1
+8$:	call	newY0
+	call	newY
+	mov	R1, Y0.scale
+	mov	R1, Y.scale
+	br	15$
+
+9$:	cmp	R0, StillPressed
+	beq	15$
+
+	mov	R0, StillPressed
+	mov	X0.scale, R1
+	inc	R1
+	cmp	R1, #-10
+	bge	10$
+	mov	#-10, R1
+10$:	tst	R1
+	ble	11$
+	clr	R1
+11$:	call	newX0
+	call	newX
+	mov	R1, X0.scale
+	mov	R1, X.scale
+
+	mov	Y0.scale, R1
+	inc	R1
+	cmp	R1, #-10
+	bge	12$
+	mov	#-10, R1
+12$:	tst	R1
+	ble	13$
+	clr	R1
+13$:	call	newY0
+	call	newY
+	mov	R1, Y0.scale
+	mov	R1, Y.scale
+	br	15$
+
+14$:	clr	StillPressed
+15$:	mov	R0, R4
+	bic	#^C1, R0		; right
+	mov	R4, R1
+	bic	#^C2, R1		; medium
+	bic	#^C4, R4		; left
+
+	asr	R4
+	asr	R4
+	asl	R1
+	asl	R0
+	bis	R0, R1
+	bis	R1, R4
+
+	mov	R4, R0
+	bic	#^C7, R0
+	mov	CSR, R1
+	bic	#^C7, R1
+
+	clr	theChange
+	xor	R0, R1			; R1  разница по кнопкам
+	beq	19$
+
+	clr	R3
+	mov	R1, R2
+
+ .rept	3
+	asr	R1
+	rorb	R3
+	asr	R2
+	rorb	R3
+ .endr
+
+ ;	R3 = MMRRLL00 (binary)
+
+	com	R3
+	mov	#250, R1
+
+	bit	#L.BUT, R4
+	beq	16$
+	mov	#14, R2
+	xor	R2, R1
+
+16$:	bit	#R.BUT, R4
+	beq	17$
+	mov	#60, R2
+	xor	R2, R1
+
+17$:	bit	#M.BUT, R4
+	beq	18$
+	mov	#300, R2
+	xor	R2, R1
+
+18$:	bic	R3, R1
+	mov	R1, theChange
+
+	inc	free
+	bis	#buttons, R4
+	bic	#<buttons+r.but+l.but+m.but>, CSR
+	bis	R4, CSR
+
+19$:	jmp	39$
+
+20$:	mov	R0,	@move.pointer
+	add	#2,	move.pointer
+	asl	R0
+;	asl	R0
+	mov	R0,	@move.pointer
+	add	#2,	move.pointer
+
+21$:	cmp	counter, #4
+	blo	19$
+
+	cmp	movement, #SUPER1
+	bge	22$
+	cmp	movement, #SUPER2
+	ble	22$
+	br	23$
+22$:	add	movement+2,	GX
+	add	movement+2,	GXL
+	sub	movement+6,	GY
+	sub	movement+6,	GYL
+	br	26$
+
+23$:	cmp	movement+4, #SUPER1
+	bge	24$
+	cmp	movement+4, #SUPER2
+	ble	24$
+	br	25$
+24$:	add	movement+2,	GX
+	add	movement+2,	GXL
+	sub	movement+6,	GY
+	sub	movement+6,	GYL
+	br	26$
+
+25$:	add	movement,	GX
+	add	movement,	GXL
+	sub	movement+4,	GY
+	sub	movement+4,	GYL
+
+26$:	cmp	movement+10, #SUPER1
+	bge	27$
+	cmp	movement+10, #SUPER2
+	ble	27$
+	br	28$
+27$:	add	movement+12,	GX
+	add	movement+12,	GXL
+	sub	movement+16,	GY
+	sub	movement+16,	GYL
+	br	31$
+
+28$:	cmp	movement+14, #SUPER1
+	bge	29$
+	cmp	movement+14, #SUPER2
+	ble	29$
+	br	30$
+29$:	add	movement+12,	GX
+	add	movement+12,	GXL
+	sub	movement+16,	GY
+	sub	movement+16,	GYL
+	br	31$
+
+30$:	add	movement+10,	GX
+	add	movement+10,	GXL
+	sub	movement+14,	GY
+	sub	movement+14,	GYL
+
+31$:	mov	#-1, counter
+
+	mov	GXL, R0
+	mov	GYL, R1
+
+	ash	(pc)+, R0
+X0.scale: .word		SLOW
+
+	ash	(pc)+, R1
+Y0.scale: .word		SLOW
+
+	cmp	R0, Xmax
+	ble	32$
+	mov	Xmax, R0
+	call	ScaleX
+32$:	cmp	R0, Xmin
+	bge	33$
+	mov	Xmin, R0
+	call	ScaleX
+33$:	cmp	R1, Ymax
+	ble	34$
+	mov	Ymax, R1
+	call	ScaleY
+34$:	cmp	R1, Ymin
+	bge	35$
+	mov	Ymin, R1
+	call	ScaleY
+35$:	mov	R0, @#gm.Xloc
+	mov	R1, @#gm.Yloc
+
+	mov	GX, R0
+	ash	(pc)+, R0
+X.scale: .word		SLOW
+	mov	GY, R1
+	ash	(pc)+, R1
+Y.scale: .word		SLOW
+	cmp	R0, gmXcop
+	beq	36$
+	bis	#2, theChange
+	inc	free
+36$:	cmp	R1, @#gm.Y
+	beq	37$
+	bis	#2, theChange
+	inc	free
+37$:	mov	R0, gmXcop
+	mov	R0, @#gm.X
+	mov	R1, @#gm.Y
+
+	tst	free
+	beq	39$
+	bit	theChange, int.Pattern
+	beq	38$
+	mov	#1, switched
+38$:	bis	#modefy, CSR
+;	mov	CSR, @gmS.cop
+	mov	CSR, @#gm.CSR
+
+39$:	inc	counter
+	bic	#M.RCRD,@#PICMR		; enable int
+	return
+
+	.dsabl	LSB
+
+ScaleX:	push	<R0,R1>
+	mov	X.scale, R1
+	neg	R1
+	ash	R1, R0
+	mov	R0, GXL
+	pop	<R1,R0>
+	return
+
+ScaleY:	push	<R0,R1>
+	mov	Y.scale, R0
+	neg	R0
+	ash	R0, R1
+	mov	R1, GYL
+	pop	<R1,R0>
+	return
+
+.REM %
+▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+                              SUBROUTINE
+
+		Обработка регистра состояния "мыши" по записи
+
+		 "1xxxxx" установить маску событий
+		  100376  установить все
+
+		 "040xxx" установить "замедление" по X (= low byte)
+		 "020xxx" установить "замедление" по Y (= low byte)
+
+		      биты
+		 ──────────┬────────────────────
+			0  │  резерв
+			1  │  перемещение мыши
+			2  │  нажатие левой кнопки
+			3  │  отжатие левой кнопки
+			4  │  нажатие центр.кнопки
+			5  │  отжатие центр.кнопки
+			6  │  нажатие прав. кнопки
+			7  │  отжатие прав. кнопки
+
+         Called from:   
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄%
+
+s.CSR:					; {записали CSR}
+	mov	@#gm.CSR, R0
+	mov	R0, R1
+	bic	#177400, R1
+	neg	R1
+
+	bit	#int.SET, R0
+	beq	1$
+
+	neg	R1
+	mov	R1, int.Pattern
+	br	5$
+
+1$:	bit	#XS.SET, R0
+	beq	3$
+	bit	#YS.SET, R0
+	beq	2$
+
+	call	newY0
+	call	newY
+	mov	R1, Y.scale
+	mov	R1, Y0.scale
+	clr	StillPressed
+
+2$:	call	newX0
+	call	newX
+	mov	R1, X0.scale
+	mov	R1, X.scale
+	clr	StillPressed
+	br	5$
+
+3$:	bit	#YS.SET, R0
+	beq	4$
+	call	newY0
+	call	newY
+	mov	R1, Y.scale
+	mov	R1, Y0.scale
+	clr	StillPressed
+	br	5$
+
+4$:	bit	#M.reset, R0
+	beq	5$
+	clr	copy
+	clr	GX
+	clr	GY
+	mov	GX, @#gm.X
+	mov	GY, @#gm.X
+	clr	gmXcop
+	mov	#connect, CSR
+	mov	CSR, @#gm.CSR
+	mov	Xmid, GXL
+	mov	Xmid, @#gm.Xloc
+	mov	Ymid, GYL
+	mov	Ymid, @#gm.Yloc
+	return
+
+5$:	mov	CSR, @#gm.CSR
+	return
+
+
+newX0:	mov	X0.scale, R2
+	mov	GXL,	R3
+	ash	R2,	R3
+	mov	R1,	R2
+	neg	R2
+	ash	R2,	R3
+	mov	R3,	GXL
+	return
+
+newX:	mov	X.scale, R2
+	mov	GX,	R3
+	ash	R2,	R3
+	mov	R1,	R2
+	neg	R2
+	ash	R2,	R3
+	mov	R3,	GX
+	return
+
+newY0:	mov	Y0.scale, R2
+	mov	GYL,	R3
+	ash	R2,	R3
+	mov	R1,	R2
+	neg	R2
+	ash	R2,	R3
+	mov	R3,	GYL
+	return
+
+newY:	mov	Y.scale, R2
+	mov	GY,	R3
+	ash	R2,	R3
+	mov	R1,	R2
+	neg	R2
+	ash	R2,	R3
+	mov	R3,	GY
+	return
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;                              SUBROUTINE
+;
+;		Генерация прерывания по обращению к регистру
+;
+;         Called from:   
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+s.CALL:	mov	@#gm.CALL, R0
+	cmp	R0, #-1
+	bne	1$
+	cmp	HeapPtr, #HeapTop
+	bhis	2$
+	mov	HeapPtr, R2
+	mov	(R2)+, copy
+	mov	(R2)+, $$copy
+	mov	(R2)+, int.Pattern
+	mov	(R2)+, Y.scale
+	mov	(R2)+, X.scale
+	mov	(R2)+, GYL
+	mov	(R2)+, GXL
+	mov	(R2)+, GY
+	mov	(R2)+, GX
+	mov	R2, HeapPtr
+	mov	#connect, CSR
+	mov	X.scale, X0.scale
+	mov	Y.scale, Y0.scale
+
+	mov	GX, @#gm.X
+	mov	GY, @#gm.Y
+	mov	GXL, @#gm.Xloc
+	mov	GYL, @#gm.Yloc
+;	mov	CSR, @gmS.cop
+	mov	CSR, @#gm.CSR
+	mov	$$copy, @#gm.CALL
+	return
+
+2$:	clr	copy
+	return
+
+1$:	cmp	HeapPtr, #HeapBot
+	blos	2$
+
+	mov	HeapPtr, R2
+	mov	GX	, -(R2)
+	mov	GY	, -(R2)
+	mov	GXL	, -(R2)
+	mov	GYL	, -(R2)
+	mov	X.scale	, -(R2)
+	mov	Y.scale	, -(R2)
+	mov	int.Pattern, -(R2)
+	mov	$$copy	, -(R2)
+	mov	copy	, -(R2)
+	mov	R2, HeapPtr
+	mov	R2, @#gm.CALL
+
+	mov	#1, copy
+	mov	R0, $$copy
+	return
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;                              SUBROUTINE
+;
+;		Установка границ передвижения мыши по X
+;
+;         Called from:   
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+s.Xset:	tst	Xrecording
+	bne	4$
+	mov	@#gm.Xloc, R0
+	cmp	R0, #-1
+	bne	1$
+	inc	Xrecording
+	return
+
+1$:	cmp	R0, #-2
+	bne	2$
+	mov	Xmin, XMNsav
+	mov	Xmax, XMXsav
+	mov	GXL, @#gm.Xloc
+	return
+
+2$:	cmp	R0, #-3
+	bne	3$
+	mov	XMNsav, Xmin
+	mov	XMXsav, Xmax
+	br	6$
+
+4$:	cmp	Xrecording, #1
+	bne	5$
+	mov	@#gm.Xloc, Xmin
+	inc	Xrecording
+3$:	return
+
+5$:	mov	@#gm.Xloc, Xmax
+	clr	Xrecording
+6$:	mov	Xmax, R0
+	add	Xmin, R0
+	asr	R0
+	bic	#100000, R0
+	mov	R0, GXL
+	mov	R0, Xmid
+	mov	R0, @#gm.Xloc
+	return
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;                              SUBROUTINE
+;
+;		Установка границ передвижения мыши по Y
+;
+;         Called from:   
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+s.Yset:	tst	Yrecording
+	bne	4$
+	mov	@#gm.Yloc, R0
+	cmp	R0, #-1
+	bne	1$
+	inc	Yrecording
+
+1$:	cmp	R0, #-2
+	bne	2$
+	mov	Ymin, YMNsav
+	mov	Ymax, YMXsav
+	mov	GYL, @#gm.Yloc
+	return
+
+2$:	cmp	R0, #-3
+	bne	3$
+	mov	YMNsav, Ymin
+	mov	YMXsav, Ymax
+	br	6$
+
+4$:	cmp	Yrecording, #1
+	bne	5$
+	mov	@#gm.Yloc, Ymin
+	inc	Yrecording
+3$:	return
+
+5$:	mov	@#gm.Yloc, Ymax
+	clr	Yrecording
+6$:	mov	Ymax, R0
+	add	Ymin, R0
+	asr	R0
+	bic	#100000, R0
+	mov	R0, GYL
+	mov	R0, Ymid
+	mov	R0, @#gm.Yloc
+	return
+
+;▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+;                                  DATA
+;▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+gmXtbl	:  .word	gmX,	   -1,	 0, 2400,    s.GX+win,     0,   0
+gmYtbl	:  .word	gmY,	   -1,	 0, 4400,    s.GY+win,     0,  -1
+gmStbl	:  .word	gmCSR,      0,   0, 2400,   s.CSR+win,     0,  -1
+gmCtbl	:  .word	gmCALL,	    0,   0, 2400,  s.CALL+win,     0,   0
+gmXlt	:  .word	gmXloc,	    0,   0, 2400,  s.Xset+win,     0,  -1
+gmYlt	:  .word	gmYloc,	    0,   0, 2400,  s.Yset+win,     0,  -1
+
+XXX		:  .word	0
+switched	:  .word	0
+
+gmX.cop		:  .word 	0
+gmY.cop		:  .word	0
+gmS.cop		:  .word	0
+gmC.cop		:  .word	0
+gmXcop		:  .word	0
+
+Xmax		:  .word	831.		; наибольшая позиция X
+Xmin		:  .word	0		;
+Xrecording	:  .word	0		; если <> 0, то вводятся ↓
+Ymax		:  .word	299.		; наибольшая позиция Y
+Ymin		:  .word	0		;
+Yrecording	:  .word	0		; если <> 0, то вводятся ↓
+Xmid		:  .word	<830./2>
+Ymid		:  .word	<300./2>
+
+XMXsav		:  .word	830.
+YMXsav		:  .word	299.
+XMNsav		:  .word	0
+YMNsav		:  .word	0
+
+StillPressed	:  .word	0
+GXL		:  .word	0
+GYL		:  .word	0
+GX		:  .word	0
+GY		:  .word	0
+CSR		:  .word	0
+
+movement	:  .blkw	10		; четыре смещения
+move.pointer	:  .word	movement+win
+free		:  .word	0
+counter		:  .word	0
+copy		:  .word	0
+$$copy		:  .word	0
+
+HeapPtr		:  .word	HeapTop
+theChange	:  .word	0		; Реальные изменения
+int.Pattern	:  .word	376		; Маска прерывания
+theHeap		:  
+
+   .IF	NE	from.RT
+GM.installed	:  .ascii <15><12>
+		   .ascii "GENIUS Mouse Driver (PC Mouse Mode) installed on COM0"<15><12>
+		   .ascii "Copyright (C) 1993,94 Maxim V. Sapronov"<15><12>
+		   .asciz "Do NOT use without permission!"<15><12>
+   .ENDC
+
+PRCfossil:
+.ascii	<15><12>
+.ascii	"   ██████████████████████████████████████████████████████████████████████████"<15><12>
+.ascii	"   ██                                                                      ██"<15><12>
+.ascii	"   ██                          GENIUS Mouse driver                         ██"<15><12>
+.ascii	"   ██                          ───────────────────                         ██"<15><12>
+.ascii	"   ██                             PC Mouse Mode                            ██"<15><12>
+.ascii	"   ██                                                       version 1708.4 ██"<15><12>
+.ascii	"   ██                                                                      ██"<15><12>
+.ascii	"   ██████████████████████████████████████████████████████████████████████████"<15><12>
+.ascii	<15><12>
+.ascii	<15><12>
+.ascii	"		    copyright (C) 1993,94 Maxim V. Sapronov"<15><12>
+.ascii	"		   2:5020/24.22@fidonet 2:5020/36.25@fidonet"<15><12>
+.ascii	<15><12>
+.ascii  "		             ALL RIGHTS RESERVED."<15><12>
+.ascii  "		       Do not use without permission!"<15><12>
+.ascii	<15><12>
+.asciz	"		   THIS HANDLER SUPPORTS INNER_COM_PORT ONLY!"<15><12>
+.even
+
+	.blkb	200
+
+	.end start
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
