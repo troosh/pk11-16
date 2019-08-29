@@ -1,0 +1,10 @@
+====
+1:158,159c
+  	M.IDE	=  M.HD
+  	V.IDE	=  V.HD
+2:158,159c
+  	M.IDE	=  M.prrd
+  	V.IDE	=  V.prrd
+3:158,159c
+  	M.IDE	=  M.slot
+  	V.IDE	=  V.slot

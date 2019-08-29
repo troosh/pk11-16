@@ -1,0 +1,2849 @@
+.MAIN.	MACRO V05.06R Thursday 29-Aug-19 10:01
+Table of contents
+
+    2- 462	common definitions for bios monitor
+    5- 462	common definitions for bios monitor
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 1
+
+
+      1					.enabl  lc
+      2					.enabl	ama
+      3					.enabl  gbl
+      4					.mcall	.push,.pop
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 3
+Common definitions for bios monitor
+
+      2
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 4
+Common definitions for bios monitor
+
+      1					;??????????????????????????????????????????????????????????????????????????
+      2					;
+      3					;			FDD+HDD(MFM+IDE) driver
+      4					;
+      5					;		All arund the world you can't find beter...
+      6					;
+      7					;		Special driver for PC-11/16 only
+      8					;		All rights reserved
+      9					;
+     10					;				  Сильно переделан в 1994 году
+     11					;
+     12					;		Сапроновым Максимом и Абкаировым Николаем
+     13					;	??????????????????????????????????????????????????????????
+     14					;
+     15					; КОММЕНТАРИЙ К МЕХАНИЗМУ	При инициализации драйвера warm-boot не
+     16					;    COOL/WARM BOOT:		играет роли, а cool описывается следующим
+     17					; 				образом:
+     18					;
+     19					;
+     20					;   151413121110 9 8 7 6 5 4 3 2 1 0
+     21					;   ?????????????????????????????????
+     22					;   ???????????????????x?x???????????
+     23					;		     ?	   ? ? ?????
+     24					;   driver ready ?????	   ? ?	 ??????????? cool boot device
+     25					;   IDE device (*) ????????? ??????????????? cool boot device doesn't exist
+     26					;
+     27					;   				Как только проходит cool_boot, само понятие
+     28					;				теряет смысл и, следовательно, биты 0..3
+     29					;   				можно использовать в др. целях. С битом #3
+     30					;   				так и происходит. А вот бит #0 - это
+     31					;				добавление для работы с IDE.
+     32					;
+     33					;   151413121110 9 8 7 6 5 4 3 2 1 0
+     34					;   ?????????????????????????????????
+     35					;   ???????????????????????????x?x???
+     36					;		     ? ? ?????	   ?
+     37					;   driver ready ????? ?   ?	   ????????? IDE drive (*)
+     38					;		       ?   ????????????????? warm boot device
+     39					;		       ????????????????????? warm boot device doesn't exist
+     40					;
+     41					;   (*) - добавление, сделанное в 1994 году для расширения возможностей
+     42					;	  драйвера.
+     43					;??????????????????????????????????????????????????????????????????????????
+     44
+     45					;	.enabl		AMA
+     46						.mcall		.exit
+     47						.dsabl		GBL
+     48
+     49						.Title	Hard Disk Controller
+     50
+     51						.include "p16mac"
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 5
+Common definitions for bios monitor
+
+      1					.macro	.push	args
+      2					.irp	x,<args>
+      3					.if b <x>
+      4						clr	-(6.)
+      5					.iff
+      6					.if	idn	<x>,#0
+      7						clr	-(6.)
+      8					.iff
+      9						mov	x,-(6.)
+     10					.endc
+     11					.endc
+     12					.endr
+     13					.endm	.push
+     14
+     15					.macro	.pop	args
+     16					.irp	x,<args>
+     17						mov	(6.)+,x
+     18					.endr
+     19					.endm	.pop
+     20					;---------------------------------------------------------
+     21					; dchar (word)	- put a code to the pos of indicator
+     22					; cod	- control code for lighting the mask
+     23					; pos	- position of indicator (0..8)
+     24
+     25					.macro  dchar   n
+     26						mov     n,	@#^o174100
+     27						nop
+     28					.endm
+     29					;---------------------------------------------------------
+     30					; dstring (adr)	- put a string to indicator, starting at pos
+     31					; adr	- address of table (.even) :
+     32					;	.byte	n*16.+pos	; n - length of string; pos - 0..8
+     33					;	.blkb	n		; the string of codes
+     34
+     35					.macro	dstring adr
+     36						mov	adr,	@#^o174102
+     37						nop
+     38					.endm
+     39					;---------------------------------------------------------
+     40					; dval (adr)	- puts a number to indicator, starting at pos
+     41					; adr	- address of table (.even) :
+     42					;	.word	val		; a number's value
+     43					;	.byte	n*16.+pos	; n - number of chars
+     44					;	.byte	rad		; radix (1..16) of the number
+     45
+     46					.macro	dval	adr
+     47						mov	adr,	@#^o174104
+     48						nop
+     49					.endm
+     50					;---------------------------------------------------------
+     51					; kstring (adr)	- 1. assign string to key (or combination) or
+     52					;		  2. connects it to emulating reg
+     53					; adr	- address of table (.even):
+     54					;		(1)	.byte	cod	; programming key(combination)
+     55					;			.byte	a,b,c,...,0 ;string of codes (0=end)
+     56					;		(2)	.byte	cod	;
+     57					;			.byte	0	;
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 5-1
+Common definitions for bios monitor
+
+     58					;			.word	reg	; reg's address
+     59					; c-set	- no memory to store the string
+     60
+     61					.macro	kstring adr
+     62						mov	adr,	@#^o174106
+     63						nop
+     64					.endm
+     65					;---------------------------------------------------------
+     66					; respon (adr)	- simulates input of string from keyboard
+     67					; adr	- address of asciz-string (ended with 0-byte)
+     68
+     69					.macro	respon	adr
+     70						mov	adr, @#^o174110
+     71						nop
+     72					.endm
+     73					;---------------------------------------------------------
+     74					; initsem (var sem : semaphore; ival)
+     75					; ival  - r5    - initial value of sem counter
+     76					; sem   - p.r0  - pointer to semaphore (returned)
+     77					; c-set         - no memory
+     78
+     79					 .macro initsem n
+     80					        mov     n,@#^o174142
+     81					        nop
+     82					 .endm
+     83
+     84					;---------------------------------------------------------
+     85					; relsem (sem : semaphore)
+     86					; sem   - r5    - pointer to semaphore
+     87
+     88					 .macro relsem  n
+     89					        mov     n,@#^o174144
+     90					        nop
+     91					 .endm
+     92
+     93					;---------------------------------------------------------
+     94					; waitsem (sem : semaphore);
+     95					; sem   - r5    - pointer to semaphore
+     96
+     97					 .macro waitsem n
+     98					        mov     n,@#^o174146
+     99					        nop
+    100					 .endm
+    101
+    102					;---------------------------------------------------------
+    103					; sigsem (sem : semaphore)
+    104					; sem   - r5    - pointer to semaphore
+    105
+    106					 .macro sigsem  n
+    107					        mov     n,@#^o174150
+    108					        nop
+    109					 .endm
+    110
+    111					;---------------------------------------------------------
+    112					; setpriority to current process
+    113					; setpriority (pri)
+    114					; pri   - r5    -  new priority
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 5-2
+Common definitions for bios monitor
+
+    115
+    116					 .macro setpri  n
+    117					        mov     n,@#^o174152
+    118					        nop
+    119					 .endm
+    120
+    121					;---------------------------------------------------------
+    122					; provec(vecadr,par)- protect vec for exclussive use
+    123					; vecadr- r5    - vector addr
+    124					; par	- p.r0	- a parameter word (stored in the 2nd word of vector)
+    125					; returned:
+    126					;       c=0     - normar return (r0=0)
+    127					;       c=1 ::
+    128					;        r0 =0  - invalid vector
+    129					;        r0<>0  - vector already protected ,
+    130					;                 r0 = descriptor addr of owner process
+    131
+    132					 .macro provec  n
+    133					        mov     n,@#^o174154
+    134					        nop
+    135					 .endm
+    136
+    137					;---------------------------------------------------------
+    138					; unpvec(vecadr)- unprotect vector
+    139					; vecadr- r5    - vector addr
+    140					; returned:
+    141					;       c=0     - ok (even we are not owner !!!)
+    142					;       c=1     - invalid vector
+    143
+    144					 .macro unpvec  n
+    145					        mov     n,@#^o174156
+    146					        nop
+    147					 .endm
+    148
+    149					;---------------------------------------------------------
+    150					; proreg(dreg)   - protect reg for emulation
+    151					; dreg   - r5    - addr of register's table
+    152					;	.word	reg	; reg's address
+    153					;	.word	r.mask, r.copy
+    154					;	.byte	r.rqst, r.stat
+    155					;	.word	r.strt, r.reset
+    156					; returned:
+    157					;       c=0     - ok
+    158					;        r0 - addr r.copy of reg-descriptor
+    159					;       c=1     - no memory or busy reg
+    160					;        r0=0  - no memory
+    161					;        r0<>0 - addr of process-owner of register
+    162
+    163					 .macro proreg  n
+    164					        mov     n,@#^o174160
+    165					        nop
+    166					 .endm
+    167
+    168					;---------------------------------------------------------
+    169					; unpreg(reg)   - unprotect reg and free it's descriptor
+    170					; reg   - r5    - addr of reg
+    171
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 5-3
+Common definitions for bios monitor
+
+    172					 .macro unpreg  n
+    173					        mov     n,@#^o174162
+    174					        nop
+    175					 .endm
+    176
+    177					;---------------------------------------------------------
+    178					; waitint(mask) - makes process wait any interrupt
+    179					; mask  - r5    - a mask to enable/disable external ints
+    180					;		low byte - mask;
+    181					;		m.tio  = 1 => need time-out:
+    182					;				p.r3 - timer interval in ticks
+    183					;				p.r4 - user defined parameter (will be
+    184					;					copied to r2, if time-out occur)
+    185					;		m.vrq  = 1 => enabled vectored ints
+    186					; p.r0, p.r1, p.r2	- user defined and would be changed in
+    187					;			situations mentioned below
+    188					; returned:
+    189					;       c=0     - reg's emulation int
+    190					;        r0 / r1 <>0 - one or two r.strt-words from reg-descriptors
+    191					;       c=1     - interrupt occur flag !!!
+    192					;        r2 - 2nd word from vector - the interruptera, or
+    193					;	    - a copy of r4 in case of time-out
+    194					;  common:	contents of r0,r1,r2 changed only if reg's emulation needed
+    195					;		and/or interrupt occur or time-out !!!
+    196					;		in case of interrupt or time-out only r2 changed !!!
+    197
+    198					 .macro waitint n
+    199					        mov     n,@#^o174164
+    200					        nop
+    201					 .endm
+    202
+    203					;---------------------------------------------------------
+    204					; newromprocess (startaddr)
+    205					; startaddr     - r5    - pc of creating process
+    206					; returned:
+    207					;       c=0     - process is created and r0 points to its descriptor
+    208					;                 (r1-r6, ur0-ur7 - copy of parent's)
+    209					;		- priority = max (077777)
+    210					;       c=1     - no memory
+    211
+    212					 .macro newromp n
+    213					        mov     n,@#^o174166
+    214					        nop
+    215					 .endm
+    216
+    217					;---------------------------------------------------------
+    218					; setint (vec)          - set request for int on vector vec
+    219					; vec   - r5    - vector (from v.low up to v.high)
+    220
+    221					.macro  setint  n
+    222					        mov     n+vrqtbl-v.low+4, @#^o174170
+    223					        nop
+    224					.endm
+    225
+    226					;---------------------------------------------------------
+    227					; resint (vec)          - reset int request for vector vec
+    228					; vec   - r5    - vector
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 5-4
+Common definitions for bios monitor
+
+    229
+    230					.macro  resint  n
+    231					        mov     n+vrqtbl-v.low+4, @#^o174172
+    232					        nop
+    233					.endm
+    234
+    235					;---------------------------------------------------------
+    236					; get4k(n4k)	- take contin. area of mem (n4k blocks in length)
+    237					; 		from the lower memory
+    238					; n4k	- r5	- length of area in 4k blocks.    1 <= n <= 16.
+    239					;		max = 64k bytes
+    240					; returned:
+    241					;       c=0, r0 - contents of mmu reg to map the block
+    242					;       c=1     - no memory for creation map or no free blocks
+    243
+    244					.macro  get4k	n
+    245					        mov	n, @#^o174176
+    246					        nop
+    247					.endm
+    248
+    249					;---------------------------------------------------------
+    250					; get8k(n8k)	- take contin. area of mem (n8k blocks in length)
+    251					;		from the higher memory
+    252					; n8k	- r5	- length of area in 8k blocks
+    253					; returned:
+    254					;	c=0, r0	= contents of mmu reg to map first block of all
+    255					;	c=1, r0,- no free mem; r0 - length of max free area in 8k blocks;
+    256					;		r0=0, if cannot allocate process's map
+    257
+    258					.macro	get8k	n
+    259						mov	n, @#^o174200
+    260						nop
+    261					.endm
+    262
+    263					;---------------------------------------------------------
+    264					; fremem(n8k,bln) - release n8k blocks of mem, starting from bln (reg mmu)
+    265					; n8k	- r5	- num of 8k blocks to make free
+    266					; bln	p.r0(r3)- starting mmu reg contents
+    267					; returned:
+    268					;		none
+    269
+    270					.macro	fremem	n
+    271						mov	n, @#^o174202
+    272						nop
+    273					.endm
+    274					.macro	fre4k	n
+    275						mov	n, @#^o174174
+    276						nop
+    277					.endm
+    278
+    279					;---------------------------------------------------------
+    280					; putbmap	- write process's mem-map (create if needed)
+    281					; returned:
+    282					;	c=0	- ok
+    283					;	c=1	- cannot allocate mem-map table
+    284
+    285					.macro	putbmap	map
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 5-5
+Common definitions for bios monitor
+
+    286						mov	map, @#^o174204
+    287						nop
+    288					.endm
+    289
+    290					;---------------------------------------------------------
+    291					; getbmap	- read process's mem-map
+    292					; returned:
+    293					;	c=0,r0	- ok, r0= length of mem-map in words
+    294					;	c=1	- no mem-map for this process
+    295
+    296					.macro	getbmap	map
+    297						mov	map, @#^o174206
+    298						nop
+    299					.endm
+    300
+    301					;---------------------------------------------------------
+    302					; getsmap	- reads system's mem-map
+    303					; returned:
+    304					;	r0	- length of mem-map in bytes
+    305
+    306					.macro	getsmap	map
+    307						mov	map, @#^o174210
+    308						nop
+    309					.endm
+    310
+    311					;---------------------------------------------------------
+    312					; himpri(pri,proc)	- sets new priority pri to process proc
+    313					; returned:	- none
+    314
+    315					.macro	himpri	pri
+    316						mov	pri, @#^o174212
+    317						nop
+    318					.endm
+    319
+    320					;---------------------------------------------------------
+    321					; newproc(desc,umap)	- creates new process
+    322					; desc	- r5	- addr of descr.table in user mapping
+    323					; umap	- p.r0	- addr of map for the proc in user mapping
+    324					; returned:
+    325					;	c=1	- no mem to create map or descriptor
+    326
+    327					.macro	newproc	desc
+    328						mov	desc, @#^o174214
+    329						nop
+    330					.endm
+    331					;--------------------------------------------------
+    332					; mthlt(addr)	- mov  r0, addr/hlt
+    333					.macro	mthlt addr
+    334						mov	addr,	@#^o174216
+    335						nop
+    336					.endm
+    337					;--------------------------------------------------
+    338					; mfhlt(addr)	- mov addr/hlt, r0
+    339					.macro	mfhlt addr
+    340						mov	addr,	@#^o174220
+    341						nop
+    342					.endm
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 5-6
+Common definitions for bios monitor
+
+    343					;--------------------------------------------------
+    344					;kilproc num_proc
+    345					.macro	kilproc num
+    346						mov	num,	@#^o174222
+    347						nop
+    348					.endm
+    349					;--------------------------------------------------
+    350					.macro	timeon
+    351						clr	r0
+    352						mthlt	#tcflg
+    353					.endm
+    354					;--------------------------------------------------
+    355					.macro	timeoff
+    356						mov	#1,	r0
+    357						mthlt	#tcflg
+    358					.endm
+    359					;--------------------------------------------------
+    360					; getpds(pds,area) - get process descriptor
+    361					;	pds	- p.r0:	process descr or 0 - caller descr
+    362					;	area:		area for descr, prolen bytes
+    363					; return:	c=0	ok
+    364					;		c=1	invalid descr
+    365					.macro	getpds	area
+    366						mov	area,	@#^o174224
+    367						nop
+    368					.endm
+    369					;--------------------------------------------------
+    370					; putpds(pds,area) - put process descriptor
+    371					;	pds	- p.r0:	process descr or 0 - caller descr
+    372					;	area:		area for descr, prolen bytes
+    373					; return:	c=0	ok
+    374					;		c=1	invalid descr
+    375					.macro	putpds	area
+    376						mov	area,	@#^o174226
+    377						nop
+    378					.endm
+    379					;--------------------------------------------------
+    380					; getrds(radr,area) - get register descriptor
+    381					;	radr	- p.r0:	register adr
+    382					;	area:		area for descr, reglen bytes
+    383					; return:	c=0	ok
+    384					;		c=1	invalid register
+    385					.macro	getrds	area
+    386						mov	area,	@#^o174230
+    387						nop
+    388					.endm
+    389					;--------------------------------------------------
+    390					; putrds(radr,area) - put register descriptor
+    391					;	radr	- p.r0:	register adr
+    392					;	area:		area for descr, reglen bytes
+    393					; return:	c=0	ok
+    394					;		c=1	invalid register
+    395					.macro	putrds	area
+    396						mov	area,	@#^o174232
+    397						nop
+    398					.endm
+    399					;--------------------------------------------------
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 5-7
+Common definitions for bios monitor
+
+    400					; getpar(pds,area) - get process par contents
+    401					;	pds	- p.r0:	process descr or 0 - caller descr
+    402					;	area:		area for par contents, 20 bytes
+    403					; return:	c=0	ok
+    404					;		c=1	invalid descr
+    405					.macro	getpar	area
+    406						mov	area,	@#^o174234
+    407						nop
+    408					.endm
+    409					;--------------------------------------------------
+    410					; putpar(pds,area) - put process par contents
+    411					;	pds	- p.r0:	process descr or 0 - caller descr
+    412					;	area:		area for par contents, 20 bytes
+    413					; return:	c=0	ok
+    414					;		c=1	invalid descr
+    415					.macro	putpar	area
+    416						mov	area,	@#^o174236
+    417						nop
+    418					.endm
+    419
+    420					;************************************************************
+    421					; halt-instructions
+    422					;------------------------------------------------------------
+    423					.macro	go			; ps:=cps
+    424						.word	12		; pc:=cpc
+    425					.endm				; return from halt-mode
+    426					;------------------------------
+    427					.macro	step			; ps:=cps
+    428					        .word	16		; pc:=cpc
+    429					.endm				; return from halt-mode (inhibit hlt-syg trap)
+    430					;------------------------------
+    431					.macro	rsel			; r0:=sw_reg
+    432						.word	20		;
+    433					.endm				; move sw_reg to r0
+    434					;------------------------------
+    435					.macro	mfus			; mov (r5)+/user, r0
+    436						.word	21		;
+    437					.endm				;
+    438					;------------------------------
+    439					.macro	rcpc			; r0:=cpc
+    440						.word	22		;
+    441					.endm				;
+    442					;------------------------------
+    443					.macro	rcps			; r0:=cps
+    444						.word	24		;
+    445					.endm				;
+    446					;------------------------------
+    447					.macro	mtus			; mov r0, -(r5)/user
+    448						.word	31		;
+    449					.endm				;
+    450					;------------------------------
+    451					.macro	wcpc			; cpc:=r0
+    452						.word	32		;
+    453					.endm				;
+    454					;------------------------------
+    455					.macro	wcps			; cps:=r0
+    456						.word	34		;
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 5-8
+Common definitions for bios monitor
+
+    457					.endm				;
+    458					;------------------------------
+    459
+    460					;************************************************************
+    461
+    462						.sbttl	common definitions for bios monitor
+    463
+    464					.macro	dsect	adr
+    465					.if nb	<adr>
+    466						$$ = adr
+    467					.iff
+    468						$$ = 0
+    469					.endc
+    470					.endm	dsect
+    471					.macro	dw	name,len
+    472					.iif nb	<name>,	name	= $$
+    473					.if nb	<len>
+    474						$$ = $$+<<len>*2>
+    475					.iff
+    476						$$ = $$+2
+    477					.endc
+    478					.endm	dw
+    479					.macro	db	name,len
+    480					.iif nb	<name>,	name	= $$
+    481					.if nb	<len>
+    482						$$ = $$+<len>
+    483					.iff
+    484						$$ = $$+1
+    485					.endc
+    486					.endm	db
+    487
+    488		140000 			        l.reg	== 140000
+    489		150000 				l.rda	== 150000
+    490
+    491		000500 				v.high	== 500	; the most high vector
+    492		000060 				v.low	== 60	; the most lower vector
+    493
+    494	000000				dsect	100000		; bios static table
+    495	000000				dw	heap      ;heap pointer
+    496	000000				dw	maplen	  ;length of ram-bit-map in bytes
+    497	000000				dw	freereg   ;pointer to first free register-descriptor
+    498	000000				dw	freepr    ;pointer to first free process-descriptor
+    499	000000				dw	freesem   ;pointer to first free semaphore
+    500	000000				dw	freemap   ;pointer to first free proc-ram-map (32 bytes)
+    501	000000				dw	memuse    ;pointer to monitor ram-map (32 bytes)
+    502	000000				dw	running   ;pointer to current process
+    503	000000				dw	readyque  ;pointer to head of queue of ready-to-run processes
+    504	000000				dw	rdsucc    ;dummy process,
+    505	000000				dw	rdpred    ; in ready-to-run queue
+    506	000000				dw	timeque   ;pointer to head of queue of time-waiting processes
+    507	000000				dw	tmsucc    ;dummy process,
+    508	000000				dw	tmpred    ; in time-waiting queue
+    509	000000				dw	top$$     ;pointer to allowed top og heap
+    510	000000				dw	vrqflg	  ;flag of request for vectored int (only c.irq bit is used)
+    511
+    512	000000				dw	sav.r0		;; work area
+    513	000000				dw	sav.r1		;;  for
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 5-9
+Common definitions for bios monitor
+
+    514	000000				dw	sav.r2		;;   console
+    515	000000				dw	sav.r3		;;    and
+    516	000000				dw	sav.r4		;;     debugger
+    517	000000				dw	sav.r5		;;      module
+    518	000000				dw	sav.sp		;;
+    519	000000				dw	sav.pc		;;
+    520	000000				dw	sav.ps		;;
+    521
+    522					 		;sync interrupt vectors
+    523	000000				dw	v.cpuh ,2   ;halt-instruction
+    524	000000				dw	v.tr4h ,2   ;trap to 4 in halt
+    525	000000				dw	v.but  ,2   ;"stop" button on keyboard
+    526	000000				dw	v.supr ,2   ;unexpected interrupt (no process waiting for it)
+    527	000000				dw	v.2tio ,2   ;double time-out
+    528							;async interrupt vectors
+    529	000000				dw	v.init ,2   ;reset-instruction
+    530	000000				dw	v.flop ,2   ;floppy disk int
+    531	000000				dw	v.rcrd ,2   ;dl-receiver ready
+    532	000000				dw	v.trrd ,2   ;dl-transmitter ready
+    533	000000				dw	v.kbd  ,2   ;keyboard request
+    534	000000				dw	v.scrn ,2   ;screen interrupt
+    535	000000				dw	v.prrd ,2   ;printer ready
+    536	000000				dw	v.slot ,2   ;request from slot
+    537		000064 				veclen	== $$-v.cpuh
+    538
+    539							;masks to enable/disable interrupts
+    540		000001 				m.init	==  1	;
+    541		000002 				m.flop	==  2	;
+    542		000004 				m.rcrd	==  4	;
+    543		000010 				m.trrd	== 10	;
+    544		000020 				m.kbd	== 20	;
+    545		000040 				m.scrn	== 40	;
+    546		000100 				m.prrd	==100	;
+    547		000200 				m.slot	==200	;
+    548
+    549		000400 				m.tio	==000400	; time-out in waitint
+    550		040000 				m.run	==040000	; proc is ready to run
+    551		100000 				m.vrq	==100000	; can eat vectored ints
+    552
+    553	000000				dw	vrqtbl, <v.high-v.low+4/2> ; table for list+map of vectored ints
+    554	000000				dw	pdptr		;pointer to first process-descriptor
+    555	000000				dw	c.tim0		;cpu-clock counter
+    556	000000				dw	c.tim1		;
+    557	000000				dw	tcflg		;
+    558
+    559		100602 			 heap$$	= $$	; end of bios static table
+    560
+    561	000000				dsect	140000
+    562	000000				dw	hstack	  ; bottom of halt-stack
+    563
+    564	000000				dsect			;register descriptor
+    565	000000				dw	r.mask    ;bit-mask to restore reg
+    566	000000				dw	r.copy    ;copy of r/o bits
+    567	000000				db	r.rqst    ;requested operation on reg
+    568	000000				db	r.stat    ;proper actions on reg
+    569	000000				dw	r.proc    ;pointer to process to operate the reg
+    570	000000				dw	r.strt	  ;parameter word for processing (user defined)
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 5-10
+Common definitions for bios monitor
+
+    571	000000				dw	r.reset	  ;this word moved to the reg on reset (nothing if -1)
+    572		000014 				reglen	== $$
+    573	000000				dsect			;process descriptor
+    574	000000				dw	p.succ    ;pointer to succ proc in queues
+    575	000000				dw	p.pred    ;pointer to pred proc in queues
+    576	000000				dw	p.r0      ;contents of cpu regs
+    577	000000				dw	p.r1
+    578	000000				dw	p.r2
+    579	000000				dw	p.r3
+    580	000000				dw	p.r4
+    581	000000				dw	p.r5
+    582	000000				dw	p.sp
+    583	000000				dw	p.pc
+    584	000000				dw	p.ps
+    585	000000				dw	p.ur0     ;contents of memory control regs
+    586	000000				dw	p.ur1
+    587	000000				dw	p.ur2
+    588	000000				dw	p.ur3
+    589	000000				dw	p.ur4
+    590	000000				dw	p.ur5
+    591	000000				dw	p.ur6
+    592	000000				dw	p.ur7
+    593	000000				dw	p.mask    ;bit-mask to desable ints during processing
+    594								;(bit15=1 => can have vectored ints, i.e. simulated)
+    595	000000				dw	p.cprc    ;pointer to process, waiting reg's emulation
+    596	000000				dw	p.tim     ;time period for sleepping
+    597	000000				dw	p.pri     ;priority of the process
+    598	000000				dw	p.mem     ;pointer to ram-map for the process (or 0, if none)
+    599	000000				dw	p.name,8. ;process name
+    600	000000				dw	p.tim0	  ;
+    601	000000				dw	p.tim1    ;
+    602	000000				dw	p.dsucc	  ;ptr on succ
+    603		000106 				prolen	== $$
+    604
+    605	000000				dsect			;semaphore
+    606	000000				dw	s.cntr    ;sem's counter
+    607	000000				dw	s.frst    ;pointer to queue of waiting processes
+    608	000000				dw	s.succ    ;dummy queue-head of
+    609	000000				dw	s.pred    ; waiting processes
+    610		000010 				semlen	== $$
+    611
+    612					;************************************************************
+    613
+    614		161000 				piccsr	== 161000	 ; 8259
+    615		161002 				picmr	== 161002
+    616
+    617		161010 				sndc0r	== 161010	 ; 8253.f
+    618		161012 				sndc1r	== 161012	 ;
+    619		161014 				sndc2r	== 161014
+    620		161016 				sndcsr	== 161016
+    621
+    622		161020 				snlc0r	== 161020	 ; 8253.l
+    623		161022 				snlc1r	== 161022	 ;
+    624		161024 				snlc2r	== 161024
+    625		161026 				snlcsr	== 161026
+    626
+    627		161030 				ppia	== 161030	 ; ppi
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 5-11
+Common definitions for bios monitor
+
+    628		161032 				ppib	== 161032
+    629		000001 							b.ef0	==  1
+    630		000002 							b.ef1	==  2
+    631		000004 							b.int	==  4
+    632		161034 				ppic	== 161034
+    633		000010 							c.irq	== 10 ; ШЭТ.
+    634		000004 							c.hlt	==  4 ; ШЭТ.
+    635		161036 				ppip	== 161036
+    636		000200 							i.hlt	==200
+    637
+    638
+    639		161060 				dlbuf	== 161060	 ; 8251A RS
+    640		161062 				dlcs	== 161062
+    641
+    642		161064 				kbdbuf	== 161064
+    643		161066 				kbdcsr	== 161066	 ; 8279
+    644
+    645		161200 				hr0	== 161200	 ; mmu reg.
+    646		161202 				hr1	== 161202
+    647		161204 				hr2	== 161204
+    648		161206 				hr3	== 161206
+    649		161210 				hr4	== 161210
+    650		161212 				hr5	== 161212
+    651		161214 				hr6	== 161214
+    652		161216 				hr7	== 161216
+    653		161220 				ur0	== 161220
+    654		161222 				ur1	== 161222
+    655		161224 				ur2	== 161224
+    656		161226 				ur3	== 161226
+    657		161230 				ur4	== 161230
+    658		161232 				ur5	== 161232
+    659		161234 				ur6	== 161234
+    660		161236 				ur7	== 161236
+    661
+    662
+    663		000015 				cr      == 15
+    664		000012 				lf      == 12
+    665
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6
+Common definitions for bios monitor
+
+      1
+      2		000000 				$BIOS		=   0
+      3
+      4					.if	DF	$BIOS
+      5		140000 				ADD.REG		=  l.reg
+      6		000020 				IDEcash		=  16.
+      7					.iff
+      8						ADD.REG		=  140000		; UR6
+      9						IDEcash		=  32.
+     10					.endc
+     11
+     12					;?????????????????????????????????????????????????????????????
+     13					; WD1010-05 map description
+     14					;
+     15		161120 				id.buff  = 161120	;  data buffer
+     16		161122 				id.err	 = id.buff+2	;  wr. precomp cyl.
+     17		161124 				id.scnt  = id.buff+4	;  Sector count rg.
+     18		161126 				id.snum  = id.buff+6	;  Sector number rg.
+     19		161130 				id.cnlo  = id.buff+10	;  Cylinder addr lo.
+     20		161132 				id.cnhi  = id.buff+12	;  Cylinder addr hi.
+     21		161134 				id.sdh	 = id.buff+14	;  Sector:Disk:Head
+     22		161136 				id.csr	 = id.buff+16	;  Command & status reg
+     23		161114 				id.irq	 = 161114	;  interrupt, 4th bit of the head number
+     24									;   and software reset
+     25
+     26		000060 				ide.add	= <id.err-hd.err>
+     27
+     28		000001 				ide$cnt	=  1		;
+     29		000001 				ide$num =  1		;
+     30		000342 				AutoPD	= 342		; = E2h Auto Power Down
+     31
+     32		161040 				hd.buff = 161040	;  data buffer
+     33		161042 				hd.err	= 161042	;  wr. precomp cyl.
+     34		000001 					e.dmnf	= 1	; data mark not found
+     35		000002 					e.tr0	= 2	; track 000 not found
+     36		000004 					e.ac	= 4	; cmd aborted
+     37		000020 					e.idnf	=20	; ident not found or crc error
+     38		000100 					e.crc	=100	; crc error /data field
+     39		000200 					e.bad	=200	; bad-block detected
+     40		161044 				hd.scnt = 161044	;  Sector count rg.
+     41		161046 				hd.snum = 161046	;  Sector number rg.
+     42		161050 				hd.cnlo = 161050	;  Cylinder addr lo.
+     43		161052 				hd.cnhi = 161052	;  Cylinder addr hi.
+     44		161054 				hd.sdh	= 161054	;  Sector:Disk:Head
+     45		000001 					sdh0	= 1	; head 0 / side
+     46		000002 					sdh1	= 2	; head 1 / dens.lo
+     47		000002 					dens.lo = sdh1	;
+     48		000004 					sdh2	= 4	; head 2 / f1sel
+     49		000004 					f1sel	= sdh2	;
+     50		000010 					sd0h	=10	; hdsel
+     51		000020 					run	=20	; run
+     52		000000 					s256	= 0	; sector size	= 256
+     53		000040 					s512	=40	;		= 512
+     54		000100 					s1024	=100	;		= 1024
+     55		000140 					s128	=140	;		= 128
+     56		000200 					x.ecc	=200	; ext for ECC
+     57		000340 					i.sfree =340
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-1
+Common definitions for bios monitor
+
+     58		000240 					i.s512	=240
+     59
+     60		161056 				hd.csr	= 161056	;  Command & status reg
+     61		000001 					s.err	= 1	;  error
+     62		000002 					s.cmd	= 2	;  cmd in progress
+     63		000010 					s.drq	=10	; sgl 'DRQ'
+     64		000020 					s.sc	=20	; sgl 'SEEK COMPLETE'
+     65		000040 					s.wf	=40	; sgl 'WRITE FAULT'
+     66		000100 					s.rdy	=100	; sgl 'DISK READY'
+     67		000200 					s.busy	=200	; busy
+     68					;?????????????????????????????????????????????????????????????
+     69		161070 				fdcsr	= 161070	;
+     70		161072 				fdbuf	= 161072	;
+     71		161076 				fdcnt	= 161076	;
+     72		000001 					ba9	= 1	;
+     73		000002 					ba10	= 2	;
+     74		000020 					fd.ini	= 20	;
+     75
+     76		177132 				T1copy	= 177132			; еееее
+     77		177134 				T2copy	= 177134			; еееее
+     78		147132 				T1.copy	= <T1copy & 7777> + ADD.REG	; еееее
+     79		147134 				T2.copy	= <T2copy & 7777> + ADD.REG	; еееее
+     80
+     81					;?????????????????????????????????????????????????????????????
+     82					; Command`s format
+     83					;?????????????????????????????????????????????????????????????
+     84					;
+     85		000020 				RESTORE =  20	;RESTORE + rate
+     86		000160 				SEEK	= 160	;SEEK	 + rate
+     87		000040 				RDSECT	=  40	;RDSECT  ! I ! M ! T
+     88		000060 				WRSECT	=  60	;WRSECT      ! M ! T
+     89		000100 				SCAN	= 100	;SCAN		 ! T
+     90		000120 				FORMAT	= 120
+     91		000010 					I  = 10 ; interrupt at end of cmd
+     92		000004 					M  =  4 ; multiple sectors
+     93		000001 					T  =  1 ; dis. retries
+     94		000000 					r0.035	= 0
+     95		000001 					r0.5	= 1
+     96		000002 					R1.0	= 2
+     97		000017 					r7.5	= 17
+     98
+     99					;?????????????????????????????????????????????????????????????
+    100					;
+    101		177130 				HDCBUF	== 177130
+    102		000230 				HDCVEC	== 230
+    103		000234 				FDCVEC	== 234
+    104		000240 				IDEVEC	== 240
+    105		000002 				M.HD	=  M.flop
+    106		100112 				V.HD	=  V.flop
+    107		000100 				M.IDE	=  M.prrd
+    108		100136 				V.IDE	=  V.prrd
+    109
+    110		147130 				HDC.BUF = <HDCBUF & 7777> + ADD.REG
+    111
+    112					;?????????????????????????????????????????????????????????????
+    113					.macro	fcmd,	cmd		;
+    114						jsr	R5,	wrcmd	;
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-2
+Common definitions for bios monitor
+
+    115						.word	cmd		;
+    116					.endm				;
+    117					;?????????????????????????????????????????????????????????????
+    118					.macro	ERROR,	cod		;
+    119						jsr	R5,	p.err	;
+    120						.byte	5*16.+0,cod	;
+    121					.endm				;
+    122					;?????????????????????????????????????????????????????????????
+    123					.macro	WHI.ONLY  mask,?l1	;если читают регистр, то не реагируем !
+    124						.push	<R0,R1>
+    125					l1:	clr	R0
+    126						clr	R1
+    127						WAITINT mask		; ждем прерываний по маске
+    128						tst	R0
+    129						bne	l1
+    130						tst	R1
+    131						bne	l1
+    132						.pop	<R1,R0>
+    133					.endm
+    134					;?????????????????????????????????????????????????????????????
+    135
+    136	000000					.asect
+    137		000000 				. = 0
+    138	000000	041520 	000000 	000000 		.word	"PC, 0, 0, 0
+	000006	000000
+    139	000010	   111 	   104 	   105 		.asciz	"IDE+MFM (2804.4)"
+	000013	   053 	   115 	   106
+	000016	   115 	   040 	   050
+	000021	   062 	   070 	   060
+	000024	   064 	   056 	   064
+	000027	   051 	   000
+    140	000000					.psect
+    141
+    142	000000	000010 			bootd		:  .word	10		; no boot partition
+    143	000002	000100 			bootw		:  .word	100		; no warm boot partition
+    144	000004	   000 					   .byte	0		; motor on
+    145	000005	   000 			bcnt		:  .byte	0
+    146	000006	000000 			h.fail		:  .word	0
+    147	000010	000000 			i.fail		:  .word	0
+    148					;?????????????????????????????????????????????????????????????
+    149		043011 			f.read		= 106*400+9.			; читать сектор(а)
+    150		042411 			f.write 	= 105*400+9.			; писать сектор(а)
+    151		046406 			f.form  	= 115*400+6.			; форматировать
+    152		003402 			f.rec		=   7*400+2			; установка на 0 дорожку
+    153		007403 			f.seek		=  17*400+3			; поиск дорожки
+    154		002002 			f.sds		=   4*400+2			; чтение состояния
+    155		004001 			f.sis		=  10*400+1
+    156					;?????????????????????????????????????????????????????????????
+    157	000012	   003 	   301 	   002 	f.spec		:  .byte	3,   12.*20+1, 2
+    158					;?????????????????????????????????????????????????????????????
+    159	000015	   106 			f.cmd		:  .byte	106
+    160	000016	   000 			f.hds		:  .byte	0
+    161	000017	   000 			f.cyl		:  .byte	0
+    162	000020	   000 			f.head		:  .byte	0
+    163	000021	   001 			f.sect		:  .byte	1
+    164	000022	   002 			f.len		:  .byte	2
+    165	000023	   037 			f.eot		:  .byte	37
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-3
+Common definitions for bios monitor
+
+    166	000024	   005 			f.gpl		:  .byte	5.
+    167	000025	   377 			f.dtl		:  .byte	377
+    168					;?????????????????????????????????????????????????????????????
+    169	000026				s.st0		:  .blkb	1
+    170	000027				s.st1		:  .blkb	1
+    171	000030				s.st2		:  .blkb	1
+    172	000031				s.cyl		:  .blkb	1
+    173	000032				s.hd		:  .blkb	1
+    174	000033				s.sec		:  .blkb	1
+    175	000034				s.len		:  .blkb	1
+    176	000035				s.sp		:  .blkb	1
+    177					;?????????????????????????????????????????????????????????????
+    178	000036				rdstat: 				; 7346
+    179	000036	012700 	000026'			mov	#s.st0, R0		; регистр состояния
+    180	000042	005037 	000052'			clr	2$			; пауза, что ли?
+    181	000046	062727 	000001 		1$:	add	#1, (pc)+		;
+    182	000052	000000 			2$:	.word	0			;
+    183	000054	103414 				bcs	3$			;
+    184	000056	105737 	161070 			tstb	@#fdcsr			; а как там винт?
+    185	000062	100371 				bpl	1$			; не выставил, пока что...
+    186	000064	122737 	000277 	161070 		cmpb	#277, @#fdcsr		; fdcsr < 277 ? да ...
+    187	000072	103005 				bcc	3$			;
+    188	000074	113720 	161072 			movb	@#fdbuf, (R0)+		; пишем регистры состояния...
+    189	000100	022700 	000036'			cmp	#s.st0+8., R0		; все регистры?
+    190	000104	103360 				bcc	1$			; нет
+    191	000106	000207 			3$:	return				;
+    192
+    193					;?????????????????????????????????????????????????????????????
+    194	000110				f.reset:				;
+    195	000110	012737 	000020 	161076 		mov	#20, @#fdcnt		;
+    196	000116	012701 	002000 			mov	#2000, R1		;
+    197	000122	005037 	161076 			clr	@#fdcnt			;
+    198	000126	077101 				sob	R1, .			;
+    199
+    200	000130	012700 	000012'		f.set:	mov	#f.spec, R0		;
+    201	000134	012701 	000003 			mov	#3, R1			;
+    202	000140	000404 				br	wrcmd1			;
+    203
+    204					;?????????????????????????????????????????????????????????????
+    205	000142	012700 	000015'		wrcmd:	mov	#f.cmd, R0		;
+    206	000146	112501 				movb	(R5)+, R1		; cnt
+    207	000150	112510 				movb	(R5)+, (R0)		; cmd
+    208
+    209	000152	005037 	000160'		wrcmd1:	clr	2$			;
+    210
+    211	000156	060127 			1$:	add	R1, (pc)+		;
+    212	000160	000000 			2$:	.word	0			;
+    213	000162	103415 				bcs	4$			;
+    214	000164	105737 	161070 			tstb	@#fdcsr			;
+    215	000170	100372 				bpl	1$			;
+    216	000172	122737 	000277 	161070 		cmpb	#277, @#fdcsr		;
+    217	000200	103406 				bcs	4$			;
+    218	000202	112027 				movb	(R0)+, (pc)+		;
+    219	000204	000000 			3$:	.word	0			;
+    220	000206	013737 	000204'	161072 		mov	3$, @#fdbuf		;
+    221	000214	077120 				sob	R1, 1$			;
+    222	000216	000205 			4$:	rts	R5			;
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-4
+Common definitions for bios monitor
+
+    223
+    224					;?????????????????????????????????????????????????????????????
+    225	000220	012537 	000236'		p.err:	mov	(R5)+, ierr		;
+    226	000224					DSTRIN	#ierr			;
+    227	000234	000205 				rts	R5			;
+    228
+    229	000236	   000 	   000 	   022 	ierr:	.byte	0,0,22,172,263,233
+	000241	   172 	   263 	   233
+    230
+    231					;?????????????????????????????????????????????????????????????
+    232
+    233	000244	000207 			s.t1:	return					; еееее
+    234
+    235	000246	023727 	147132 	123456 	s.t2:	cmp	@#T1.copy, #123456		; еееее
+    236	000254	000240 				<nop>
+    237	000256	001006 				bne	1$				; еееее
+    238	000260	013700 	147134 			mov	@#T2.copy, R0			; еееее
+    239	000264	000240 				<nop>
+    240	000266	010037 	147130 			mov	R0, @#HDC.BUF			; еееее
+    241	000272	000240 				<nop>
+    242	000274	005037 	147132 		1$:	clr	@#T1.copy			; еееее
+    243	000300	000240 				<nop>
+    244	000302	005037 	147134 			clr	@#T2.copy			; еееее
+    245	000306	000240 				<nop>
+    246	000310	000207 				return
+    247
+    248	000312				xread:
+    249	000312	012702 	001357'		xwr:	mov	#xerr,	 R2
+    250	000316	012705 	161042 			mov	#hd.err, R5
+    251	000322	113737 	001364'	001334'		movb	xsdh,	D955$
+    252	000330	042737 	177760 	001334'		bic	#^C17,	D955$
+    253	000336	005046 				clr	-(sp)
+    254	000340	113716 	001364'			movb	xsdh,	 (sp)
+    255	000344	032716 	000010 			bit	#10,	 (sp)
+    256	000350	001403 				beq	1$
+    257	000352	052716 	177400 			bis	#177400, (sp)
+    258	000356	000402 				br	2$
+    259
+    260	000360	042716 	000340 		1$:	bic	#i.sfree, (sp)
+    261	000364	052716 	000050 		2$:	bis	#<s512+sd0h>, (sp)
+    262	000370	132737 	000010 	007031'		bitb	#10,	h.err+1		; dev 10..17 ?
+    263	000376	001402 				beq	3$
+    264	000400	042716 	000010 			bic	#sd0h,	(sp)		; select flop
+    265
+    266	000404	112225 			3$:	movb	(R2)+,	(R5)+
+    267	000406	005205 				inc	R5
+    268	000410	022705 	161052 			cmp	#<hd.sdh-2>, R5
+    269	000414	103373 				bcc	3$
+    270
+    271	000416	111622 				movb	(sp),	(R2)+
+    272	000420	012625 				mov	(sp)+,	(R5)+
+    273
+    274					;	?????????????????????
+    275
+    276	000422	013737 	001362'	001330'		mov	xcyl,	D95$
+    277	000430	132737 	000010 	007031'		bitb	#10,	h.err+1
+    278	000436	001404 				beq	4$
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-5
+Common definitions for bios monitor
+
+    279	000440	042737 	177776 	001334'		bic	#^C1,	D955$
+    280	000446	000462 				br	F.RW
+    281
+    282	000450	132712 	000020 		4$:	bitb	#20,	(R2)
+    283	000454	001405 				beq	5$
+    284	000456	105337 	000005'			decb	bcnt
+    285	000462	142737 	177774 	000005'		bicb	#^C3,	bcnt
+    286
+    287	000470	113737 	000005'	161076 	5$:	movb	bcnt, @#fdcnt		; buf.addr
+    288	000476	111215 				movb	(R2), (R5)
+    289	000500					DSTRING #D96$
+    290	000510					DVAL	#D95$
+    291	000520					DVAL	#D955$
+    292
+    293	000530					WHI.ONL #M.HD
+    294					;	WAITINT #M.HD
+    295	000564	113737 	000005'	161076 		movb	bcnt,	@#fdcnt		; buf.addr
+    296	000572	000261 				<sec>
+    297	000574	032715 	000001 			bit	#s.err,	(R5)
+    298	000600	001001 				bne	6$
+    299	000602	000241 				<clc>
+    300	000604	032737 	000100 	161042 	6$:	bit	#e.crc, @#hd.err	;hd.err
+    301	000612	000207 				return
+    302
+    303					;?????????????????????????????????????????????????????????????
+    304	000614				f.rw:	.push	<R0,R1,R3>
+    305	000622	013702 	000016'			mov	f.hds, R2
+    306	000626	105037 	000016'			clrb	f.hds
+    307	000632	113700 	001364'			movb	xsdh, R0
+    308	000636	106000 				rorb	R0
+    309	000640	106137 	000016'			rolb	f.hds
+    310	000644	113737 	000016'	000020'		movb	f.hds, f.head
+    311	000652	106137 	000016'			rolb	f.hds
+    312	000656	106000 				rorb	R0
+    313	000660	106000 				rorb	R0
+    314	000662	112737 	000333 	001346'		movb	#333, d97$+2
+    315	000670	103003 				bcc	1$
+    316	000672	112737 	000073 	001346'		movb	#73, d97$+2
+    317
+    318	000700	106137 	000016'		1$:	rolb	f.hds
+    319	000704	113737 	001362'	000017'		movb	xcyl, f.cyl
+    320	000712	163702 	000016'			sub	f.hds, R2
+    321	000716	113737 	001361'	000021'		movb	xsnum, f.sect
+    322	000724	042702 	000376 			bic	#376, R2
+    323	000730	001430 				beq	2$
+    324					;	????????????????????????
+    325	000732					FCMD	f.seek			;
+    326	000740	012703 	000050 			mov	#50, R3			;
+    327	000744					WHI.ONL	#m.hd+m.tio		;
+    328					;	WAITINT #m.hd+m.tio		;
+    329	001000					FCMD	f.sis			;
+    330	001006	004737 	000036'			call	rdstat			;
+    331					;	????????????????????????
+    332
+    333	001012	113737 	000005'	161076 	2$:	movb	bcnt, @#fdcnt		; buf.addr
+    334	001020	122737 	000044 	001365'		cmpb	#rdsect+m, xcsr		;
+    335	001026	001004 				bne	3$			;
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-6
+Common definitions for bios monitor
+
+    336	001030					FCMD	f.read			;
+    337	001036	000444 				br	5$			;
+    338					;	????????????????????????
+    339	001040	122737 	000064 	001365'	3$:	cmpb	#wrsect+m, xcsr		;
+    340	001046	001005 				bne	4$			;
+    341	001050	005715 				tst	(R5)			; hd.csr
+    342	001052					FCMD	f.write			;
+    343	001060	000433 				br	5$			;
+    344					;	????????????????????????
+    345	001062	122737 	000120 	001365'	4$:	cmpb	#format, xcsr		;
+    346	001070	001103 				bne	8$			;
+    347	001072					.push	f.hds			;
+    348	001076	112737 	000002 	000017'		movb	#2, f.cyl		;
+    349	001104	116437 	000012 	000020'		movb	p$sn(R4), f.head	;
+    350	001112	116437 	000014 	000021'		movb	p$rl(R4), f.sect	;
+    351	001120	116437 	000016 	000022'		movb	p$rl+2(R4), f.len	;
+    352	001126	005715 				tst	(R5)			; hd.csr
+    353	001130					FCMD	f.form			;
+    354	001136	112737 	000002 	000022'		movb	#2, f.len		;
+    355	001144					.pop	f.hds			;
+    356					;	????????????????????????
+    357	001150				5$:	DSTRING #D97$			;
+    358	001160					DVAL	#D95$			;
+    359	001170					DVAL	#D955$
+    360	001200	012703 	000062 			mov	#50., R3		;
+    361	001204					WHI.ONL	#<m.hd+m.tio>		;
+    362					;	WAITINT #<m.hd+m.tio>		;
+    363	001240	005702 				tst	R2			;
+    364	001242	001410 				beq	7$			;
+    365					;	????????????????????????
+    366	001244	012702 	001000 			mov	#1000, R2		;
+    367
+    368	001250	005037 	161076 		6$:	clr	@#fdcnt			;
+    369	001254	077203 				sob	R2, 6$			;
+    370	001256	052737 	000010 	007030'		bis	#10, h.err		;
+    371					;	????????????????????????
+    372	001264	004737 	000036'		7$:	call	rdstat			;
+    373	001270	113737 	000005'	161076 		movb	bcnt, @#fdcnt		; buf.addr
+    374	001276	005715 				tst	(R5)			; hd.csr
+    375	001300	122737 	000077 	000026'	8$:	cmpb	#77, s.st0		;
+    376	001306	103004 				bcc	10$			;
+    377	001310	112737 	177777 	000017'	9$:	movb	#-1, f.cyl		;
+    378	001316	000240 				<nop>
+    379
+    380	001320				10$:	.pop	<R3,R1,R0>		;
+    381	001326	000207 				return				;
+    382
+    383					;?????????????????????????????????????????????????????????????
+    384	001330	000000 	005060 		D95$		:  .WORD	0,10.*400+<3*16.>
+    385	001334	000000 	005045 		D955$		:  .WORD	0,10.*400+<2*16.+5>
+    386	001340	   062 	   002 	   263 	D96$		:  .BYTE	3*16.+2,2,263,233
+	001343	   233
+    387	001344	   062 	   002 	   333 	D97$		:  .BYTE	3*16.+2,2,333,132
+	001347	   132
+    388	001350	   062 	   002 	   072 	D98$		:  .BYTE	3*16.+2,2,072,153
+	001353	   153
+    389	001354	000000 			D100$		:  .WORD	0
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-7
+Common definitions for bios monitor
+
+    390					;	????????????????????????
+    391
+    392	001356	   000 					   .byte	 0
+    393	001357	   377 			xerr		:  .byte	-1		; прекомп/ошибка
+    394	001360	   000 			xscnt		:  .byte	 0		; число секторов
+    395	001361	   377 			xsnum		:  .byte	-1		; номер сектора
+    396	001362	000000 			xcyl		:  .word	 0		; цилиндр
+    397	001364	   040 			xsdh		:  .byte	 s512		; головка
+    398	001365	   040 			xcsr		:  .byte	 rdsect		; команда
+    399					;?????????????????????????????????????????????????????????????
+    400
+    401	001366	177132 	000000 	000000 	T1tbl		:  .word	 T1copy, 0, 0, 2000,   s.t1,-1	; еееее
+	001374	002000 	000244'	177777
+    402	001402	177134 	000000 	000000 	T2tbl		:  .word	 T2copy, 0, 0, 2000,   s.t2,-1	; еееее
+	001410	002000 	000246'	177777
+    403	001416	177130 	000000 	000000 	HDBTBL		:  .word	 HDCBUF, 0, 0, 2000, H.WBUF,-1
+	001424	002000 	003614'	177777
+    404	001432	   111 	   104 	   105 	pname		:  .asciz	"IDE+MFM (2804.4)"
+	001435	   053 	   115 	   106
+	001440	   115 	   040 	   050
+	001443	   062 	   070 	   060
+	001446	   064 	   056 	   064
+	001451	   051 	   000
+    405					.EVEN
+    406
+    407					;?????????????????????????????????????????????????????????????
+    408	001454				hdcini::
+    409	001454					.exit
+    410
+    411	001456					SETPRI	#30
+    412	001466					UNPVEC	#V.HD
+    413	001476	005000 				clr	R0
+    414	001500					PROVEC	#V.HD
+    415
+    416	001510					UNPREG	#hdcbuf
+    417	001520					PROREG	#hdbtbl 		;
+    418	001530					UNPREG	#T1copy			; еееее
+    419	001540					UNPREG	#T2copy			; еееее
+    420	001550					PROREG	#T1tbl			; еееее
+    421	001560					PROREG	#T2tbl			; еееее
+    422
+    423	001570	005037 	147130 			clr	@#HDC.BUF
+    424	001574	005720 				tst	(R0)+			;
+    425	001576	010037 	006776'			mov	R0, hb.copy 		;
+    426
+    427					.if	DF	$BIOS
+    428	001602	004737 	011054'			CALL	PROT.A			; ++++++++++++++++++++++ Сделано
+    429					.endc
+    430
+    431	001606	013737 	161210 	161230 		mov	@#HR4,	@#UR4
+    432	001614	013737 	161212 	161232 		mov	@#HR5,	@#UR5
+    433	001622	005037 	161234 			clr	@#UR6
+    434										; При поиске ошибке - неожиданное
+    435										; зависание
+    436					;	????????????????????????
+    437
+    438	001626	012705 	161056 		93$:	mov	#hd.csr, R5		; регистр состояния - в R5
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-8
+Common definitions for bios monitor
+
+    439	001632	005715 				tst	(R5)			; reset h.int
+    440	001634	005045 				clr	-(R5)			; select flop
+    441	001636	004537 	000110'			jsr	R5, f.reset 		; init FDC
+    442	001642	012703 	000144 			mov	#2*50., R3		; wait
+    443	001646	012704 	006272'			mov	#f.cb0, R4		; параметр при T/O
+    444
+    445	001652	016415 	000004 		1$:	mov	p$hb(R4), (R5)		; выбираем некий флоп
+    446	001656					FCMD	f.rec			; на ноль
+    447	001664					WHI.ONL	#<M.TIO+M.HD>		;+ ждать только прерывания
+    448	001720					FCMD	f.sis			; ставим бит читаем состояния
+    449	001726	004737 	000036'			call	rdstat			; читаем состояние
+    450	001732	005127 	000000 			com	#0			; &&'&%%% с флопом...
+    451	001736	001345 				bne	1$			; не все закончилось...
+    452	001740	005702 				tst	R2			; а что случилось?
+    453	001742	001006 				bne	2$			; прерывание...
+    454	001744	132737 	000300 	000026'		bitb	#300,	s.st0		; ошибка чтения?
+    455	001752	001002 				bne	2$			; да...
+    456	001754	012714 	040000 			mov	#pm.off, (R4)		; ставим, что флоп работает...
+    457
+    458	001760	062704 	000024 		2$:	add	#par.len, R4		; берем следующий флоп
+    459	001764	005127 	000000 			com	#0			; и так до ?1
+    460	001770	001330 				bne	1$			; ...
+    461
+    462					;	????????????????????????
+    463	001772	012725 	000010 			mov	#sd0h, (R5)+		; hd.sdh, select hd0
+    464	001776	012704 	000024 			mov	#20., R4		; ждем 20 раз по секунде...
+    465	002002	012703 	000012 		3$:	mov	#10., R3		; ждем секунду...
+    466	002006					WHI.ONL	#M.TIO			;+ ждать только прерывания
+    467	002042	032715 	000100 			bit	#s.rdy, (R5)		; hd.csr - выставлен?
+    468	002046	001005 				bne	4$			; да!
+    469	002050	077424 				sob	R4, 3$			; подождем, пока не T/O
+    470	002052					ERROR	201			; err #1
+    471	002060	000430 				br	fail			; поставим h.fail
+    472
+    473					;	????????????????????????
+    474	002062	012715 	000020 		4$:	mov	#RESTORE, (R5)		; установим на 0
+    475	002066	012703 	000372 			mov	#5.*50., R3		; 5 (20) секунд - максимум
+    476	002072					WHI.ONL	#<M.HD+M.TIO>		;+ ждать только прерывания
+    477	002126	032715 	000001 			bit	#s.err, (R5)		; hd.csr
+    478	002132	001405 				beq	ok.MFM			; нет ошибки - на "OK:"
+    479	002134					ERROR	362			; err #2
+    480
+    481	002142	005237 	000006'		fail:	inc	h.fail			; нет хард'а
+    482
+    483					;	????????????????????????	  проверим IDE
+    484
+    485	002146	004737 	007166'		ok.MFM:	call	IDE.res
+    486	002152	004737 	007216'			call	IDE.skip
+    487	002156	001033 				bne	1$
+    488	002160	012737 	000020 	161136 		mov	#RESTORE, @#id.csr	; установим на 0
+    489	002166	012703 	000310 			mov	#<4.*50.>, R3		; 5 (20) секунд - максимум
+    490	002172	012704 	177777 			mov	#-1,	R4		; Просто число не равное M.IDE
+    491	002176					WHI.ONL	#<M.IDE+M.TIO>		;+ ждать только прерывания
+    492	002232	020402 				cmp	R4,	R2		; Это есть копия R4?
+    493	002234	001404 				beq	1$			;  а раз так ,то IDE отсутствует...
+    494	002236	032737 	000001 	161136 		bit	#s.err, @#id.csr	; id.csr
+    495	002244	001412 				beq	ok			; нет ошибки - на "OK:"
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-9
+Common definitions for bios monitor
+
+    496	002246				1$:	ERROR	301			; err #7
+    497
+    498	002254				fail.IDE:
+    499	002254	005237 	000010'			inc	i.fail
+    500	002260	005737 	000006'			tst	h.fail
+    501	002264	001402 				beq	OK
+    502	002266	000137 	002700'			jmp	loop0
+    503
+    504					;???????????????????????????????????????
+    505	002272	012704 	000312'		ok:	mov	#xread, R4		;
+    506	002276	004714 				call	(R4)			;
+    507	002300	103526 				bcs	foreign 		;
+    508	002302	012700 	000520 		1$:	mov	#par.fre, R0		;
+    509	002306	012701 	161040 			mov	#hd.buff, R1		;
+    510	002312	005711 			2$:	tst	(R1)			;
+    511	002314	077002 				sob	R0, 2$			;
+    512
+    513					;	????????????????????????
+    514	002316	012700 	000260 			mov	#par.siz, R0		;
+    515	002322	010003 				mov	R0, R3			;
+    516	002324	012702 	006012'			mov	#h0.sec, R2		;
+    517	002330	111122 			3$:	movb	(R1), (R2)+		;
+    518	002332	077002 				sob	R0, 3$			;
+    519	002334	026227 	177776 	123456 		cmp	-2(R2), #123456		; signature
+    520	002342	001407 				beq	5$			;
+    521	002344					ERROR	343			; err #3
+    522	002352	105042 			4$:	clrb	-(R2)			; clear both par. tab !
+    523	002354	077302 				sob	R3, 4$			;
+    524	002356	000137 	002700'			jmp	loop0			;
+    525
+    526					;	????????????????????????
+    527	002362	013700 	006012'		5$:	mov	h0.sec, R0		;
+    528	002366	001414 				beq	bad			;
+    529	002370	070037 	006014'			mul	h0.head, R0		;
+    530	002374	010100 				mov	R1, R0			;
+    531	002376	001410 				beq	bad			;
+    532	002400	070037 	006016'			mul	h0.track,R0		; R1 - lo, R0 - hi
+    533	002404	020137 	006020'			cmp	R1, h0.size 		;
+    534	002410	001003 				bne	bad			;
+    535	002412	020037 	006022'			cmp	R0, h0.size+2
+    536	002416	001403 				beq	cont			;
+    537	002420				bad:	ERROR	213			; ERR #4
+    538
+    539					;?????????????????????????????????????????????????????????????
+    540					; total disk space OK!
+    541					; now test all partitions to be correct
+    542
+    543	002426	005003 			cont:	clr	R3			;
+    544	002430	012702 	006030'			mov	#p.cb0, R2		; part # * size
+    545	002434	042762 	040000 	000000 	1$:	bic	#pm.off, p$cb(R2)	; part. off
+    546	002442	016200 	000012 			mov	p$sn(R2), R0		;
+    547	002446	001434 				beq	3$			;
+    548	002450	070062 	000006 			mul	p$hn(R2), R0		;
+    549	002454	010100 				mov	R1, R0			;
+    550	002456	001430 				beq	3$			;
+    551	002460	070062 	000002 			mul	p$cn(R2), R0		;
+    552	002464	020162 	000020 			cmp	R1, p$sz(R2)		;
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-10
+Common definitions for bios monitor
+
+    553	002470	001023 				bne	3$			;
+    554	002472	020062 	000022 			cmp	R0, p$sz+2(R2)
+    555	002476	001020 				bne	3$			;
+    556	002500	052762 	040000 	000000 		bis	#pm.off, p$cb(R2)	; size OK -> part. on
+    557	002506	032712 	010000 			bit	#pm.nb, (R2)		;
+    558	002512	001402 				beq	2$			;
+    559	002514	010337 	000000'			mov	R3, bootd		;
+    560	002520	032712 	004000 		2$:	bit	#pm.wb, (R2)		;
+    561	002524	001405 				beq	3$			;
+    562	002526	010304 				mov	R3, R4			;
+    563	002530	072427 	000003 			ash	#3, R4			;
+    564	002534	010437 	000002'			mov	R4, bootw		;
+    565	002540	062702 	000024 		3$:	add	#par.len, R2		;
+    566	002544	005203 				inc	R3			;
+    567	002546	022703 	000010 			cmp	#8., R3			;
+    568	002552	001330 				bne	1$			;
+    569	002554	000451 				br	loop0			;
+    570					;	????????????????????????????????
+    571	002556				foreign:				;
+    572	002556	012703 	001361'			mov	#xsnum,R3		; hd.snum
+    573	002562	105213 				incb	(R3)			;
+    574	002564	100445 				bmi	loop0			;
+    575	002566	004714 				call	(R4)			;
+    576	002570	103001 				bcc	1$			;
+    577	002572	001771 				beq	foreign 		;
+    578					;	????????????????????????????????
+    579	002574	111337 	006040'		1$:	movb	(R3),	p.sb0		;
+    580	002600	105213 			2$:	incb	(R3)			;
+    581	002602	004714 				call	(R4)			;
+    582	002604	103375 				bcc	2$			;
+    583	002606	001374 				bne	2$			;
+    584	002610	111337 	006042'			movb	(R3),	p.sn0		;
+    585	002614	163737 	006040'	006042'		sub	p.sb0,	p.sn0		;
+    586	002622	105313 				decb	(R3)			;
+    587					;	????????????????????????????????
+    588	002624	012703 	001364'			mov	#xsdh,	R3		; hd.sdh
+    589	002630	112713 	000050 			movb	#<s512+sd0h>, (R3)
+    590	002634	105313 			3$:	decb	(R3)			;
+    591	002636	004714 				call	(R4)			;
+    592	002640	103001 				bcc	4$			;
+    593	002642	001774 				beq	3$			;
+    594	002644	142713 	177770 		4$:	bicb	#^C7,	(R3)		;
+    595	002650	105213 				incb	(R3)			;
+    596	002652	111337 	006036'			movb	(R3),	p.hn0		;
+    597	002656	012737 	002000 	006032'		mov	#1024., p.cn0		;
+    598	002664	012737 	177770 	006050'		mov	#177770,p.sz0		;
+    599	002672	052737 	040000 	006030'		bis	#pm.off,p.cb0		;
+    600
+    601					;?????????????????????????????????????????????????????????????
+    602					;
+    603	002700	005737 	000010'		loop0:	tst	i.fail			; IDE_hard_disk_drive exists?
+    604	002704	001402 				beq	1$			; Да
+    605	002706	000137 	003506'			jmp	i.loop0			; Нет - выйдем с ошибкой
+    606
+    607	002712	105037 	001357'		1$:	clrb	xerr			; Прекомпенсация = 0, т.к. дорожка =0
+    608	002716	112737 	000001 	001360'		movb	#ide$cnt, xscnt		; Номер сектора  (ide$cnt=1)
+    609	002724	112737 	000001 	001361'		movb	#ide$num, xsnum		; Число секторов (ide$num=1)
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-11
+Common definitions for bios monitor
+
+    610	002732	005037 	001362'			clr	xcyl			; Цилиндр = 0
+    611	002736	112737 	000240 	001364'		movb	#i.s512, xsdh		; Не принципиально IDE.xxx поправит
+    612	002744	112737 	000040 	001365'		movb	#rdsect, xcsr		; Читать сектора
+    613	002752	112737 	000020 	007031'		movb	#20, h.err+1		; Устройство  - IDE_hdd
+    614
+    615	002760	004737 	007370'			call	IDE.send		; Загрузить регистры контроллера
+    616	002764	001167 				bne	i.foreign		; Ошибка? -> i.foreign
+    617
+    618	002766					WHI.ONL	#M.IDE			; Прочитали Partition?
+    619	003022	032737 	000001 	161136 		bit	#s.err,	@#id.csr	; Да - без ошибок?
+    620	003030	001145 				bne	i.foreign		; Были ошибки =(
+    621
+    622	003032	012700 	000250 			mov	#<par.fre/2>, R0	;
+    623	003036	012701 	161120 			mov	#id.buf, R1		;
+    624
+    625	003042	005046 				clr	-(sp)
+    626	003044	011116 			2$:	mov	(R1), (sp)		;
+    627	003046	077002 				sob	R0, 2$			;
+    628	003050	005726 				tst	(sp)+
+    629
+    630					;	????????????????????????
+    631
+    632	003052	012700 	000007 			mov	#<ipar.add/2>, R0	;
+    633	003056	012702 	005774'			mov	#i0.sec, R2		;
+    634	003062	011122 			3$:	mov	(R1), (R2)+		;
+    635	003064	077002 				sob	R0, 3$			;
+    636	003066	012700 	000121 			mov	#<ipar.siz/2>, R0	;
+    637	003072	012702 	006532'			mov	#ip.CB0, R2		;
+    638	003076	011122 			4$:	mov	(R1), (R2)+		;
+    639	003100	077002 				sob	R0, 4$			;
+    640	003102	026227 	177776 	123456 		cmp	-2(R2), #123456		; signature
+    641	003110	001417 				beq	7$			;
+    642	003112					ERROR	153			; err #5
+    643	003120	012700 	000121 			mov	#<ipar.siz/2>, R0	;
+    644	003124	005042 			5$:	clr	-(R2)			; clear both par. tab !
+    645	003126	077002 				sob	R0, 5$			;
+    646	003130	012700 	000007 			mov	#<ipar.add/2>, R0	;
+    647	003134	012702 	005774'			mov	#i0.sec, R2		;
+    648	003140	005022 			6$:	clr	(R2)+			;
+    649	003142	077002 				sob	R0, 6$			;
+    650	003144	000137 	003344'			jmp	i.foreign		;
+    651
+    652					;	????????????????????????
+    653	003150	013700 	005774'		7$:	mov	i0.sec, R0		;
+    654	003154	001414 				beq	i.bad			;
+    655	003156	070037 	005776'			mul	i0.head, R0		;
+    656	003162	010100 				mov	R1, R0			;
+    657	003164	001410 				beq	i.bad			;
+    658	003166	070037 	006000'			mul	i0.track, R0		; R1 - lo, R0 - hi
+    659	003172	020137 	006002'			cmp	R1, i0.size 		;
+    660	003176	001003 				bne	i.bad			;
+    661	003200	020037 	006004'			cmp	R0, i0.size+2
+    662	003204	001403 				beq	i.caunt			;
+    663	003206				i.bad:	ERROR	173			; ERR #6
+    664
+    665	003214				i.caunt:
+    666	003214	005003 				clr	R3			;
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-12
+Common definitions for bios monitor
+
+    667	003216	012702 	006532'			mov	#ip.cb0, R2		; part # * size
+    668	003222	042762 	040000 	000000 	1$:	bic	#pm.off, p$cb(R2)	; part. off
+    669	003230	016200 	000012 			mov	p$sn(R2), R0		;
+    670	003234	001434 				beq	3$			;
+    671	003236	070062 	000006 			mul	p$hn(R2), R0		;
+    672	003242	010100 				mov	R1, R0			;
+    673	003244	001430 				beq	3$			;
+    674	003246	070062 	000002 			mul	p$cn(R2), R0		;
+    675	003252	020162 	000020 			cmp	R1, p$sz(R2)		;
+    676	003256	001023 				bne	3$			;
+    677	003260	020062 	000022 			cmp	R0, p$sz+2(R2)
+    678	003264	001020 				bne	3$			;
+    679	003266	052762 	040000 	000000 		bis	#pm.off, p$cb(R2)	; size OK -> part. on
+    680	003274	032712 	010000 			bit	#pm.nb, (R2)		;
+    681	003300	001402 				beq	2$			;
+    682	003302	010337 	000000'			mov	R3, bootd		;
+    683					;	bis	#20, bootd
+    684	003306	032712 	004000 		2$:	bit	#pm.wb, (R2)		;
+    685	003312	001405 				beq	3$			;
+    686	003314	010304 				mov	R3, R4			;
+    687	003316	072427 	000003 			ash	#3, R4			;
+    688	003322	010437 	000002'			mov	R4, bootw		;
+    689					;	bis	#1, bootw
+    690	003326	062702 	000024 		3$:	add	#ipar.len, R2		;
+    691	003332	005203 				inc	R3			;
+    692	003334	022703 	000010 			cmp	#8., R3			;
+    693	003340	001330 				bne	1$			;
+    694	003342	000461 				br	i.loop0			;
+    695					;	????????????????????????????????
+    696
+    697	003344				i.foreign:
+    698	003344	012704 	161136 			mov	#id.csr, R4
+    699	003350	012714 	000354 			mov	#354, (R4)
+    700	003354	012705 	177777 			mov	#177777, R5
+    701	003360	032714 	000010 		1$:	bit	#s.drq, (R4)
+    702	003364	001003 				bne	2$
+    703	003366	005305 				dec	R5
+    704	003370	001373 				bne	1$
+    705	003372	000442 				br	i.f.bad
+    706
+    707	003374	005737 	161120 		2$:	tst	@#id.buff			; лажа
+    708	003400	013737 	161120 	006534'		mov	@#id.buff, ip.CN0		; число цилиндров
+    709	003406	005737 	161120 			tst	@#id.buff			; бред
+    710	003412	013737 	161120 	006540'		mov	@#id.buff, ip.HN0		; число головок
+    711	003420	005737 	161120 			tst	@#id.buff			; буфер для дорожки
+    712	003424	005737 	161120 			tst	@#id.buff			; число байт на сектор
+    713	003430	013737 	161120 	006544'		mov	@#id.buff, ip.SN0		; число секторов
+    714	003436	032714 	000010 		3$:	bit	#s.drq, (R4)
+    715	003442	001403 				beq	4$
+    716	003444	005737 	161120 			tst	@#id.buff
+    717	003450	000772 				br	3$
+    718
+    719	003452	013701 	006544'		4$:	mov	ip.SN0, R1
+    720	003456	070137 	006540'			mul	ip.HN0, R1
+    721	003462	010100 				mov	R1, R0
+    722	003464	070037 	006534'			mul	ip.CN0, R0
+    723	003470	010037 	006554'			mov	R0, ip.SZ0+2		; HIGH
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-13
+Common definitions for bios monitor
+
+    724	003474	010137 	006552'			mov	R1, ip.SZ0		; LOW
+    725	003500				i.f.bad:
+    726	003500	052737 	140000 	006532'		bis	#<pm.off+pm.st1>, ip.cb0
+    727
+    728	003506				i.loop0:
+    729
+    730					.if	DF	$BIOS
+    731	003506	004737 	011032'			CALL	UNPR.A			;+++
+    732					.endc
+    733	003512	013737 	000000'	147130 		mov	bootd, @#HDC.BUF 	;	?????
+    734	003520	052737 	000200 	147130 		bis	#200,  @#HDC.BUF 	;	?????
+    735
+    736					.if	DF	$BIOS
+    737	003526	004737 	011054'			CALL	PROT.A			;+++
+    738					.endc
+    739
+    740	003532	005005 			loop:	clr	R5			;
+    741	003534	132737 	000020 	001364'		bitb	#run, xsdh		;
+    742	003542	001406 				beq	10$			;
+    743	003544	012703 	000144 			mov	#100., R3		;
+    744	003550	012704 	000020 			mov	#run, R4		;
+    745	003554	012705 	000400 			mov	#m.tio,	R5		;
+    746
+    747	003560	012700 	005770'		10$:	mov	#ret, R0		;
+    748	003564	010001 				mov	R0, R1			;
+    749	003566	005002 				clr	R2			;
+    750	003570					WAITINT R5			;
+    751	003576					.push	#loop			;
+    752	003602	140237 	161054 			bicb	R2, @#hd.sdh		;
+    753	003606	140237 	001364'			bicb	R2, xsdh		;
+    754	003612	004011 				jsr	R0, (R1)		;
+    755
+    756					;?????????????????????????????????????????????????????????????
+    757					;
+    758	003614				h.wbuf:
+    759					.if	DF	$BIOS
+    760	003614	004737 	011032'			CALL	UNPR.A			;+++
+    761					.endc
+    762	003620	005077 	003152 			clr	@hb.copy		; обнулим копию НАШЕГО регистра
+    763
+    764					.if	DF	$BIOS
+    765	003624	004737 	011054'			CALL	PROT.A			;+++
+    766					.endc
+    767	003630					.push	#h.exit 		; точка H.EXIT - в стек
+    768	003634	112737 	000003 	000005'		movb	#3, bcnt		;
+    769	003642	005037 	007030'			clr	h.err			; номер устройства - 0, hard
+    770	003646	005000 				clr	R0			; карту обратившегося процесса
+    771	003650					GETPAR	#hr.map 		;  хватаем
+    772
+    773					.if	DF	$BIOS
+    774	003660	012737 	000010 	007016'		mov	#10, hr.map+16		;+++ deny access for upper window
+    775	003666	004737 	011032'			CALL	UNPR.A			;+++
+    776					.endc
+    777
+    778	003672	013701 	147130 			mov	hdc.buf, R1		; берем регистр
+    779	003676	042737 	177776 	147130 		bic	#177776, hdc.buf 	; скинем хвост...
+    780
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-14
+Common definitions for bios monitor
+
+    781					.if	DF	$BIOS
+    782	003704	004737 	011054'			CALL	PROT.A			;+++
+    783					.endc
+    784
+    785	003710	004737 	010764'			call	SETMAP			; пишем в UR'ы
+    786	003714	012702 	007020'			mov	#hr.blk, R2		; и вот параметры
+    787	003720	012122 				mov	(R1)+, (R2)+		; hr.blk
+    788	003722	012122 				mov	(R1)+, (R2)+		; hr.dev
+    789	003724	010205 				mov	R2, R5			; hr.dev - в R5
+    790	003726	012122 				mov	(R1)+, (R2)+		; hr.buf
+    791	003730	112737 	000044 	001365'		movb	#RDSECT!M, xcsr		;
+    792	003736	011112 				mov	(R1), (R2)		; hr.cntw
+    793	003740	001527 				beq	8$			;
+    794	003742	100004 				bpl	1$			;
+    795	003744	112737 	000064 	001365'		movb	#WRSECT!M, xcsr
+    796	003752	005412 				neg	(R2)			;
+    797
+    798					;	????????????????????????????????
+    799	003754	114504 			1$:	movb	-(R5), R4		; hr.dev+1
+    800	003756	042704 	177740 			bic	#^c37, R4		;
+    801	003762	020427 	000020 			cmp	R4, #20 		; ?
+    802	003766	103402 				blo	2$			; ?
+    803	003770	042704 	000010 			bic	#10, R4 		; ?
+    804
+    805	003774	110437 	007031'		2$:	movb	R4, h.err+1		; dev.num for late..
+    806	004000	012703 	000024 			mov	#par.len, R3		; блину информационной части
+    807	004004	070304 				mul	R4, R3			; умножим на номер устр-ва
+    808	004006	062703 	006030'			add	#p.cb0, R3		; прибавим смещение от начального
+    809	004012	010304 				mov	R3, R4			;
+    810	004014	132737 	000010 	007031'		bitb	#10, h.err+1		;
+    811	004022	001017 				bne	4$			;
+    812	004024	132737 	000020 	007031'		bitb	#20, h.err+1		; ?
+    813	004032	001407 				beq	3$			; ?
+    814	004034	142737 	000017 	001365'		bicb	#17, xcsr
+    815	004042	005737 	000010'			tst	i.fail			; ?
+    816	004046	001446 				beq	5$			; ?
+    817	004050	000460 				br	7$			; ?
+    818	004052	005737 	000006'		3$:	tst	h.fail			;
+    819	004056	001443 				beq	6$			;
+    820	004060	000454 				br	7$			;
+    821
+    822					;	????????????????????????????????
+    823	004062	005724 			4$:	tst	(R4)+			; skip sign
+    824	004064	116437 	000015 	000013'		movb	p$rl+1(R4), f.spec+1	;
+    825	004072	004537 	000130'			jsr	R5, f.set		; step rate
+    826	004076	132737 	000020 	001364'		bitb	#run, xsdh		;
+    827	004104	001030 				bne	6$			;
+    828	004106	152737 	000020 	001364'		bisb	#run, xsdh		;
+    829	004114	152737 	000020 	161054 		bisb	#run, @#hd.sdh		;
+    830	004122	012703 	000020 			mov	#20, R3			;
+    831	004126					WHI.ONL	#M.TIO			;
+    832	004162	000401 				br	6$
+    833
+    834					;	????????????????????????????????
+    835	004164	005724 			5$:	tst	(R4)+			; skip sign
+    836	004166	013701 	007024'		6$:	mov	hr.buf,	R1		;
+    837	004172	004737 	010764'			call	setmap			;
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-15
+Common definitions for bios monitor
+
+    838	004176	032714 	040000 			bit	#pm.off, (R4)		; а не выключен ли этот диск?
+    839	004202	001007 				bne	9$			; да...
+    840	004204	124527 	000360 			cmpb	-(R5), #360		; hr.dev
+    841	004210	001431 				beq	14$			;
+    842	004212	052737 	000010 	007030'	7$:	bis	#10, h.err		;
+    843	004220	000207 			8$:	return				;
+    844
+    845					;??????????????????????????????????????????????????????
+    846
+    847	004222	105745 			9$:	tstb	-(R5)			; hr.dev
+    848	004224	001002 				bne	10$			; read/write
+    849	004226	000137 	005056'			jmp	34$
+    850	004232	122715 	000373 		10$:	cmpb	#373, (R5)		; spfun getsize
+    851	004236	001013 				bne	13$			;
+    852	004240	016411 	000020 			mov	p$sz(R4), (R1)		;
+    853	004244	005764 	000000 			tst	p$cb(R4)		;
+    854	004250	100001 				bpl	11$			;
+    855	004252	005311 				dec	(R1)			;
+    856	004254	000207 			11$:	return				;
+    857
+    858	004256	052737 	000040 	007030'	12$:	bis	#40, h.err		;
+    859	004264	000207 				return				;
+    860					;	????????????????????????????????
+    861
+    862	004266	122715 	000360 		13$:	cmpb	#360, (R5)		;
+    863	004272	001064 				bne	23$			;
+    864	004274	005337 	007026'		14$:	dec	hr.cntw			;
+    865	004300	001366 				bne	12$			; key not match
+    866	004302	012702 	000024 			mov	#par.len, R2		;
+    867	004306	132737 	000010 	007031'		bitb	#10, h.err+1		;
+    868	004314	001015 				bne	16$			;
+    869
+    870	004316	132737 	000020 	007031'		bitb	#20, h.err+1		; ?
+    871	004324	001405 				beq	15$			; ?
+    872	004326	012704 	005774'			mov	#i0.sec, R4		; ?
+    873	004332	012702 	000016 			mov	#<i0.gap3-i0.sec+2>, R2 ; ?
+    874	004336	000404 				br	16$			; ?
+    875
+    876	004340	012704 	006012'		15$:	mov	#h0.sec, R4		;
+    877	004344	012702 	000260 			mov	#<h0.sign-h0.sec+2>, R2
+    878
+    879	004350	132737 	000020 	001365'	16$:	bitb	#20, xcsr		;
+    880	004356	001415 				beq	20$			;
+    881
+    882	004360	112124 			17$:	movb	(R1)+, (R4)+		;
+    883	004362	077202 				sob	R2, 17$			;
+    884	004364	132737 	000020 	007031'		bitb	#20, h.err+1		; ?
+    885	004372	001406 				beq	19$			; ?
+    886	004374	012704 	006532'			mov	#ip.cb0, R4		; ?
+    887	004400	012702 	000242 			mov	#<ih0.sign-ip.cb0+2>, R2; ?
+    888	004404	112124 			18$:	movb	(R1)+, (R4)+		; ?
+    889	004406	077202 				sob	R2, 18$ 		; ?
+    890	004410	000207 			19$:	return				;
+    891
+    892	004412	112421 			20$:	movb	(R4)+, (R1)+		;
+    893	004414	077202 				sob	R2,	20$		;
+    894	004416	132737 	000020 	007031'		bitb	#20, h.err+1		; ?
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-16
+Common definitions for bios monitor
+
+    895	004424	001406 				beq	22$			; ?
+    896	004426	012704 	006532'			mov	#ip.cb0, R4		; ?
+    897	004432	012702 	000242 			mov	#<ih0.sign-ip.cb0+2>, R2; ?
+    898	004436	112421 			21$:	movb	(R4)+, (R1)+		; ?
+    899	004440	077202 				sob	R2, 21$ 		; ?
+    900	004442	000207 			22$:	return				;
+    901
+    902					;	????????????????????????????????
+    903
+    904	004444	122715 	000362 		23$:	cmpb	#362,	(R5)		;
+    905	004450	001402 				beq	24$			;
+    906	004452	000137 	004670'			jmp	30$
+    907
+    908	004456	022737 	054322 	007026'	24$:	cmp	#-123456, hr.cntw	;
+    909	004464	001144 				bne	32$			;
+    910	004466	010103 				mov	R1, R3			;
+    911	004470	012702 	001360'			mov	#xscnt, R2		;
+    912	004474	113722 	006012'			movb	h0.sec, (R2)+		; xscnt
+    913	004500	113722 	006026'			movb	h0.gap3, (R2)+		; xsnum
+    914
+    915	004504	013701 	007020'		25$:	mov	hr.blk, R1		; Format
+    916	004510	005000 				clr	R0			;
+    917	004512	071064 	000006 			div	p$hn(R4), R0		; R1 - head, R0 - cyl
+    918	004516	066401 	000004 			add	p$hb(R4), R1		;
+    919	004522	026400 	000002 			cmp	p$cn(R4), R0		;
+    920	004526	101523 				blos	32$			;
+    921	004530	066400 	000000 			add	p$cb(R4), R0		;
+    922	004534	042700 	174000 			bic	#174000, R0		;
+    923					;	????????????????????????????????
+    924	004540	010022 				mov	R0, (R2)+		; xcyl
+    925	004542	142712 	000017 			bicb	#17, (R2)		; xsdh
+    926	004546	142712 	000340 			bicb	#i.sfree, (R2)
+    927	004552	152712 	000040 			bisb	#s512, (R2)
+    928
+    929	004556	150122 				bisb	R1, (R2)+		; xsdh !!!!
+    930	004560	112712 	000120 			movb	#format, (R2)		; xcsr
+    931					;	????????????????????????????????
+    932	004564	010301 				mov	R3, R1			;
+    933	004566	012703 	000400 			mov	#256., R3		;
+    934	004572	012700 	161040 			mov	#hd.buf, R0		;
+    935
+    936	004576	132737 	000020 	007031'		bitb	#20, h.err+1		; ?
+    937	004604	001417 				beq	28$			; ?
+    938	004606	004737 	010664'			call	sec.w
+    939
+    940	004612	105737 	161136 		26$:	tstb	@#id.csr		; ?
+    941	004616	100775 				bmi	26$			; ?
+    942	004620	000261 				<sec>				; ?
+    943	004622	032737 	000001 	161136 		bit	#s.err, @#id.csr	; ?
+    944	004630	001001 				bne	27$			; ?
+    945	004632	000241 				<clc>				; ?
+    946	004634	032737 	000100 	161122 	27$:	bit	#e.crc, @#id.err	; ?id.err
+    947	004642	000207 				return
+    948
+    949	004644	113737 	000005'	161076 	28$:	movb	bcnt, @#fdcnt		;
+    950	004652	005737 	161054 			tst	@#hd.sdh		;
+    951
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-17
+Common definitions for bios monitor
+
+    952	004656	112110 			29$:	movb	(R1)+, (R0)		;
+    953	004660	112110 				movb	(R1)+, (R0)		;
+    954	004662	077303 				sob	R3, 29$			;
+    955	004664	000137 	000312'			jmp	xwr			;
+    956					;???????????????????????????????????????
+    957	004670	122715 	000361 		30$:	cmpb	#361, (R5)		; hr.dev
+    958	004674	001044 				bne	33$			;
+    959	004676	005337 	007026'			dec	hr.cntw			;
+    960	004702	001035 				bne	32$			;
+    961	004704	022737 	123456 	007020'		cmp	#123456, hr.blk		;
+    962	004712	001031 				bne	32$			;
+    963	004714	012705 	007026'			mov	#hr.cntw, R5		;
+    964	004720	005015 				clr	(R5)			;
+    965	004722	012703 	000400 			mov	#400, R3		; cntw
+    966	004726	012700 	001360'			mov	#xscnt, R0		;
+    967	004732	132737 	000020 	007031'		bitb	#20, h.err+1		; ?
+    968	004740	001410 				beq	31$			; ?
+    969	004742	112720 	000001 			movb	#ide$cnt, (R0)+ 	; ?
+    970	004746	112720 	000001 			movb	#ide$num, (R0)+ 	; ?
+    971	004752	005020 				clr	(R0)+			; ?
+    972	004754	112720 	000240 			movb	#i.s512, (R0)+		; ?
+    973	004760	000566 				br	43$			; ?
+    974
+    975	004762	012720 	177401 		31$:	mov	#177401, (R0)+		; xscnt, xsnum
+    976	004766	005020 				clr	(R0)+			; xcyl
+    977	004770	142710 	000017 			bicb	#17, (R0)		; xsdh	!!!!
+    978	004774	000560 				br	43$			;
+    979					;???????????????????????????????????????
+    980	004776	052737 	000040 	007030'	32$:	bis	#40, h.err		;
+    981	005004	000207 				return				;
+    982					;???????????????????????????????????????
+    983	005006	122715 	000374 		33$:	cmpb	#374, (R5)		; hr.dev - Auto Power Down
+    984	005012	001371 				bne	32$
+    985	005014	132737 	000020 	007031'		bitb	#20, h.err+1
+    986	005022	001765 				beq	32$
+    987	005024	013700 	007020'			mov	hr.blk,	R0
+    988	005030	042700 	177400 			bic	#177400, R0
+    989					;	clrb	xerr
+    990	005034	110037 	001360'			movb	R0,	xscnt		; 1F2 - по 5 секунд задержка
+    991					;	clrb	xsnum
+    992					;	clr	xcyl
+    993					;	clrb	xsdh
+    994	005040	112737 	000342 	001365'		movb	#AutoPD, xcsr
+    995	005046	004737 	007370'			call	IDE.send
+    996	005052	001351 				bne	32$
+    997	005054	000207 				return
+    998					;???????????????????????????????????????
+    999	005056	005714 			34$:	tst	(R4)			; start from 1 or 2: bypass part. sec
+   1000	005060	100002 				bpl	35$			;
+   1001	005062	005237 	007020'			inc	hr.blk			;
+   1002	005066	132737 	000020 	001365'	35$:	bitb	#20, xcsr		; write cmd ?
+   1003	005074	001403 				beq	36$			;
+   1004	005076	032714 	020000 			bit	#pm.rw, (R4)		;
+   1005	005102	001335 				bne	32$			; read only err
+   1006
+   1007					;???????????????????????????????????????
+   1008
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-18
+Common definitions for bios monitor
+
+   1009	005104	005000 			36$:	clr	R0			;
+   1010	005106	012702 	001360'			mov	#xscnt, R2		;
+   1011	005112	012705 	007027'			mov	#hr.cntw+1,R5		;
+   1012	005116	111512 				movb	(R5), (R2)		;
+   1013	005120	120045 				cmpb	R0, -(R5)		;
+   1014	005122	005512 				adc	(R2)			;
+   1015
+   1016					;	????????????????????????????????
+   1017	005124	013701 	007020'			mov	hr.blk,	R1		;
+   1018	005130	016403 	000012 			mov	p$sn(R4), R3		;
+   1019	005134	071003 				div	R3, R0			; R1 = rel sector adr, R0 = h*c
+   1020	005136	160103 				sub	R1, R3			;
+   1021	005140	066401 	000010 			add	p$sb(R4), R1		;
+   1022					;	????????????????????????????????
+   1023	005144	120312 				cmpb	R3, (R2)		;
+   1024	005146	103001 				bcc	37$			;
+   1025	005150	110312 				movb	R3, (R2)		;
+   1026
+   1027	005152	132737 	000020 	007031'	37$:	bitb	#20, h.err+1
+   1028	005160	001006 				bne	38$
+   1029	005162	122712 	000004 			cmpb	#4, (R2)		;
+   1030	005166	103010 				bhis	39$			;
+   1031	005170	112712 	000004 			movb	#4, (R2)		;
+   1032	005174	000405 				br	39$			;+++
+   1033	005176	122712 	000020 		38$:	cmpb	#IDECASH, (R2)		;+++ ограничиваем кол. блоков
+   1034	005202	103002 				bhis	39$			;+++ длиной окна - 8 КБайт
+   1035	005204	112712 	000020 			movb	#IDECASH, (R2)		;+++ (надо сделать по-другому)
+   1036	005210	112203 			39$:	movb	(R2)+, R3		; число секторов
+   1037	005212	042703 	177400 			bic	#^C377, R3
+   1038	005216	110337 	000005'			movb	R3, bcnt		;
+   1039	005222	105437 	000005'			negb	bcnt			;
+   1040	005226	142737 	177774 	000005'		bicb	#^C3, bcnt		;
+   1041	005234	060337 	007020'			add	R3, hr.blk		;
+   1042	005240	000303 				swab	R3			;
+   1043	005242	160315 				sub	R3, (R5)		; wcnt
+   1044	005244	100001 				bpl	40$			;
+   1045	005246	061503 				add	(R5), R3		;
+   1046										;
+   1047					;	????????????????????????????????
+   1048
+   1049	005250	132737 	000020 	007031'	40$:	bitb	#20, h.err+1
+   1050	005256	001402 				beq	41$
+   1051	005260	063701 	005772'			add	i0.SBEG, R1
+   1052
+   1053	005264	110122 			41$:	movb	R1, (R2)+		; xsnum
+   1054	005266	010001 				mov	R0, R1			;
+   1055	005270	005000 				clr	R0			;
+   1056	005272	071064 	000006 			div	p$hn(R4),R0		; R1 = rel head adr, R0 = cyl
+   1057	005276	066401 	000004 			add	p$hb(R4),R1		;
+   1058	005302	026400 	000002 			cmp	p$cn(R4),R0		;
+   1059	005306	003003 				bgt	42$			;
+   1060	005310	105137 	007030'			comb	h.err			;
+   1061	005314	000207 				return				;
+   1062										;
+   1063	005316	066400 	000000 		42$:	add	p$cb(R4), R0		;
+   1064	005322	042700 	174000 			bic	#174000, R0		;
+   1065	005326	010022 				mov	R0, (R2)+		; xcyl
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-19
+Common definitions for bios monitor
+
+   1066	005330	142712 	000017 			bicb	#17, (R2)		; xsdh !!!!
+   1067	005334	150112 				bisb	R1, (R2)		; xsdh
+   1068					;	????????????????????????????????
+   1069	005336	014501 			43$:	mov	-(R5), R1		; hr.buf
+   1070	005340	060315 				add	R3, (R5)		;
+   1071	005342	060325 				add	R3, (R5)+		;
+   1072	005344	004737 	010764'			call	setmap			;
+   1073					;	????????????????????????????????
+   1074	005350	012700 	161040 		44$:	mov	#hd.buf, R0		;
+   1075	005354	132737 	000020 	001365'		bitb	#20, xcsr		;
+   1076	005362	001425 				beq	49$			;
+   1077					;	????????????????????????????????
+   1078
+   1079	005364	132737 	000020 	007031'		bitb	#20, h.err+1
+   1080	005372	001403 				beq	45$
+   1081
+   1082	005374	004737 	010664'			call	sec.w
+   1083	005400	000436 				br	53$			;+
+   1084
+   1085	005402	113737 	000005'	161076 	45$:	movb	bcnt,	@#fdcnt		; write
+   1086	005410	005737 	161054 			tst	@#hd.sdh		; bdir := write
+   1087
+   1088	005414	112110 			46$:	movb	(R1)+,	(R0)		;
+   1089	005416	112110 				movb	(R1)+,	(R0)		;
+   1090	005420	077303 				sob	R3, 46$			;
+   1091
+   1092	005422	005715 			47$:	tst	(R5)			; wcnt
+   1093	005424	100004 				bpl	49$			;
+   1094										;
+   1095	005426	010310 			48$:	mov	R3, (R0)		;
+   1096	005430	010310 				mov	R3, (R0)		;
+   1097	005432	005215 				inc	(R5)			;
+   1098	005434	100774 				bmi	48$			;
+   1099
+   1100					; ???????????????????????????????????????
+   1101
+   1102	005436	132737 	000020 	007031'	49$:	bitb	#20, h.err+1
+   1103	005444	001403 				beq	51$
+   1104
+   1105	005446	004737 	010564'		50$:	call	sec.r
+   1106	005452	000411 				br	53$
+   1107
+   1108	005454	004737 	000312'		51$:	call	xwr
+   1109
+   1110	005460	132737 	000020 	001365'		bitb	#20, xcsr		;
+   1111	005466	001003 				bne	53$			;
+   1112
+   1113	005470	111021 			52$:	movb	(R0), (R1)+		;
+   1114	005472	111021 				movb	(R0), (R1)+		;
+   1115	005474	077303 				sob	R3, 52$			;
+   1116										;
+   1117	005476	103406 			53$:	bcs	55$			;
+   1118	005500	005737 	007026'			tst	hr.cntw			;
+   1119	005504	003402 				ble	54$			;
+   1120	005506	000137 	005104'			jmp	36$
+   1121	005512	000207 			54$:	return				;
+   1122
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-20
+Common definitions for bios monitor
+
+   1123	005514	052737 	000377 	007030'	55$:	bis	#377, h.err
+   1124	005522	000207 				return
+   1125
+   1126					;??????????????????????????????????????????????????????????????????????????
+   1127					;                              SUBROUTINE
+   1128					;		Смотрим на результат выполнения пред. команды,
+   1129					;		 ставим/нет биты ошибок и выставляем прерывания
+   1130					;		 для RT-11.
+   1131					;
+   1132					;		Called from: entry point of the H.WBUF subroutine
+   1133					;??????????????????????????????????????????????????????????????????????????
+   1134
+   1135	005524				h.exit:
+   1136
+   1137					.if	DF	$BIOS
+   1138	005524	004737 	011032'			CALL	UNPR.A			;+++
+   1139					.endc
+   1140
+   1141	005530	013701 	147130 			MOV	HDC.BUF, R1
+   1142
+   1143					.if	DF	$BIOS
+   1144	005534	004737 	011054'			CALL	PROT.A			;+++
+   1145					.endc
+   1146
+   1147	005540	106700 				mfps	R0			;+
+   1148	005542	132737 	000010 	007031'		bitb	#10,	h.err+1		; Flop ?
+   1149	005550	001416 				beq	3$			; Нет
+   1150
+   1151	005552	132737 	000300 	000026'		bitb	#300,	s.st0		; Да, это - флоп, что с байтом
+   1152	005560	001403 				beq	1$			;  состояния?
+   1153	005562	153737 	000027'	007030'		bisb	s.st1,	h.err		; Есть ошибка...
+   1154
+   1155	005570	006001 			1$:	ror	R1			; Надо выставлять вектор?
+   1156	005572	103056 				bcc	7$			; Нет - пропустим
+   1157	005574					SETINT	#fdcvec			; Вектор флопа
+   1158	005604	000451 				br	7$			; И на выход
+   1159
+   1160					;??????????????????????????????????????????????????????????????????????????
+   1161
+   1162	005606	132737 	000020 	007031'	3$:	bitb	#20, h.err+1		; А, может это - IDE?
+   1163	005614	001426 				beq	5$			; Нет - MFM hard_disk...
+   1164	005616	012705 	000240 			mov	#idevec, R5		;  ???
+   1165	005622	106400 				mtps	R0			;+?
+   1166	005624	103004 				bcc	8$			;+?
+   1167	005626	012737 	000004 	007030'		mov	#4,	h.err		;+?
+   1168	005634	000407 				br	4$			;+?
+   1169	005636	032737 	000001 	161136 	8$:	bit	#s.err, @#id.csr	; Есть ошибки при выполнении?
+   1170	005644	001403 				beq	4$			; Нет
+   1171	005646	053737 	161122 	007030'		bis	@#id.err, h.err		; Да - запишем в h.err
+   1172	005654	006001 			4$:	ror	R1			; Нужны прерывания?
+   1173	005656	103024 				bcc	7$			; Нет
+   1174	005660					SETINT	#idevec			; Да - выставим вектор
+   1175	005670	000417 				br	7$			;  и выйдем
+   1176
+   1177					;??????????????????????????????????????????????????????????????????????????
+   1178
+   1179	005672	012705 	000230 		5$:	mov	#hdcvec, R5		; ???
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-21
+Common definitions for bios monitor
+
+   1180	005676	032737 	000001 	161056 		bit	#s.err, @#hd.csr	; Были ошибки?
+   1181	005704	001403 				beq	6$			; Нет
+   1182	005706	053737 	161042 	007030'		bis	@#hd.err, h.err		; Если были - запомним их
+   1183	005714	006001 			6$:	ror	R1			; Прерывания?
+   1184	005716	103004 				bcc	7$			; Нет - не нужно
+   1185	005720					SETINT	#hdcvec			; Нужно - ставим вектор
+   1186
+   1187					;??????????????????????????????????????????????????????????????????????????
+   1188
+   1189	005730	013700 	007030'		7$:	mov	h.err, R0		; Ошибку - в регистр,
+   1190	005734	000300 				swab	R0			;  в старший разряд
+   1191	005736	052700 	000200 			bis	#200, R0		;  и флаг завершения
+   1192	005742	053700 	000002'			bis	bootw, R0		; Холодная загрузка
+   1193
+   1194					.if	DF	$BIOS
+   1195	005746	004737 	011032'			CALL	UNPR.A			;++++++++++++++++++++++++
+   1196					.endc
+   1197
+   1198	005752	010037 	147130 			mov	R0, @#hdc.buf		; И напишем...
+   1199	005756	012777 	002000 	001012 		mov	#2000, @hb.copy		;
+   1200
+   1201					.if	DF	$BIOS
+   1202	005764	004737 	011054'			CALL	PROT.A			;++++++++++++++++++++++++
+   1203					.endc
+   1204
+   1205	005770	000207 			ret:	return				;
+   1206
+   1207					;??????????????????????????????????????????????????????
+   1208					;	Boot record and Partition Table Stucture
+   1209					;
+   1210	005772	000001 			i0.SBEG		:  .word	1	; Number of the first sector
+   1211	005774				i0.SEC		:  .blkw	1	; Number of sectors per track
+   1212	005776				i0.HEAD		:  .blkw	1	; Number of heads
+   1213	006000				i0.TRACK	:  .blkw	1	; Number of cylinders
+   1214	006002				i0.SIZE		:  .blkw	2	; Total size of disk in blocks
+   1215	006006				i0.pcm		:  .blkw	1	; Precomp.
+   1216	006010				i0.gap3		:  .blkw	1	; Gap 3 length
+   1217					;???????????????????????????????????????
+   1218	006012				h0.SEC		:  .blkw	1	; Number of sectors per track
+   1219	006014				h0.HEAD		:  .blkw	1	; Number of heads
+   1220	006016				h0.TRACK	:  .blkw	1	; Number of cylinders
+   1221	006020				h0.SIZE		:  .blkw	2	; Total size of disk in blocks
+   1222	006024				h0.pcm		:  .blkw	1	; Precomp.
+   1223	006026				h0.gap3		:  .blkw	1	; Gap 3 length
+   1224					;???????????????????????????????????????
+   1225	006030				p.CB0		:  .blkw	1	; Number of first cylinder of the partition #0
+   1226	006032				p.CN0		:  .blkw	1	; Number of cylinder`s in the partition #0
+   1227	006034				p.HB0		:  .blkw	1	; Number of first head of the partition #0
+   1228	006036				p.HN0		:  .blkw	1	; Number of heads in the partition #0
+   1229	006040				p.SB0		:  .blkw	1	; Number of first sector of the partition #0
+   1230	006042				p.SN0		:  .blkw	1	; Number of sectors in the partition #0
+   1231	006044				p.RL0		:  .blkw	2	; Relative sector partition #0
+   1232	006050				p.SZ0		:  .blkw	2	; Size of partition #0 in sector`s
+   1233					;???????????????????????????????????????
+   1234		000024 				par.len = . - p.cb0
+   1235					;???????????????????????????????????????
+   1236	006054						   .blkb	par.len*7
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-22
+Common definitions for bios monitor
+
+   1237					;???????????????????????????????????????
+   1238	006270				h0.SIGN		:  .blkw	1	; signature 123456
+   1239					;???????????????????????????????????????
+   1240		000260 				par.siz	= . - h0.sec		; total partition tables size
+   1241		000520 				par.fre	= 1000 - par.siz	; empty
+   1242
+   1243					;??????????????????????????????????????????????????????
+   1244					;
+   1245	006272				dsect	0		;
+   1246	006272				dw	p$CB		; Number of first cylinder of the partition #0
+   1247	006272				dw	p$CN		; Number of cylinder`s in the partition #0
+   1248	006272				dw	p$HB		; Number of first head of the partition #0
+   1249	006272				dw	p$HN		; Number of heads in the partition #0
+   1250	006272				dw	p$SB		; Number of first sector of the partition #0
+   1251	006272				dw	p$SN		; Number of sectors in the partition #0
+   1252	006272				dw	p$RL,2		; Relative sector partition #0
+   1253	006272				dw	p$SZ,2		; Size of partition #0 in sector`s
+   1254
+   1255					;?????????????????????????????????????????????????????????????????????????
+   1256					; p.CB*
+   1257					;	b0-b10	: Cylinder number
+   1258					;	b15	: 0 - start from sector 1, 1 - from 2
+   1259					;	b14	: 0 - off,		   1 - on disk
+   1260					;	b13	: 0 - R/W,		   1 - read only
+   1261					;	b12	: 0 - non bootable,	   1 - bootable disk
+   1262					;	b11	: 0 - no warm boot	   1 - warm boot disk
+   1263
+   1264		100000 				pm.st1	= 100000
+   1265		040000 				pm.off	= 040000
+   1266		020000 				pm.rw	= 020000
+   1267		010000 				pm.nb	= 010000
+   1268		004000 				pm.wb	= 004000
+   1269
+   1270					;???????????????????????????????????????
+   1271	006272	000000 			f.CB0		:  .word	0	; Number of first cylinder of the flop #0
+   1272	006274	000122 			f.CN0		:  .word	82.	; Number of cylinder`s
+   1273	006276	000002 			f.HB0		:  .word	2	; Number of first head
+   1274	006300	000002 			f.HN0		:  .word	2	; Number of heads
+   1275	006302	000001 			f.SB0		:  .word	1	; Number of first sector
+   1276	006304	000012 			f.SN0		:  .word	10.	; Number of sectors
+   1277	006306	   036 	   341 		f.RL0		:  .byte	30., 14.*20+1	; gap3, step rate
+   1278	006310	   123 	   000 				   .byte	123,	0	; filler byte
+   1279	006312	003150 	000000 		f.SZ0		:  .word	82.*2*10., 0	; Size of partition
+   1280					;	????????????????????????????????
+   1281	006316	000000 			f.CB1		:  .word	0	; Number of first cylinder of the flop #0
+   1282	006320	000122 			f.CN1		:  .word	82.	; Number of cylinder`s
+   1283	006322	000006 			f.HB1		:  .word	6	; Number of first head
+   1284	006324	000002 			f.HN1		:  .word	2	; Number of heads
+   1285	006326	000001 			f.SB1		:  .word	1	; Number of first sector
+   1286	006330	000012 			f.SN1		:  .word	10.	; Number of sectors
+   1287	006332	   036 	   341 		f.RL1		:  .byte	30., 14.*20+1	; gap3, step rate
+   1288	006334	   123 	   000 				   .byte	123,	0	; filler byte
+   1289	006336	003150 	000000 		f.SZ1		:  .word	82.*2*10., 0	; Size of partition
+   1290					;	????????????????????????????????
+   1291	006342	040000 			f.CB2		:  .word	40000	; Number of first cylinder of the flop #1
+   1292	006344	000122 			f.CN2		:  .word	82.	; Number of cylinder`s
+   1293	006346	000000 			f.HB2		:  .word	0	; Number of first head
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-23
+Common definitions for bios monitor
+
+   1294	006350	000002 			f.HN2		:  .word	2	; Number of heads
+   1295	006352	000001 			f.SB2		:  .word	1	; Number of first sector
+   1296	006354	000024 			f.SN2		:  .word	20.	; Number of sectors
+   1297	006356	   024 	   321 		f.RL2		:  .byte	20., 13.*20+1	; gap3, step rate
+   1298	006360	   123 	   000 				   .byte	123,	0	; filler byte
+   1299	006362	006320 	000000 		f.SZ2		:  .word	82.*2*20., 0	; Size of partition
+   1300					;	????????????????????????????????
+   1301	006366	040000 			f.CB3		:  .word	40000	; Number of first cylinder of the flop #1
+   1302	006370	000122 			f.CN3		:  .word	82.	; Number of cylinder`s
+   1303	006372	000004 			f.HB3		:  .word	4	; Number of first head
+   1304	006374	000002 			f.HN3		:  .word	2	; Number of heads
+   1305	006376	000001 			f.SB3		:  .word	1	; Number of first sector
+   1306	006400	000021 			f.SN3		:  .word	17.	; Number of sectors
+   1307	006402	   024 	   321 		f.RL3		:  .byte	20., 13.*20+1	; gap3, step rate
+   1308	006404	   123 	   000 				   .byte	123,	0	; filler byte
+   1309	006406	005344 	000000 		f.SZ3		:  .word	82.*17.*2,0 	; Size of partition
+   1310					;	????????????????????????????????
+   1311	006412	040000 			f.CB4		:  .word	40000	; Number of first cylinder of the flop #1
+   1312	006414	000120 			f.CN4		:  .word	80.	; Number of cylinder`s
+   1313	006416	000000 			f.HB4		:  .word	0	; Number of first head
+   1314	006420	000002 			f.HN4		:  .word	2	; Number of heads
+   1315	006422	000001 			f.SB4		:  .word	1	; Number of first sector
+   1316	006424	000022 			f.SN4		:  .word	18.	; Number of sectors
+   1317	006426	   024 	   321 		f.RL4		:  .byte	20., 13.*20+1	; gap3, step rate
+   1318	006430	   125 	   000 				   .byte	125,	0	; filler byte
+   1319	006432	005500 	000000 		f.SZ4		:  .word	80.*2*18., 0	; Size of partition
+   1320					;	????????????????????????????????
+   1321	006436	040000 			f.CB5		:  .word	40000	; Number of first cylinder of the flop #1
+   1322	006440	000120 			f.CN5		:  .word	80.	; Number of cylinder`s
+   1323	006442	000004 			f.HB5		:  .word	4	; Number of first head
+   1324	006444	000002 			f.HN5		:  .word	2	; Number of heads
+   1325	006446	000001 			f.SB5		:  .word	1	; Number of first sector
+   1326	006450	000017 			f.SN5		:  .word	15.	; Number of sectors
+   1327	006452	   024 	   321 		f.RL5		:  .byte	20., 13.*20+1	; gap3, step rate
+   1328	006454	   125 	   000 				   .byte	125,	0	; filler byte
+   1329	006456	004540 	000000 		f.SZ5		:  .word	80.*15.*2,0 	; Size of partition
+   1330					;	????????????????????????????????
+   1331	006462	040000 			f.CB6		:  .word	40000	; Number of first cylinder of the flop #0
+   1332	006464	000120 			f.CN6		:  .word	80.	; Number of cylinder`s
+   1333	006466	000002 			f.HB6		:  .word	2	; Number of first head
+   1334	006470	000002 			f.HN6		:  .word	2	; Number of heads
+   1335	006472	000001 			f.SB6		:  .word	1	; Number of first sector
+   1336	006474	000011 			f.SN6		:  .word	9.	; Number of sectors
+   1337	006476	   036 	   341 		f.RL6		:  .byte	30., 14.*20+1	; gap3, step rate
+   1338	006500	   125 	   000 				   .byte	125,	0	; filler byte
+   1339	006502	002640 	000000 		f.SZ6		:  .word	80.*2*9., 0	; Size of partition
+   1340					;	????????????????????????????????
+   1341	006506	040000 			f.CB7		:  .word	40000	; Number of first cylinder of the flop #0
+   1342	006510	000120 			f.CN7		:  .word	80.	; Number of cylinder`s
+   1343	006512	000006 			f.HB7		:  .word	6	; Number of first head
+   1344	006514	000002 			f.HN7		:  .word	2	; Number of heads
+   1345	006516	000001 			f.SB7		:  .word	1	; Number of first sector
+   1346	006520	000012 			f.SN7		:  .word	10.	; Number of sectors
+   1347	006522	   036 	   341 		f.RL7		:  .byte	30., 14.*20+1	; gap3, step rate
+   1348	006524	   125 	   000 				   .byte	125,	0	; filler byte
+   1349	006526	003100 	000000 		f.SZ7		:  .word	80.*2*10., 0	; Size of partition
+   1350
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-24
+Common definitions for bios monitor
+
+   1351					;?????????????????????????????????????????????????????????????????????
+   1352	006532				ip.CB0		:  .blkw	1	; Number of first cylinder of the partition #0
+   1353	006534				ip.CN0		:  .blkw	1	; Number of cylinder`s in the partition #0
+   1354	006536				ip.HB0		:  .blkw	1	; Number of first head of the partition #0
+   1355	006540				ip.HN0		:  .blkw	1	; Number of heads in the partition #0
+   1356	006542				ip.SB0		:  .blkw	1	; Number of first sector of the partition #0
+   1357	006544				ip.SN0		:  .blkw	1	; Number of sectors in the partition #0
+   1358	006546				ip.RL0		:  .blkw	2	; Relative sector partition #0
+   1359	006552				ip.SZ0		:  .blkw	2	; Size of partition #0 in sector`s
+   1360					;???????????????????????????????????????
+   1361		000024 			ipar.len 	=  . - ip.cb0		;
+   1362					;???????????????????????????????????????
+   1363	006556						   .blkb	ipar.len*7
+   1364					;???????????????????????????????????????
+   1365	006772				ih0.SIGN	:  .blkw	1	; signature 123456
+   1366					;???????????????????????????????????????
+   1367		000242 			ipar.siz	=  . - ip.CB0			; total partition tables size
+   1368		000016 			ipar.add	=  i0.gap3 - i0.sec+2		;
+   1369		000520 			ipar.fre	=  1000 - ipar.siz-ipar.add	; empty
+   1370					;?????????????????????????????????????????????????????????????????????
+   1371
+   1372	006774				HDC.CPRC	:  .blkw	1		;
+   1373	006776				HB.COPY		:  .blkw	1		;
+   1374	007000				HR.MAP		:  .blkw	10		;
+   1375	007020				HR.BLK		:  .blkw	1		;
+   1376	007022				HR.DEV		:  .blkw	1		;
+   1377	007024				HR.BUF		:  .blkw	1		;
+   1378	007026				HR.CNTW		:  .blkw	1		;
+   1379	007030	000000 			H.ERR		:  .word	0		;
+   1380	007032	054321 					   .word	54321
+   1381					;?????????????????????????????????????????????????????????????????????
+   1382
+   1383					;??????????????????????????????????????????????????????????????????????????
+   1384					;                                 DATA
+   1385					;
+   1386					;		Данные для работы с IDE hard_disk'ом: КОНСТАНТЫ
+   1387					;??????????????????????????????????????????????????????????????????????????
+   1388
+   1389
+   1390		000300 				h.0C0		= 300		; 300 = 0C0h - BSY & RDY flags
+   1391		000240 				h.0A0		= 240		; 240 = 0A0h - 512 bytes per sector
+   1392		001130 				$IDE.TIME	= 50.*12.	; 12 sec - to read/write
+   1393
+   1394					;??????????????????????????????????????????????????????????????????????????
+   1395					;                              SUBROUTINE
+   1396					;
+   1397					;	 Загружаем регистры контроллера IDE hard_disk'а
+   1398					;		 xerr   - precomp
+   1399					;		 xscnt  - number of sectors
+   1400					;		 xsnum  - first sector
+   1401					;		 xcyl   - cylinder number
+   1402					;		 xsdh   - head/...
+   1403					;		 xcsr   - command
+   1404					;		 x.076  - биты для тестирования
+   1405					;
+   1406					;
+   1407					;		Called from: IDE.send
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-25
+Common definitions for bios monitor
+
+   1408					;??????????????????????????????????????????????????????????????????????????
+   1409
+   1410	007034				IDE.xxx:
+   1411	007034					.push	<R0,R1>
+   1412	007040	012701 	001357'			mov	#xerr, R1
+   1413
+   1414					;?	movb	6(R1), R0		; xcsr
+   1415					;?	bic	#177400, R0
+   1416					;?	bit	#h.0C0, x.076		; биты проверить - RDY & BSY
+   1417					;?	beq	1$
+   1418					;?	cmp	R0, #117
+   1419					;?	bhi	1$
+   1420					;?	bis	#1, R0
+   1421					;?
+   1422					;? 1$:	movb	R0, 6(R1)		; command
+   1423
+   1424	007044	013700 	006006'			mov	i0.pcm, R0
+   1425	007050	006200 				asr	R0
+   1426	007052	006200 				asr	R0
+   1427	007054	110021 				movb	R0, (R1)+		; precomp.
+   1428
+   1429	007056	116100 	000004 			movb	4(R1), R0
+   1430	007062	142700 	177760 			bicb	#^C17, R0
+   1431	007066	152700 	000240 			bisb	#h.0A0, R0
+   1432	007072	110061 	000004 			movb	R0, 4(R1)
+   1433
+   1434					;?	bic	#^C<h.0C0>, x.076
+   1435					;?	bis	offs.8, x.076
+   1436
+   1437	007076	013737 	011104'	161114 		mov	x.076, @#id.irq
+   1438	007104	000240 				<nop>
+   1439
+   1440	007106	116137 	000004 	001334'		movb	4(R1), D955$
+   1441	007114	042737 	177760 	001334'		bic	#^C17, D955$
+   1442
+   1443	007122	013737 	001362'	001330'		mov	xcyl, D95$
+   1444	007130					DSTRING #D98$
+   1445	007140					DVAL	#D95$
+   1446	007150					DVAL	#D955$
+   1447	007160					.pop	<R1,R0>
+   1448	007164	000207 				return
+   1449
+   1450					;??????????????????????????????????????????????????????????????????????????
+   1451					;                              SUBROUTINE
+   1452					;
+   1453					;			Серьезно сбрасываем винт.
+   1454					;			   Регистры сохраняются.
+   1455					;
+   1456					;				РЕЗУЛЬТАТ
+   1457					;
+   1458					;				  нет
+   1459					;
+   1460					;		Called from: IDE.skip,IDE.hlt
+   1461					;??????????????????????????????????????????????????????????????????????????
+   1462
+   1463	007166				IDE.res:
+   1464	007166					.push	<R0>
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-26
+Common definitions for bios monitor
+
+   1465	007170	012737 	000004 	161114 		mov	#4,	@#id.irq
+   1466	007176	005000 				clr	R0
+   1467	007200	077001 				sob	R0,	.
+   1468	007202	013737 	011104'	161114 		mov	x.076,	@#id.irq
+   1469	007210	077001 				sob	R0,	.
+   1470	007212					.pop	<R0>
+   1471	007214	000207 				return
+   1472
+   1473					;??????????????????????????????????????????????????????????????????????????
+   1474					;                              SUBROUTINE
+   1475					;
+   1476					;		Ожидаем, пока в регистре 1F1h не снимется бит #7
+   1477					;		 который означает, что команда в процессе.
+   1478					;		Максимальная задержка = (IDE.delay * FFFFh).
+   1479					;			Регистры сохраняются.
+   1480					;
+   1481					;				РЕЗУЛЬТАТ
+   1482					;
+   1483					;		Z = 0  - произошел timeout даже после сброса.
+   1484					;		Z = 1  - бит был снят.
+   1485					;
+   1486					;		Called from: IDE.send, sec.r, sec.w
+   1487					;??????????????????????????????????????????????????????????????????????????
+   1488
+   1489	007216				IDE.skip:
+   1490	007216					.push	<R0,R1,R2>
+   1491	007224	005001 				clr	R1
+   1492	007226	012702 	000002 			mov	#2, R2
+   1493	007232	013700 	011102'		3$:	mov	IDE.delay, R0
+   1494
+   1495	007236	105737 	161136 		2$:	tstb 	@#id.csr
+   1496	007242	100012 				bpl	1$
+   1497	007244	077104 				sob	R1, 2$
+   1498	007246	077005 				sob	R0, 2$
+   1499	007250	004737 	007166'			call	IDE.res
+   1500	007254	077212 				sob	R2, 3$
+   1501	007256					.pop	<R2,R1,R0>
+   1502	007264	000244 				<clz>
+   1503	007266	000207 				return
+   1504	007270				1$:	.pop	<R2,R1,R0>
+   1505	007276	000264 				<sez>
+   1506	007300	000207 				return
+   1507
+   1508					;??????????????????????????????????????????????????????????????????????????
+   1509					;                              SUBROUTINE
+   1510					;
+   1511					;		Ожидаем, пока в регистре  1F1h не установится
+   1512					;		 комбинация, заданная в R4, маска для очистки
+   1513					;		 содержится в R3.
+   1514					;		Максимальная задержка = (IDE.delay * FFFFh).
+   1515					;			Регистры сохраняются.
+   1516					;
+   1517					;				РЕЗУЛЬТАТ
+   1518					;
+   1519					;		Z = 0  - произошел timeout.
+   1520					;		Z = 1  - комбинация совпала.
+   1521					;
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-27
+Common definitions for bios monitor
+
+   1522					;		Called from: IDE.send, IDE.rb, IDE.wb
+   1523					;??????????????????????????????????????????????????????????????????????????
+   1524
+   1525	007302				IDE.wait:
+   1526	007302					.push	<R0,R1,R3,R5>
+   1527	007312	005103 				com	R3			; R3 - CUT  mask
+   1528	007314	013700 	011102'			mov	IDE.delay, R0		; R4 - TEST mask
+   1529	007320	005001 				clr	R1			; 177777 - cycle
+   1530
+   1531	007322	013705 	161136 		2$:	mov	@#id.csr, R5
+   1532	007326	040305 				bic	R3, R5
+   1533	007330	020504 				cmp	R5, R4
+   1534	007332	001410 				beq	1$
+   1535
+   1536	007334	077106 				sob	R1, 2$
+   1537	007336	077007 				sob	R0, 2$
+   1538	007340					.pop	<R5,R3,R1,R0>
+   1539	007350	000244 				<clz>
+   1540	007352	000207 				return
+   1541
+   1542	007354				1$:	.pop	<R5,R3,R1,R0>
+   1543	007364	000264 				<sez>
+   1544	007366	000207 				return
+   1545
+   1546					;??????????????????????????????????????????????????????????????????????????
+   1547					;                              SUBROUTINE
+   1548					;
+   1549					;		Готовим регистры для передачи в hard_disk,
+   1550					;		 пропускаем бит #7 в 1F7h,
+   1551					;		 загружаем регистры в hard_disk_registers,
+   1552					;			Регистры сохраняются.
+   1553					;
+   1554					;				РЕЗУЛЬТАТ
+   1555					;
+   1556					;		Z = 0  - произошел timeout.
+   1557					;		Z = 1  - все прошло нормально.
+   1558					;
+   1559					;		Called from : sec.r, sec.w
+   1560					;??????????????????????????????????????????????????????????????????????????
+   1561
+   1562	007370				IDE.send:
+   1563	007370					.push	<R0,R1,R2,R3,R4>
+   1564	007402	004737 	007034'			call	IDE.xxx
+   1565	007406	012702 	000004 			mov	#4, R2			; Всего 4 попытки
+   1566	007412	004737 	007216'		1$:	call	IDE.skip
+   1567	007416	001041 				bne	4$
+   1568
+   1569	007420	032737 	000010 	161136 		bit	#10, @#id.csr		; Ожидаем, пока не выставится бит,
+   1570	007426	001405 				beq	2$			;  сообщающий, что есть данные
+   1571	007430	012737 	000020 	161136 		mov	#RESTORE, @#id.csr	;  такого не случилось - рекалибр.
+   1572	007436	077213 				sob	R2, 1$			; Попытки кончились?
+   1573	007440	000430 				br	4$			; Да - ошибка...
+   1574
+   1575	007442	012702 	000006 		2$:	mov	#6, R2
+   1576	007446	012700 	161122 			mov	#id.err, R0
+   1577	007452	012701 	001357'			mov	#xerr, R1
+   1578
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-28
+Common definitions for bios monitor
+
+   1579	007456	112120 			3$:	movb	(R1)+, (R0)+
+   1580	007460	005200 				inc	R0
+   1581	007462	077203 				sob	R2, 3$
+   1582
+   1583	007464	012703 	000360 			mov	#360, R3		; AH
+   1584	007470	012704 	000120 			mov	#120, R4		; AL
+   1585	007474	004737 	007302'			call	IDE.wait
+   1586	007500	001010 				bne	4$
+   1587	007502	111110 				movb	(R1), (R0)
+   1588
+   1589	007504					.pop	<R4,R3,R2,R1,R0>
+   1590	007516	000264 				<sez>
+   1591	007520	000207 				return
+   1592
+   1593	007522				4$:	.pop	<R4,R3,R2,R1,R0>
+   1594	007534	000244 				<clz>
+   1595	007536	000207 				return
+   1596
+   1597					;??????????????????????????????????????????????????????????????????????????
+   1598					;                              SUBROUTINE
+   1599					;
+   1600					;				РЕЗУЛЬТАТ
+   1601					;
+   1602					;		Z = 0  - произошел timeout.
+   1603					;		Z = 1  - все прошло нормально.
+   1604					;
+   1605					;		Called from : IDE.rb,IDE.wb
+   1606					;??????????????????????????????????????????????????????????????????????????
+   1607
+   1608	007540				IDE.hlt:
+   1609	007540					.push	<R0,R1,R2>
+   1610	007546	012701 	161136 			mov	#id.csr, R1
+   1611	007552	005002 				clr	R2
+   1612	007554	012700 	011102'			mov	#IDE.del, R0
+   1613	007560	105711 			1$:	tstb	(R1)
+   1614	007562	100406 				bmi	2$
+   1615	007564	032711 	000001 			bit	#1, (R1)
+   1616	007570	001007 				bne	3$
+   1617	007572	032711 	000010 			bit	#10, (R1)
+   1618	007576	001011 				bne	4$
+   1619	007600	077211 			2$:	sob	R2, 1$
+   1620	007602	077012 				sob	R0, 1$
+   1621	007604	004737 	007166'			call	IDE.res
+   1622	007610				3$:	.pop	<R2,R1,R0>
+   1623	007616	000244 				<clz>
+   1624	007620	000207 				return
+   1625	007622				4$:	.pop	<R2,R1,R0>
+   1626	007630	000264 				<sez>
+   1627	007632	000207 				return
+   1628
+   1629					;??????????????????????????????????????????????????????????????????????????
+   1630					;                              SUBROUTINE
+   1631					;
+   1632					;		Принимаем данные от hard_disk'а и передаем их
+   1633					;		 в буфер "us.bufer", число слов для передачи
+   1634					;		 в "n.words", остаток от FFh проглатывается.
+   1635					;			Регистры _НЕ_ сохраняются.
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-29
+Common definitions for bios monitor
+
+   1636					;
+   1637					;				РЕЗУЛЬТАТ
+   1638					;
+   1639					;		Z = 0  - произошел timeout.
+   1640					;		Z = 1  - все прошло нормально.
+   1641					;
+   1642					;		Called from : sec.r
+   1643					;??????????????????????????????????????????????????????????????????????????
+   1644
+   1645	007634	013701 	011106'		IDE.rb:	mov	us.bufer, R1
+   1646	007640	013702 	011110'			mov	n.words, R2
+   1647	007644	012705 	161120 			mov	#id.buf, R5
+   1648
+   1649	007650				1$:	.push	<R1,R2>
+   1650	007654	012703 	001130 			mov	#<$IDE.time>, R3	; За это время должно считаться (4s)
+   1651	007660	012704 	177777 			mov	#-1, R4			; Для проверки -> что произошло
+   1652	007664					WHI.ONL	#<M.IDE+M.TIO>		; Ждем...
+   1653	007720	020402 				cmp	R4, R2			; Что было?
+   1654	007722	001005 				bne	2$			; Был Time_Out
+   1655	007724					.pop	<R2,R1>			; А это плохо - выходим с ошибкой
+   1656	007730	004737 	007166'			call	IDE.res			; Скинем состояние
+   1657	007734	000523 				br	14$			; Выходим
+   1658
+   1659	007736				2$:	.pop	<R2,R1>			; Регистры...
+   1660
+   1661	007742	004737 	007540'		3$:	call	IDE.hlt			; *
+   1662	007746	001116 				bne	14$			; *
+   1663
+   1664	007750	012700 	000400 		4$:	mov	#256., R0
+   1665	007754	160002 				sub	R0, R2
+   1666	007756	100011 				bpl	7$
+   1667
+   1668	007760	060002 				add	R0, R2
+   1669	007762	160200 				sub	R2, R0
+   1670
+   1671	007764	005302 			5$:	dec	R2
+   1672	007766	100402 				bmi	6$
+   1673	007770	011521 				mov	(R5), (R1)+
+   1674	007772	000774 				br	5$
+   1675
+   1676	007774	005715 			6$:	tst	(R5)
+   1677	007776	077002 				sob	R0, 6$
+   1678	010000	000443 				br	9$
+   1679
+   1680	010002	012700 	000010 		7$:	mov	#10, R0		; *
+   1681	010006	000040 			8$:  .rept	40		; *
+   1682						mov	(R5), (R1)+	; *
+   1683					     .endr			; *
+   1684	010106	077041 				sob	R0, 8$
+   1685
+   1686	010110	132737 	000002 	001365'	9$:	bitb	#2, xcsr
+   1687	010116	001414 				beq	11$
+   1688
+   1689	010120	012703 	000130 			mov	#130, R3
+   1690	010124	012704 	000130 			mov	#130, R4
+   1691	010130	004737 	007302'			call	IDE.wait
+   1692	010134	001023 				bne	14$
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-30
+Common definitions for bios monitor
+
+   1693
+   1694	010136	012700 	000004 			mov	#4, R0
+   1695	010142	011521 			10$:	mov	(R5), (R1)+
+   1696	010144	000240 				<nop>
+   1697	010146	077003 				sob	R0, 10$
+   1698
+   1699	010150	105737 	161136 		11$:	tstb	@#id.csr
+   1700	010154	100635 				bmi	1$
+   1701	010156	032737 	000010 	161136 		bit	#10, @#id.csr
+   1702	010164	001266 				bne	3$
+   1703	010166	005702 				tst	R2		; *
+   1704	010170	003005 				bgt	14$		; *
+   1705
+   1706	010172	105737 	161124 		12$:	tstb	@#id.scnt	; *
+   1707	010176	001002 				bne	14$		; *
+   1708
+   1709	010200	000264 			13$:	<sez>
+   1710	010202	000207 				return
+   1711
+   1712	010204	000244 			14$:	<clz>			; E R R O R !
+   1713	010206	000207 				return
+   1714
+   1715
+   1716
+   1717					;??????????????????????????????????????????????????????????????????????????
+   1718					;                              SUBROUTINE
+   1719					;
+   1720					;		Передаем данные hard_disk'у из буфера
+   1721					;		 "us.bufer", число слов для передачи
+   1722					;		  в "n.words", остаток от FFh нулится.
+   1723					;			Регистры _НЕ_ сохраняются.
+   1724					;
+   1725					;				РЕЗУЛЬТАТ
+   1726					;
+   1727					;		Z = 0  - произошел timeout.
+   1728					;		Z = 1  - все прошло нормально.
+   1729					;
+   1730					;		Called from : sec.w
+   1731					;??????????????????????????????????????????????????????????????????????????
+   1732
+   1733	010210	013701 	011106'		IDE.wb:	mov	us.bufer, R1
+   1734	010214	013702 	011110'			mov	n.words, R2
+   1735	010220	012705 	161120 			mov	#id.buf, R5
+   1736
+   1737	010224	004737 	007540'		1$:	call	IDE.hlt
+   1738	010230	001153 				bne	14$
+   1739
+   1740	010232	012700 	000400 		2$:	mov	#256., R0
+   1741	010236	160002 				sub	R0, R2
+   1742	010240	100011 				bpl	5$
+   1743
+   1744	010242	060002 				add	R0, R2
+   1745	010244	160200 				sub	R2, R0
+   1746
+   1747	010246	005302 			3$:	dec	R2
+   1748	010250	100402 				bmi	4$
+   1749	010252	012115 				mov	(R1)+, (R5)
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-31
+Common definitions for bios monitor
+
+   1750	010254	000774 				br	3$
+   1751
+   1752	010256	005015 			4$:	clr	(R5)
+   1753	010260	077002 				sob	R0, 4$
+   1754					;	clr	R2
+   1755	010262	000443 				br	7$
+   1756
+   1757	010264	012700 	000010 		5$:	mov	#10, R0
+   1758	010270	000040 			6$:  .rept	40
+   1759						mov	(R1)+, (R5)
+   1760					     .endr
+   1761	010370	077041 				sob	R0, 6$
+   1762
+   1763	010372	132737 	000002 	001365'	7$:	bitb	#2, xcsr
+   1764	010400	001414 				beq	9$
+   1765
+   1766	010402	012703 	000130 			mov	#130, R3
+   1767	010406	012704 	000130 			mov	#130, R4
+   1768	010412	004737 	007302'			call	IDE.wait
+   1769	010416	001060 				bne	14$
+   1770
+   1771	010420	012700 	000004 			mov	#4, R0
+   1772	010424	012115 			8$:	mov	(R1)+, (R5)
+   1773	010426	000240 				<nop>
+   1774	010430	077003 				sob	R0, 8$
+   1775
+   1776	010432				9$:	.push	<R1,R2>
+   1777	010436	012703 	001130 			mov	#<$IDE.TIME>, R3	;за это время должно записаться
+   1778	010442	012704 	177777 			mov	#-1, R4
+   1779	010446					WHI.ONL	#<M.IDE+M.TIO>
+   1780	010502	020402 				cmp	R4, R2
+   1781	010504	001005 				bne	10$
+   1782	010506					.pop	<R2,R1>
+   1783	010512	004737 	007166'			call	IDE.res
+   1784	010516	000420 				br	14$
+   1785
+   1786	010520				10$:	.pop	<R2,R1>
+   1787	010524	105737 	161136 			tstb	@#id.csr	; *
+   1788	010530	100413 				bmi	14$		; *
+   1789
+   1790	010532	032737 	000010 	161136 	11$:	bit	#10, @#id.csr
+   1791	010540	001234 				bne	2$
+   1792
+   1793	010542	005702 				tst	R2		; *
+   1794	010544	003005 				bgt	14$		; *
+   1795
+   1796	010546	105737 	161124 		12$:	tstb	@#id.scnt	;+
+   1797	010552	001002 				bne	14$		;+
+   1798
+   1799	010554	000264 			13$:	<sez>
+   1800	010556	000207 				return
+   1801
+   1802	010560	000244 			14$:	<clz>
+   1803	010562	000207 				return
+   1804
+   1805					;??????????????????????????????????????????????????????????????????????????
+   1806					;                              SUBROUTINE
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-32
+Common definitions for bios monitor
+
+   1807					;
+   1808					;			Прием от hard_disk'а данных.
+   1809					;			Регистры сохраняются кроме R1.
+   1810					;
+   1811					;				РЕЗУЛЬТАТ
+   1812					;
+   1813					;			C = 1  - произошел timeout.
+   1814					;			C = 0  - все прошло нормально.
+   1815					;??????????????????????????????????????????????????????????????????????????
+   1816
+   1817	010564				sec.r:	.push	<R0,R2,R3,R4,R5>
+   1818	010576	010337 	011110'			mov	R3, n.words
+   1819	010602	010137 	011106'			mov	R1, us.buffer
+   1820	010606	004737 	007370'			call	IDE.send
+   1821	010612	001015 				bne	1$
+   1822	010614	004737 	007634'			call	IDE.rb
+   1823	010620	001012 				bne	1$
+   1824	010622	004737 	007216'			call	IDE.skip
+   1825	010626	001007 				bne	1$
+   1826	010630					.pop	<R5,R4,R3,R2,R0>
+   1827	010642	000241 				<clc>
+   1828	010644	000207 				return
+   1829
+   1830	010646				1$:	.pop	<R5,R4,R3,R2,R0>
+   1831	010660	000261 				<sec>
+   1832	010662	000207 				return
+   1833
+   1834					;??????????????????????????????????????????????????????????????????????????
+   1835					;                              SUBROUTINE
+   1836					;
+   1837					;			Передача в hard_disk данных.
+   1838					;			Регистры сохраняются кроме R1.
+   1839					;
+   1840					;				РЕЗУЛЬТАТ
+   1841					;
+   1842					;			C = 1  - произошел timeout.
+   1843					;			C = 0  - все прошло нормально.
+   1844					;??????????????????????????????????????????????????????????????????????????
+   1845
+   1846	010664				sec.w:	.push	<R0,R2,R3,R4,R5>
+   1847	010676	010337 	011110'			mov	R3, n.words
+   1848	010702	010137 	011106'			mov	R1, us.buffer
+   1849	010706	004737 	007370'			call	IDE.send
+   1850	010712	001015 				bne	1$
+   1851	010714	004737 	010210'			call	IDE.wb
+   1852	010720	001012 				bne	1$
+   1853	010722	004737 	007216'			call	IDE.skip
+   1854	010726	001007 				bne	1$
+   1855	010730					.pop	<R5,R4,R3,R2,R0>
+   1856	010742	000241 				<clc>
+   1857	010744	000207 				return
+   1858
+   1859	010746				1$:	.pop	<R5,R4,R3,R2,R0>
+   1860	010760	000261 				<sec>
+   1861	010762	000207 				return
+   1862
+   1863					;??????????????????????????????????????????????????????????????????????????
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-33
+Common definitions for bios monitor
+
+   1864					;                              SUBROUTINE
+   1865					;		Настраиваемся на регистры диспетчера вызвавшего
+   1866					;		 прерывание процесса и переключаем окна #2,3
+   1867					;		R1 - начало области для операции.
+   1868					;
+   1869					;		Called from : ...
+   1870					;??????????????????????????????????????????????????????????????????????????
+   1871
+   1872					.if	DF	$BIOS
+   1873
+   1874	010764	005000 			SETMAP:	clr	R0
+   1875	010766	006301 				asl	R1			;	ashc	#3, R0
+   1876	010770	006100 				rol	R0			;
+   1877	010772	006301 				asl	R1			;
+   1878	010774	006100 				rol	R0			;
+   1879	010776	006301 				asl	R1			;
+   1880	011000	006100 				rol	R0			;
+   1881	011002	006300 				asl	R0
+   1882	011004	006001 				ror	R1
+   1883	011006	000261 				sec
+   1884	011010	006001 				ror	R1
+   1885	011012	006001 				ror	R1
+   1886	011014	016037 	007000'	161224 		mov	hr.map(R0), UR2
+   1887	011022	016037 	007002'	161226 		mov	hr.map+2(R0), UR3
+   1888	011030	000207 				return
+   1889
+   1890					.iff
+   1891
+   1892					SETMAP:	clr	R0
+   1893
+   1894						asl	R1			;	ashc	#3, R0
+   1895						rol	R0			;
+   1896						asl	R1			;
+   1897						rol	R0			;
+   1898						asl	R1			;
+   1899						rol	R0			;
+   1900
+   1901						asl	R0
+   1902
+   1903						sec
+   1904						ror	R1			; 1xxxxx
+   1905						ror	R1			; 01xxxxx
+   1906						ror	R1			; 001xxx
+   1907						mov	hr.map(R0), UR1
+   1908						mov	hr.map+2(R0), UR2
+   1909						mov	hr.map+4(R0), UR3
+   1910						return
+   1911					.endc
+   1912
+   1913					;??????????????????????????????????????????????????????????????????????????
+   1914					;  Эти две подпрограммки сделаны при поиске ошибке - неожиданное зависание
+   1915					;
+   1916					;??????????????????????????????????????????????????????????????????????????
+   1917
+   1918					.if	DF	$BIOS
+   1919	011032	013737 	161210 	161230 	UNPR.A:	mov	@#HR4,	@#UR4
+   1920	011040	013737 	161212 	161232 		mov	@#HR5,	@#UR5
+Hard Disk Controller	MACRO V05.06R Thursday 29-Aug-19 10:01  Page 6-34
+Common definitions for bios monitor
+
+   1921	011046	005037 	161234 			clr	@#UR6
+   1922	011052	000207 				return
+   1923
+   1924	011054	012737 	000010 	161230 	PROT.A:	mov	#10, @#UR4
+   1925	011062	012737 	000010 	161232 		mov	#10, @#UR5
+   1926	011070	012737 	000010 	161234 		mov	#10, @#UR6
+   1927	011076	000207 				return
+   1928					.endc
+   1929
+   1930					;??????????????????????????????????????????????????????????????????????????
+   1931					;                                 DATA
+   1932					;
+   1933					;		Данные для работы с IDE hard_disk'ом : ПЕРЕМЕННЫЕ.
+   1934					;??????????????????????????????????????????????????????????????????????????
+   1935
+   1936	011100	000000 			offs.8		:  .word	0
+   1937	011102	000005 			IDE.delay	:  .word	5		; 28h
+   1938	011104	000000 			x.076		:  .word	0
+   1939	011106	000000 			us.buffer	:  .word	0
+   1940	011110	000000 			n.words		:  .word	0
+   1941
+   1942		001454'				.end	hdcini
+Errors detected:  0
+
+*** Assembler statistics
+
+
+Work  file  reads: 0
+Work  file writes: 0
+Size of work file: 10005 Words  ( 40 Pages)
+Size of core pool: 16640 Words  ( 65 Pages)
+Operating  system: RT-11
+
+Elapsed time: 00:00:00.31
+DK:IDE6V,DK:IDE6V=DK:P16,DK:IDE6V
