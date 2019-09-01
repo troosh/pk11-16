@@ -1,5 +1,5 @@
-RT-11 LINK  V05.45 	Load Map 	Thursday 29-Aug-2019 10:01  Page 1
-IDE7V .PRC   	Title:	HARD  	Ident:	      	
+RT-11 LINK  V05.45 	Load Map 	Sunday 01-Sep-2019 21:09  Page 1
+IDE7VF.PRC   	Title:	HARD  	Ident:	      	
 
 Section  Addr	Size	Global	Value	Global	Value	Global	Value
 
@@ -26,7 +26,7 @@ Section  Addr	Size	Global	Value	Global	Value	Global	Value
 			UR1   	161222	UR2   	161224	UR3   	161226	
 			UR4   	161230	UR5   	161232	UR6   	161234	
 			UR7   	161236	HDCBUF	177130	
- 	 001000	011112 = 2341.   words  (RW,I,LCL,REL,CON)
+ 	 001000	010770 = 2300.   words  (RW,I,LCL,REL,CON)
 			HDCINI	002454	
 
-Transfer address = 002454, High limit = 012110 = 2596.   words
+Transfer address = 002454, High limit = 011766 = 2555.   words

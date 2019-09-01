@@ -50,7 +50,7 @@
 
 	.include "p16mac"
 
-	$BIOS		=   0
+;	$BIOS		=   0
 
 .if	DF	$BIOS
 	ADD.REG		=  l.reg
