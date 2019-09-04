@@ -1,0 +1,492 @@
+;ЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏ
+;		SCREEN support for a "mouse" (for example GENIUS)
+;
+;		Have a nice game with a ... GENIUS mouse ! 
+;
+;			       ЄЄЄЄЄЄЄЄЄ
+;				part II
+;			       ЄЄЄЄЄЄЄЄЄ
+;
+;		Special driver for PC-11/16 only
+;		All rights reserved
+;
+;				       copyright (c) 1994 Maxim V. Sapronov
+;ЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌ
+
+	.title		GMOUSE - genius mouse DRAW for xPROS
+	.dsabl		GBL
+	.mcall		PUSH,POP,.exit
+
+	.nlist
+	.include		"sy:P16MAC"
+	.list
+
+;ЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏ
+		.asect
+		. =	0
+		.word		"PC,0,0,0
+		.asciz		"GM image xPROS"
+		. =	1000
+		.psect		PROGRAM,GBL
+;ЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌ
+
+	Xmouse	  =		176210
+	Ymouse	  =		176212
+	MarkStat  =		176214
+	MCSR	  =		176204
+	ScrBase	  =		 60010
+
+	PicHeight =		    12.
+
+;ЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏ
+;				MAIN PROGRAM
+;ЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌ
+
+begin:	.exit
+	mov	#40,	@#MCSR
+	<nop>
+	UNPREG	#MarkStat
+	PROREG	#TCUC
+	SETPRI	#100
+
+1$:	mov	#3$,	R4		; Что делать при T/O
+	mov	#1,	R3		; Число тиков для T/O
+	mov	#2$,	R0		; Подпрограмма для незанятых
+	mov	R0,	R1		;
+	mov	R0,	R2		;
+	WAITINT	#M.TIO			; Ждем T/O или записи в регистр
+	mov	#1$,	-(sp)		; Последняя подпрограмма
+	mov	R2,	-(sp)		; 
+	jsr	R0,	(R1)		; Вызываем по очереди
+2$:	RETURN
+
+3$:	tst	Exist			; Надо прорисовывать?
+	bne	5$			; Нет - ждем дальше
+
+	mov	@#Xmouse, R4		; Координата Xі[0..831.]
+	mov	@#Ymouse, R5
+	asl	R4			; Координата Xі[0..1663.]
+
+	cmp	R4,	X.prev		; Было ли смещение относительно
+	bne	4$			;  предыдущего положения
+	cmp	R5,	Y.prev		;  курсора?
+	beq	5$			;
+
+4$:	mov	R4,	X.		; Было смещение - запомним новые
+	mov	R5,	Y.		;  координаты,
+	mov	R4,	X.prev		;  
+	mov	R5,	Y.prev		;
+	call	HideMarker		;  сотрем 
+	call	ShowMarker		;  и нарисуем курсор
+
+5$:	return
+
+
+;ЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏ
+;				SUBROUTINE
+;	HideMarker - убирает курсор. Информация для восстановления
+;	области  -  FIELD. Структура FIELD следующая:
+;			Высота_Облати
+;			 Ширина_Строки_в_Байтах
+;			 Слово_для_Диспетчера_Памяти
+;			 Адрес_ОЗУ (для UR3)
+;			      <Байты>
+;			 Ширина_Строки_в_Байтах
+;			     <e.t.c.>
+;
+;	Called from: MAIN PROGRAM, SetMarker
+;ЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌ
+
+HideMarker:
+	push	<@#UR3>
+
+	mov	#Field,	R4
+	mov	(R4)+,	R3		; Высота области
+
+1$:	dec	R3
+	bmi	3$
+
+	movb	(R4)+,	R0		; Старшая часть ширины
+	swab	R0
+	bic	#377,	R0
+	movb	(R4)+,	R1		; Младшая часть ширины
+	bic	#177400,R1
+	bis	R1,	R0		; Собственно, длина
+
+	movb	(R4)+,	R2		; Старшая часть регистра диспетчера
+	swab	R2
+	bic	#377,	R2
+	movb	(R4)+,	R1		; Младшая часть регистра диспетчера
+	bic	#177400,R1
+	bis	R1,	R2		; Собственно, регистр
+	mov	R2,	@#UR3
+
+	movb	(R4)+,	R2		; Старшая часть адреса в ОЗУ
+	swab	R2
+	bic	#377,	R2
+	movb	(R4)+,	R1		; Младшая часть адреса
+	bic	#177400,R1
+	bis	R1,	R2		; Собственно, адрес
+
+2$:	dec	R0
+	bmi	1$
+	movb	(R4)+,	(R2)+
+	br	2$
+
+3$:	pop	<@#UR3>
+	return
+
+;ЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏ
+;				SUBROUTINE
+;	ShowMarker - рисует курсор. Координаты - X и Y
+;		     должны находиться в диапазоне [0,1663]
+;
+;	Called from: MAIN PROGRAM, SetMarker
+;ЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌ
+
+ShowMarker:
+	push	<@#UR3>
+	mov	#-1,	2$
+	mov	#-1,	3$
+	clr	R5
+	clr	ModeOffset
+	clr	ModeOffset+2
+	clr	ModeOffset+4
+	clr	ModeOffset+6
+	mov	Y.,	Y.now
+	mov	#<Field+2>, R4		; Не трогаем высоту
+	clr	Y.offset
+
+1$:	push	<R4,R5>
+	mov	X.,	R4
+	mov	Y.now,	R5
+	call	lookLine
+	pop	<R5>
+
+	cmp	Register, (PC)+
+2$:	.word	0
+	bne	4$
+	cmp	MemOffset, (PC)+
+3$:	.word	0
+	bne	4$
+	pop	<R4>
+	br	8$
+
+4$:	mov	Register, @#UR3
+	mov	MemOffset, R1
+	add	theByte, R1
+
+	mov	Mode,	R3
+	asl	R3
+	mov	ModeOffset(R3), R4
+	add	MarkNumber, R3
+	mov	Wide(R3),  R0
+	mov	Modes(R3), R3
+	add	theDot,	R3
+	mov	(R3)+,	R2
+	mov	(R3),	R3
+	add	R4,	R2
+	add	R4,	R3
+
+	mov	R0,	-(SP)
+	add	theByte,R0
+	neg	R0
+	add	ColLength, R0
+	bmi	5$
+	mov	(SP)+,	R0
+	br	6$
+
+5$:	add	(SP)+,	R0
+	inc	R0
+
+6$:	pop	<R4>
+	swab	R0
+	movb	R0,	(R4)+
+	swab	R0
+	movb	R0,	(R4)+
+	swab	Register
+	movb	Register, (R4)+
+	swab	Register
+	movb	Register, (R4)+
+	swab	R1
+	movb	R1,	(R4)+
+	swab	R1
+	movb	R1,	(R4)+
+
+7$:	movb	(R1),	(R4)+
+	bicb	(R3)+,	(R1)
+	bisb	(R2)+,	(R1)+
+	sob	R0,	7$
+
+	inc	R5
+8$:	inc	Y.now
+	inc	Y.offset
+
+	mov	Register,  2$
+	mov	MemOffset, 3$
+
+	add	Mark1offset,	ModeOffset
+	add	Mark2offset,	ModeOffset+2
+	add	Mark4offset,	ModeOffset+4
+	add	Mark8offset,	ModeOffset+6
+
+	cmp	Y.now,	#300.
+	bhis	9$
+	cmp	Y.offset, #PicHeight
+	blo	1$
+9$:	mov	R5,	Field
+	pop	<@#UR3>
+	return
+
+
+;ЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏ
+;				SUBROUTINE
+;		Исходные данные - R4 - <X>, R5 - <Y>
+;		 по этим данным определяется отрезок в строке
+;		 с адресом Register:MemOffset, с правым байтом
+;		 # ColLength, оптимальное смещение - theByte
+;		 пиксел в байте - theDot. Видеорежим для отрезка
+;		 Mode.
+;
+;		Called from: ShowCursor
+;ЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌ
+
+lookLine:
+	mov	R4,	R1		; Вычисляем номер полоски, в
+	asl	R1			;  которой находтся байт
+	asl	R1			;  путем деления на 64.
+	bic	#377,	R1		;  т.е. 8(pixel/byte)*8(byte/cut)
+	swab	R1			;  
+	inc	R1			; NOP!
+	mov	R1,	-(sp)
+
+	mov	R5,	R0		; Вычисляем адрес строки,
+	asl	R0			;  в которой находится наш байт
+	asl	R0
+
+	mov	#1000,	@#UR3
+	add	#ScrBase, R0
+	call	bltMemory
+
+	mov	(sp)+,	R3
+	mov	R2,	@#UR3
+	clr	R0
+
+1$:	mov	2(R1),	R4
+
+	asr	R4
+	asr	R4
+	swab	R4
+	bis	#177740, R4
+	neg	R4
+	cmp	R4,	#26.
+	blos	2$
+	mov	#26.,	R4
+	sub	R0,	R4
+2$:	add	R4,	R0
+	cmp	R0,	R3
+	bhis	3$			; BHI
+	cmp	(R1)+,	(R1)+
+	br	1$
+
+3$:	sub	R4,	R0
+	asl	R4			; Число полосок * 8 байт
+	asl	R4			;  получим длину полоски в байтах
+	asl	R4			;  
+	mov	R4,	ColLength
+	ash	#6,	R0
+	mov	X.,	R4
+	sub	R0,	R4		; Отступ от начала отрезка в точках
+	mov	2(R1),	-(sp)
+	mov	R1,	R0
+	call	bltMemory
+	mov	R2,	Register
+	mov	R1,	MemOffset
+	bit	#1000,	(sp)
+	beq	4$
+	bit	#400,	(sp)
+	bne	6$
+	br	5$			; Растяжка в 2 раза
+4$:	asr	R4			; Растяжка в 4 раза
+	asr	ColLength
+5$:	asr	R4
+	asr	ColLength
+6$:	mov	R4,	-(sp)
+	ash	#-3,	R4		; Номер байта в отрезке
+	mov	R4,	theByte
+	mov	(sp)+,	R4
+	bic	#^C7,	R4
+	mov	(sp)+,	R1		; Без растяжки
+
+	clr	R0
+	bit	#300,	R1
+	beq	9$
+	bit	#200,	R1
+	beq	8$
+	bit	#100,	R1
+	beq	7$
+	bit	#100000,R1
+	beq	7$
+	inc	R0			; VM8
+7$:	inc	R0			; VM4
+8$:	inc	R0			; VM2
+9$:	mov	R0,	Mode		; VM1
+	neg	R0
+	ash	R0,	R4
+	asl	R4
+	asl	R4
+	mov	R4,	theDot
+	dec	ColLength		; Номер самого правого байта
+	return				;  в полоске
+
+;ЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏ
+;				SUBROUTINE
+;		Идея данной подпрограммы заключается в выделении
+;		 из 2-х словного (32 разряда) слова слова для
+;		 регистра диспетчера памяти и адреса ОЗУ
+;		 (здесь для UR3).
+;		 
+;	Called from: LookLine
+;ЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌ
+
+bltMemory:
+	mov	(R0)+,	R3
+	mov	(R0),	R2
+	ashc	#2,	R2
+	mov	R3,	R1
+	bic	#^C77,	R2
+	bic	#7777,	R3
+	bis	R3,	R2
+	swab	R2
+	bic	R3,	R1
+	bis	#60000,	R1		; Если R2 положить в UR3, то
+	return				;  R1 указывает на начало буфера
+
+;ЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏ
+;				SUBROUTINE
+;	Подпрограмма обработки прерывания при обращении по записи к
+;	 регистру MCSR.
+;
+;	Called from: MAIN PROGRAM
+;ЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌ
+
+SetMark:
+	mov	@#MarkStat, R0
+	cmp	R0,	#1
+	bne	2$
+	tst	Exist
+	bne	1$
+	call	HideMarker
+	mov	#1,	Exist
+1$:	return
+
+2$:	cmp	R0,	#2
+	bne	4$
+	tst	Exist
+	beq	3$
+
+	mov	@#Xmouse, R4		; Координата Xі[0..831.]
+	mov	@#Ymouse, R5
+	asl	R4			; Координата Xі[0..1663.]
+	mov	R4,	X.
+	mov	R5,	Y.
+	call	ShowMarker
+	mov	X.,	X.prev
+	mov	Y.,	Y.prev
+
+	clr	Exist
+3$:	return
+	
+4$:	cmpb	R0,	#3
+	bne	5$
+	swab	R0
+	bic	#177400, R0
+	cmp	R0,	#3
+	bhi	5$
+	asl	R0
+	asl	R0
+	asl	R0
+	mov	Wide(R0),   Mark1offset
+	mov	Wide+2(R0), Mark2offset
+	mov	Wide+4(R0), Mark4offset
+	mov	Wide+6(R0), Mark8offset
+	mov	R0,	MarkNumber
+	tst	Exist
+	bne	5$
+
+	call	HideMarker
+	mov	@#Xmouse, R4		; Координата Xі[0..831.]
+	mov	@#Ymouse, R5
+	asl	R4			; Координата Xі[0..1663.]
+	mov	R4,	X.
+	mov	R5,	Y.
+	call	ShowMarker
+	mov	X.,	X.prev
+	mov	Y.,	Y.prev
+
+5$:	return
+
+;ЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏЏ
+;				   DATA
+;ЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌЌ
+
+Modes		:  .word  Mode1,Mode2,Mode4,Mode8
+		   .word  SMode1,SMode2,SMode4,SMode8
+		   .word  SMode1,SMode2,SMode4,SMode8
+		   .word  WMode1,WMode2,WMode4,WMode8
+
+Mode1		:  .word  M11,MP11,M12,MP12,M13,MP13,M14,MP14,M15,MP15
+		   .word  M16,MP16,M17,MP17,M18,MP18
+Mode2		:  .word  M21,MP21,M22,MP22,M23,MP23,M24,MP24
+Mode4		:  .word  M41,MP41,M42,MP42
+Mode8		:  .word  M81,MP81
+
+WMode1		:  .word  W11,WP11,W12,WP12,W13,WP13,W14,WP14,W15,WP15
+		   .word  W16,WP16,W17,WP17,W18,WP18
+WMode2		:  .word  W21,WP21,W22,WP22,W23,WP23,W24,WP24
+WMode4		:  .word  W41,WP41,W42,WP42
+WMode8		:  .word  W81,WP81
+
+SMode1		:  .word  S11,SP11,S12,SP12,S13,SP13,S14,SP14,S15,SP15
+		   .word  S16,SP16,S17,SP17,S18,SP18
+SMode2		:  .word  S21,SP21,S22,SP22,S23,SP23,S24,SP24
+SMode4		:  .word  S41,SP41,S42,SP42
+SMode8		:  .word  S81,SP81
+
+Wide		:  .word  4,6,4,4		; для Мыши
+		   .word  4,8.,8.,10.		; для Размера
+		   .word  4,8.,8.,10.		; для Размера
+		   .word  4,6,6,4		; для Часов
+
+	 .radix		2
+	.include	"image"			; Матрицы курсоров
+	 .radix		8
+
+Mode		:  .word  0			; Режим ї [0,3]
+theByte		:  .word  0			; Смещение отн.начала отрезка
+theDot		:  .word  0			; Смещение (в точках) в байте
+ColLength	:  .word  0			; Длина отрезка
+Register	:  .word  0			; Регистр диспетчера
+MemOffset	:  .word  0			; Адрес начала отрезка
+Y.offset	:  .word  0			; Смещение по Yљ
+X.		:  .word  0			;
+Y.		:  .word  0			;
+Y.now		:  .word  0			; Текущее положение по Y
+X.prev		:  .word  77777
+Y.prev		:  .word  77777
+Exist		:  .word  1			; 0-exist, 1-no
+markNumber	:  .word  0			; 0,10,20,...
+
+mark1Offset	:  .word  4
+mark2Offset	:  .word  6
+mark4Offset	:  .word  4
+mark8Offset	:  .word  4
+
+ModeOffset	:  .word  0,0,0,0
+
+TCUC		:  .WORD  MarkStat, 0, 0, 2000, SetMark, -1
+
+Field		:
+
+	.end	begin
+                                                   
