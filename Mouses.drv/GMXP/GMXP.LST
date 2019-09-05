@@ -1,8 +1,8 @@
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42
 Table of contents
 
     2- 462	common definitions for bios monitor
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 1
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 1
 
 
       1					;//////////////////////////////////////////////////////////////////////////
@@ -22,9 +22,10 @@ Table of contents
      15
      16						.title		GMOUSE - genius mouse DRAW for xPROS
      17						.dsabl		GBL
-     18						.mcall		.push,.pop,.exit
-     19
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 3
+     18						.list           meb
+     19						.mcall		.push,.pop,.exit
+     20
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 3
 Common definitions for bios monitor
 
       2
@@ -55,11 +56,18 @@ Common definitions for bios monitor
      22					;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
      23
      24	000000				begin:	.exit
+	000000	104350 				EMT	^o350
      25	000002	012737 	000040 	176204 		mov	#40,	@#MCSR
      26	000010	000240 				<nop>
      27	000012					UNPREG	#MarkStat
+	000012	012737 	176214 	174162 	        mov     #MarkStat,@#^o174162
+	000020	000240 			        nop
      28	000022					PROREG	#TCUC
+	000022	012737 	015064'	174160 	        mov     #TCUC,@#^o174160
+	000030	000240 			        nop
      29	000032					SETPRI	#100
+	000032	012737 	000100 	174152 	        mov     #100,@#^o174152
+	000040	000240 			        nop
      30
      31	000042	012704 	000104'		1$:	mov	#3$,	R4		; ãÁ÷ òóøïÁË úÞü T/O
      32	000046	012703 	000001 			mov	#1,	R3		; ãüÀø÷ Áüç÷ð òøÎ T/O
@@ -67,6 +75,8 @@ Common definitions for bios monitor
      34	000056	010001 				mov	R0,	R1		;
      35	000060	010002 				mov	R0,	R2		;
      36	000062					WAITINT	#M.TIO			; 6òóý T/O üøü âïúüÀü ð ÞóñüÀÁÞ
+	000062	012737 	000400 	174164 	        mov     #M.TIO,@#^o174164
+	000070	000240 			        nop
      37	000072	012746 	000042'			mov	#1$,	-(sp)		; ?÷ÀøóòùÎÎ ú÷òúÞ÷ñÞïýýï
      38	000076	010246 				mov	R2,	-(sp)		;
      39	000100	004011 				jsr	R0,	(R1)		; 2ÊâÊðïóý ú÷ ÷ÃóÞóòü
@@ -75,6 +85,9 @@ Common definitions for bios monitor
      42	000104	005767 	014730 		3$:	tst	Exist			; =ïò÷ úÞ÷ÞüÀ÷ðÊðïÁË?
      43	000110	001027 				bne	5$			; =óÁ - æòóý òïøËÕó
      44
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 3-1
+Common definitions for bios monitor
+
      45	000112	013704 	176210 			mov	@#Xmouse, R4		; :÷÷ÞòüùïÁï XÆ[0..831.]
      46	000116	013705 	176212 			mov	@#Ymouse, R5
      47	000122	006304 				asl	R4			; :÷÷ÞòüùïÁï XÆ[0..1663.]
@@ -84,9 +97,6 @@ Common definitions for bios monitor
      51	000132	020567 	014700 			cmp	R5,	Y.prev		;  çÖÞÀ÷Þï?
      52	000136	001414 				beq	5$			;
      53
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 3-1
-Common definitions for bios monitor
-
      54	000140	010467 	014662 		4$:	mov	R4,	X.		; 1Êø÷ ÀýóÈóùüó - âïú÷ýùüý ù÷ðÊó
      55	000144	010567 	014660 			mov	R5,	Y.		;  ç÷÷ÞòüùïÁÊ,
      56	000150	010467 	014660 			mov	R4,	X.prev		;
@@ -114,6 +124,7 @@ Common definitions for bios monitor
      78
      79	000172				HideMarker:
      80	000172					.push	<@#UR3>
+	000172	013746 	161226 			mov	@#UR3,-(6.)
      81
      82	000176	012704 	015100'			mov	#Field,	R4
      83	000202	012403 				mov	(R4)+,	R3		; 2ÊÀ÷Áï ÷ÿøïÀÁü
@@ -134,6 +145,9 @@ Common definitions for bios monitor
      98	000240	112401 				movb	(R4)+,	R1		; <øïòÕïÎ ÃïÀÁË ÞóñüÀÁÞï òüÀúóÁÃóÞï
      99	000242	042701 	177400 			bic	#177400,R1
     100	000246	050102 				bis	R1,	R2		; à÷ÿÀÁðóùù÷, ÞóñüÀÁÞ
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 3-2
+Common definitions for bios monitor
+
     101	000250	010237 	161226 			mov	R2,	@#UR3
     102
     103	000254	112402 				movb	(R4)+,	R2		; àÁïÞÕïÎ ÃïÀÁË ïòÞóÀï ð >7ö
@@ -144,14 +158,12 @@ Common definitions for bios monitor
     108	000272	050102 				bis	R1,	R2		; à÷ÿÀÁðóùù÷, ïòÞóÀ
     109
     110	000274	005300 			2$:	dec	R0
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 3-2
-Common definitions for bios monitor
-
     111	000276	100742 				bmi	1$
     112	000300	112422 				movb	(R4)+,	(R2)+
     113	000302	000774 				br	2$
     114
     115	000304				3$:	.pop	<@#UR3>
+	000304	012637 	161226 			mov	(6.)+,@#UR3
     116	000310	000207 				return
     117
     118					;//////////////////////////////////////////////////////////////////////////
@@ -164,6 +176,7 @@ Common definitions for bios monitor
     125
     126	000312				ShowMarker:
     127	000312					.push	<@#UR3>
+	000312	013746 	161226 			mov	@#UR3,-(6.)
     128	000316	012767 	177777 	000074 		mov	#-1,	2$
     129	000324	012767 	177777 	000076 		mov	#-1,	3$
     130	000332	005005 				clr	R5
@@ -176,10 +189,13 @@ Common definitions for bios monitor
     137	000366	005067 	014432 			clr	Y.offset
     138
     139	000372				1$:	.push	<R4,R5>
+	000372	010446 				mov	R4,-(6.)
+	000374	010546 				mov	R5,-(6.)
     140	000376	016704 	014424 			mov	X.,	R4
     141	000402	016705 	014424 			mov	Y.now,	R5
     142	000406	004767 	000316 			call	lookLine
     143	000412					.pop	<R5>
+	000412	012605 				mov	(6.)+,R5
     144
     145	000414	026727 	014400 			cmp	Register, (PC)+
     146	000420	000000 			2$:	.word	0
@@ -188,6 +204,10 @@ Common definitions for bios monitor
     149	000430	000000 			3$:	.word	0
     150	000432	001002 				bne	4$
     151	000434					.pop	<R4>
+	000434	012604 				mov	(6.)+,R4
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 3-3
+Common definitions for bios monitor
+
     152	000436	000471 				br	8$
     153
     154	000440	016737 	014354 	161226 	4$:	mov	Register, @#UR3
@@ -204,9 +224,6 @@ Common definitions for bios monitor
     165	000510	012302 				mov	(R3)+,	R2
     166	000512	011303 				mov	(R3),	R3
     167	000514	060402 				add	R4,	R2
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 3-3
-Common definitions for bios monitor
-
     168	000516	060403 				add	R4,	R3
     169
     170	000520	010046 				mov	R0,	-(SP)
@@ -221,6 +238,7 @@ Common definitions for bios monitor
     179	000544	005200 				inc	R0
     180
     181	000546				6$:	.pop	<R4>
+	000546	012604 				mov	(6.)+,R4
     182	000550	000300 				swab	R0
     183	000552	110024 				movb	R0,	(R4)+
     184	000554	000300 				swab	R0
@@ -247,6 +265,9 @@ Common definitions for bios monitor
     205	000640	016767 	014156 	177562 		mov	MemOffset, 3$
     206
     207	000646	066767 	014172 	014200 		add	Mark1offset,	ModeOffset
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 3-4
+Common definitions for bios monitor
+
     208	000654	066767 	014166 	014174 		add	Mark2offset,	ModeOffset+2
     209	000662	066767 	014162 	014170 		add	Mark4offset,	ModeOffset+4
     210	000670	066767 	014156 	014164 		add	Mark8offset,	ModeOffset+6
@@ -257,6 +278,7 @@ Common definitions for bios monitor
     215	000714	103626 				blo	1$
     216	000716	010567 	014156 		9$:	mov	R5,	Field
     217	000722					.pop	<@#UR3>
+	000722	012637 	161226 			mov	(6.)+,@#UR3
     218	000726	000207 				return
     219
     220
@@ -264,9 +286,6 @@ Common definitions for bios monitor
     222					;				SUBROUTINE
     223					;		8ÀÅ÷òùÊó òïùùÊó - R4 - <X>, R5 - <Y>
     224					;		 ú÷ ÌÁüý òïùùÊý ÷úÞóòóøÎóÁÀÎ ÷ÁÞóâ÷ç ð ÀÁÞ÷çó
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 3-4
-Common definitions for bios monitor
-
     225					;		 À ïòÞóÀ÷ý Register:MemOffset, À úÞïðÊý ÿïûÁ÷ý
     226					;		 # ColLength, ÷úÁüýïøËù÷ó ÀýóÈóùüó - theByte
     227					;		 úüçÀóø ð ÿïûÁó - theDot. 2üòó÷Þóæüý òøÎ ÷ÁÞóâçï
@@ -306,6 +325,9 @@ Common definitions for bios monitor
     261	001024	020427 	000032 			cmp	R4,	#26.
     262	001030	101403 				blos	2$
     263	001032	012704 	000032 			mov	#26.,	R4
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 3-5
+Common definitions for bios monitor
+
     264	001036	160004 				sub	R0,	R4
     265	001040	060400 			2$:	add	R4,	R0
     266	001042	020003 				cmp	R0,	R3
@@ -324,9 +346,6 @@ Common definitions for bios monitor
     279	001100	016146 	000002 			mov	2(R1),	-(sp)
     280	001104	010100 				mov	R1,	R0
     281	001106	004767 	000152 			call	bltMemory
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 3-5
-Common definitions for bios monitor
-
     282	001112	010267 	013702 			mov	R2,	Register
     283	001116	010167 	013700 			mov	R1,	MemOffset
     284	001122	032716 	001000 			bit	#1000,	(sp)
@@ -366,6 +385,9 @@ Common definitions for bios monitor
     318	001256	005367 	013534 			dec	ColLength		; =÷ýóÞ Àïý÷ñ÷ úÞïð÷ñ÷ ÿïûÁï
     319	001262	000207 				return				;  ð ú÷ø÷Àçó
     320
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 3-6
+Common definitions for bios monitor
+
     321					;//////////////////////////////////////////////////////////////////////////
     322					;				SUBROUTINE
     323					;		8òóÎ òïùù÷û ú÷òúÞ÷ñÞïýýÊ âïçøÍÃïóÁÀÎ ð ðÊòóøóùüü
@@ -384,9 +406,6 @@ Common definitions for bios monitor
     336	001276	042702 	177700 			bic	#^C77,	R2
     337	001302	042703 	007777 			bic	#7777,	R3
     338	001306	050302 				bis	R3,	R2
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 3-6
-Common definitions for bios monitor
-
     339	001310	000302 				swab	R2
     340	001312	040301 				bic	R3,	R1
     341	001314	052701 	060000 			bis	#60000,	R1		; 5Àøü R2 ú÷ø÷æüÁË ð UR3, Á÷
@@ -426,6 +445,9 @@ Common definitions for bios monitor
     375
     376	001434	005067 	013400 			clr	Exist
     377	001440	000207 			3$:	return
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 3-7
+Common definitions for bios monitor
+
     378
     379	001442	120027 	000003 		4$:	cmpb	R0,	#3
     380	001446	001055 				bne	5$
@@ -444,9 +466,6 @@ Common definitions for bios monitor
     393	001526	005767 	013306 			tst	Exist
     394	001532	001023 				bne	5$
     395
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 3-7
-Common definitions for bios monitor
-
     396	001534	004767 	176432 			call	HideMarker
     397	001540	013704 	176210 			mov	@#Xmouse, R4		; :÷÷ÞòüùïÁï XÆ[0..831.]
     398	001544	013705 	176212 			mov	@#Ymouse, R5
@@ -486,6 +505,9 @@ Common definitions for bios monitor
     421	001734	011350'	011430'		Mode8		:  .word  M81,MP81
     422
     423	001740	011510'	012310'	011570'	WMode1		:  .word  W11,WP11,W12,WP12,W13,WP13,W14,WP14,W15,WP15
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 3-8
+Common definitions for bios monitor
+
 	001746	012370'	011650'	012450'
 	001754	011730'	012530'	012010'
 	001762	012610'
@@ -504,9 +526,6 @@ Common definitions for bios monitor
 	002056	003270'
     430	002060	002550'	003350'	002630'			   .word  S16,SP16,S17,SP17,S18,SP18
 	002066	003430'	002710'	003510'
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 3-8
-Common definitions for bios monitor
-
     431	002074	003570'	004370'	003730'	SMode2		:  .word  S21,SP21,S22,SP22,S23,SP23,S24,SP24
 	002102	004530'	004070'	004670'
 	002110	004230'	005030'
@@ -525,7 +544,7 @@ Common definitions for bios monitor
     439
     440		000002 				 .radix		2
     441						.include	"image"			; <ïÁÞüÔÊ çÖÞÀ÷Þ÷ð
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4
 Common definitions for bios monitor
 
       1					;	................, ................. ................ ................
@@ -585,7 +604,7 @@ Common definitions for bios monitor
      55	002420	003140 	000140 			0000011001100000,0000000001100000
      56	002424	177740 	000177 			1111111111100000,0000000001111111
      57	002430	000140 	000140 			0000000001100000,0000000001100000
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-1
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-1
 Common definitions for bios monitor
 
      58	002434	100140 	003777 			1000000001100000,0000011111111111
@@ -645,7 +664,7 @@ Common definitions for bios monitor
     112	002744	003000 	077770 			0000011000000000,0111111111111000
     113	002750	003000 	060030 			0000011000000000,0110000000011000
     114	002754	177000 	060037 			1111111000000000,0110000000011111
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-2
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-2
 Common definitions for bios monitor
 
     115	002760	000000 	077770 			0000000000000000,0111111111111000
@@ -705,7 +724,7 @@ Common definitions for bios monitor
     169	003264	140000 	007777 			1100000000000000,0000111111111111
     170
     171	003270	177760 	000777 		SP15:	1111111111110000,0000000111111111
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-3
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-3
 Common definitions for bios monitor
 
     172	003274	177760 	000777 			1111111111110000,0000000111111111
@@ -765,7 +784,7 @@ Common definitions for bios monitor
     225	003600	177760 	177777 	000377 		1111111111110000,1111111111111111,0000000011111111,0000000000000000
 	003606	000000
     226	003610	170360 	052525 	000365 		1111000011110000,0101010101010101,0000000011110101,0000000000000000
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-4
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-4
 Common definitions for bios monitor
 
 	003616	000000
@@ -825,7 +844,7 @@ Common definitions for bios monitor
 	004136	000000
     255	004140	007400 	170000 	177777 		0000111100000000,1111000000000000,1111111111111111,0000000000001111
 	004146	000017
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-5
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-5
 Common definitions for bios monitor
 
     256	004150	007400 	170000 	052760 		0000111100000000,1111000000000000,0101010111110000,0000000000001111
@@ -885,7 +904,7 @@ Common definitions for bios monitor
 	004466	000003
     285	004470	177777 	177777 	177777 		1111111111111111,1111111111111111,1111111111111111,0000000000000011
 	004476	000003
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-6
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-6
 Common definitions for bios monitor
 
     286	004500	177777 	177777 	177777 		1111111111111111,1111111111111111,1111111111111111,0000000000000011
@@ -945,7 +964,7 @@ Common definitions for bios monitor
     314	005020	000000 	177400 	177777 		0000000000000000,1111111100000000,1111111111111111,0000000000111111
 	005026	000077
     315
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-7
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-7
 Common definitions for bios monitor
 
     316	005030	177700 	177777 	177777 	SP24:	1111111111000000,1111111111111111,1111111111111111,0000000000000000
@@ -1005,7 +1024,7 @@ Common definitions for bios monitor
     344	005350	007400 	000017 	007400 		0000111100000000,0000000000001111,0000111100000000,0000000000000000
 	005356	000000
     345	005360	177400 	177777 	007777 		1111111100000000,1111111111111111,0000111111111111,0000000000000000
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-8
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-8
 Common definitions for bios monitor
 
 	005366	000000
@@ -1065,7 +1084,7 @@ Common definitions for bios monitor
     374	005700	177760 	177777 	177777 		1111111111110000,1111111111111111,1111111111111111,0000000011111111
 	005706	000377
     375	005710	177760 	177777 	177777 		1111111111110000,1111111111111111,1111111111111111,0000000011111111
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-9
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-9
 Common definitions for bios monitor
 
 	005716	000377
@@ -1125,7 +1144,7 @@ Common definitions for bios monitor
     394	006134	   000 	   000 	   000 		.byte	000,000,000,001,377,377,377,377,000,000
 	006137	   001 	   377 	   377
 	006142	   377 	   377 	   000
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-10
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-10
 Common definitions for bios monitor
 
 	006145	   000
@@ -1185,7 +1204,7 @@ Common definitions for bios monitor
     409
     410		000002 				.radix	2
     411
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-11
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-11
 Common definitions for bios monitor
 
     412	006350	000000 	000000 		M11:	.word	0000000000000000,0000000000000000	; 1
@@ -1245,7 +1264,7 @@ Common definitions for bios monitor
     466	006660	000340 	000000 			.word	0000000011100000,0000000000000000
     467	006664	001740 	000000 			.word	0000001111100000,0000000000000000
     468	006670	007740 	000000 			.word	0000111111100000,0000000000000000
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-12
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-12
 Common definitions for bios monitor
 
     469	006674	037740 	000000 			.word	0011111111100000,0000000000000000
@@ -1305,7 +1324,7 @@ Common definitions for bios monitor
     523	007164	000177 	000000 			.word	0000000001111111,0000000000000000
     524	007170	000777 	000000 			.word	0000000111111111,0000000000000000
     525	007174	003777 	000000 			.word	0000011111111111,0000000000000000
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-13
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-13
 Common definitions for bios monitor
 
     526	007200	017777 	000000 			.word	0001111111111111,0000000000000000
@@ -1365,7 +1384,7 @@ Common definitions for bios monitor
     580	007510	077760 	000000 			.word	0111111111110000,0000000000000000
     581	007514	076360 	000000 			.word	0111110011110000,0000000000000000
     582	007520	174140 	000000 			.word	1111100001100000,0000000000000000
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-14
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-14
 Common definitions for bios monitor
 
     583	007524	170000 	000000 			.word	1111000000000000,0000000000000000
@@ -1425,7 +1444,7 @@ Common definitions for bios monitor
     637	010060	000060 	000000 	000000 	M22:	.word	0000000000110000,0000000000000000,0000000000000000	; 2
     638	010066	001760 	000000 	000000 		.word	0000001111110000,0000000000000000,0000000000000000
     639	010074	037760 	000000 	000000 		.word	0011111111110000,0000000000000000,0000000000000000
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-15
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-15
 Common definitions for bios monitor
 
     640	010102	177760 	000003 	000000 		.word	1111111111110000,0000000000000011,0000000000000000
@@ -1485,7 +1504,7 @@ Common definitions for bios monitor
     694	010556	177774 	037777 	000000 		.word	1111111111111100,0011111111111111,0000000000000000
     695	010564	177774 	177777 	000000 		.word	1111111111111100,1111111111111111,0000000000000000
     696	010572	177774 	177777 	000000 		.word	1111111111111100,1111111111111111,0000000000000000
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-16
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-16
 Common definitions for bios monitor
 
     697	010600	177774 	000377 	000000 		.word	1111111111111100,0000000011111111,0000000000000000
@@ -1545,7 +1564,7 @@ Common definitions for bios monitor
     751	011200	000000 	007760 			.word	0000000000000000,0000111111110000
     752	011204	000000 	000000 			.word	0000000000000000,0000000000000000
     753
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-17
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-17
 Common definitions for bios monitor
 
     754	011210	000377 	000000 		MP41:	.word	0000000011111111,0000000000000000	; M1
@@ -1605,7 +1624,7 @@ Common definitions for bios monitor
     796	011430	   377 	   377 	   377 	MP81:	.byte	377,377,377,377
 	011433	   377
     797	011434	   377 	   377 	   377 		.byte	377,377,377,377
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-18
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-18
 Common definitions for bios monitor
 
 	011437	   377
@@ -1665,7 +1684,7 @@ Common definitions for bios monitor
     841	011664	177760 	000000 			.word	1111111111110000,0000000000000000
     842	011670	174760 	000000 			.word	1111100111110000,0000000000000000
     843	011674	174760 	000000 			.word	1111100111110000,0000000000000000
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-19
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-19
 Common definitions for bios monitor
 
     844	011700	174760 	000000 			.word	1111100111110000,0000000000000000
@@ -1725,7 +1744,7 @@ Common definitions for bios monitor
     898	012210	000000 	000000 			.word	0000000000000000,0000000000000000
     899	012214	000000 	000000 			.word	0000000000000000,0000000000000000
     900	012220	000000 	000000 			.word	0000000000000000,0000000000000000
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-20
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-20
 Common definitions for bios monitor
 
     901	012224	000000 	000000 			.word	0000000000000000,0000000000000000
@@ -1785,7 +1804,7 @@ Common definitions for bios monitor
     955	012530	177700 	000000 		WP14:	.word	1111111111000000,0000000000000000
     956	012534	177700 	000000 			.word	1111111111000000,0000000000000000
     957	012540	177740 	000001 			.word	1111111111100000,0000000000000001
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-21
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-21
 Common definitions for bios monitor
 
     958	012544	177770 	000007 			.word	1111111111111000,0000000000000111
@@ -1845,7 +1864,7 @@ Common definitions for bios monitor
    1012	013054	177600 	000177 			.word	1111111110000000,0000000001111111
    1013	013060	177600 	000177 			.word	1111111110000000,0000000001111111
    1014	013064	177600 	000177 			.word	1111111110000000,0000000001111111
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-22
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-22
 Common definitions for bios monitor
 
    1015	013070	177000 	000037 			.word	1111111000000000,0000000000011111
@@ -1905,7 +1924,7 @@ Common definitions for bios monitor
    1069	013512	177000 	177777 	000013 		.word	1111111000000000,1111111111111111,0000000000001011
    1070	013520	124000 	125252 	000002 		.word	1010100000000000,1010101010101010,0000000000000010
    1071	013526	000000 	000000 	000000 		.word	0000000000000000,0000000000000000,0000000000000000
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-23
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-23
 Common definitions for bios monitor
 
    1072	013534	000000 	000000 	000000 		.word	0000000000000000,0000000000000000,0000000000000000
@@ -1965,7 +1984,7 @@ Common definitions for bios monitor
    1126
    1127
    1128	014210	000000 	000000 	000000 	W41:	.word	0000000000000000,0000000000000000,0000000000000000
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-24
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-24
 Common definitions for bios monitor
 
    1129	014216	000000 	000000 	000000 		.word	0000000000000000,0000000000000000,0000000000000000
@@ -2025,7 +2044,7 @@ Common definitions for bios monitor
    1183	014650	   000 	   000 	   000 	W81:	.byte	000,000,000,000
 	014653	   000
    1184	014654	   000 	   000 	   000 		.byte	000,000,000,000
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 4-25
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 4-25
 Common definitions for bios monitor
 
 	014657	   000
@@ -2077,7 +2096,7 @@ Common definitions for bios monitor
    1208
    1209		000010 				.radix	8
    1210
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 5
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 5
 Common definitions for bios monitor
 
       1		000010 				 .radix		8
@@ -2111,7 +2130,7 @@ Common definitions for bios monitor
      27	015100				Field		:
      28
      29		000000'				.end	begin
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 5-1
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 5-1
 Symbol table
 
 BEGIN   000000R     002	MP13    007310R     002	P.R0  = 000004   	SP11    002770R     002	V.HIGH= 000500 G
@@ -2171,7 +2190,7 @@ MODE4   001724R     002	P.PC  = 000022   	SNLCSR= 161026 G 	V.BUT = 100072   	Y.
 MODE8   001734R     002	P.PRED= 000002   	SNLC0R= 161020 G 	V.CPUH= 100062   	Y.PREV  015036R     002
 MP11    007150R     002	P.PRI = 000054   	SNLC1R= 161022 G 	V.FLOP= 100112   	$$    = 000010
 MP12    007230R     002	P.PS  = 000024   	SNLC2R= 161024 G
-GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 08:34  Page 5-2
+GMOUSE - genius mouse DRAW for 	MACRO V05.06R Thursday 05-Sep-19 09:42  Page 5-2
 Symbol table
 
 
@@ -2189,5 +2208,5 @@ Size of work file: 9838 Words  ( 39 Pages)
 Size of core pool: 16640 Words  ( 65 Pages)
 Operating  system: RT-11
 
-Elapsed time: 00:00:00.34
+Elapsed time: 00:00:00.29
 DK:GMXP,DK:GMXP=DK:GMXP

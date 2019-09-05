@@ -15,11 +15,12 @@
 
 	.title		GMOUSE - genius mouse DRAW for xPROS
 	.dsabl		GBL
+	.list           meb
 	.mcall		.push,.pop,.exit
 
 	.nlist
 	.include		"P16MAC"
-	.list
+        .list
 
 ;¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
 		.asect
