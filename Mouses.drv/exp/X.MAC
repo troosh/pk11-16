@@ -1,0 +1,96 @@
+.include	/p16mac/
+.asect
+
+msx	= 1	;msx (1) or Slavic (0) mouse 
+
+        .=2466
+mtst:
+	mov	PICMR,	-(sp)
+	mov	#377,	PICMR	;disable int's
+	call	mouse
+	call	mouse
+	mov	(sp)+,	PICMR	;restore picmr
+	mov	#m.tio,	mflg
+	add	r0,	r1
+	bcc	10$
+	clr	mflg
+10$:	
+	clr	mkey
+	return
+
+        .=2562
+;------------------------------
+mouse:
+
+.macro delay n
+.if ne msx
+	mov	#n,	r0
+	sob	r0,	.
+.endc
+.endm
+
+nnn1	= 48.
+nnn2	=  8.
+stb	= 200
+
+	mov	#ppia,	r5
+	mov	#ppic,	r4
+	mov	#stb,	r3		
+
+	bis	r3,	(r5)
+	DELAY	nnn1
+	mov	(r4),	r0	;yh
+;----------------------------------------
+	xor	r3,	(r5)
+;	ash	#-3,	r0	;
+.rept	4			;
+	rolb	r0		;
+	rol	r1		;
+.endr	
+	DELAY	nnn2		;
+	mov	(r4),	r0	;yl
+;----------------------------------------
+	xor	r3,	(r5)	;
+;	ash	#-3,	r0	;
+.rept	4			;
+	rolb	r0		;
+	rol	r1		;
+.endr
+	DELAY	nnn2		;
+	mov	(r4),	r0	;xh
+;----------------------------------------
+	xor	r3,	(r5)
+;	ash	#-3,	r0	;
+.rept	4			;
+	rolb	r0		;
+	rol	r1		;
+.endr				;
+	DELAY	nnn2		
+	mov	(r4),	r0	;xl
+;----------------------------------------
+;	ash	#-3,	r0	;
+.rept	4			;
+	rolb	r0		;
+	rol	r1		;
+.endr				;
+	movb	r1,	r0	;dy
+	swab	r1		;
+	movb	r1,	r1	;dx
+	bis	#140,	(r5)	;
+	mov	(r5),	r2	;key
+	com	r2
+	return
+
+        .=3006
+        .word	-1 ; Marker for next code
+
+        .=7076
+mkey:	.word	0
+
+        .=7102
+mflg:	.word	0
+
+
+.print
+.end	mtst
+
