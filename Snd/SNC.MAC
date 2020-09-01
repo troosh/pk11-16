@@ -1,0 +1,499 @@
+	.title	SNC	- process
+.enabl ama
+
+.INCLUDE	"sy:P16MAC"
+.INCLUDE	"sy:WDC.MAC"
+buflen	= 4500.
+ch1	= 210
+ch2	= 211
+ch3	= 212
+
+DELTA   = 28.
+
+TMP	= 100000
+
+PRCSR=176240
+PRBUF=176242
+
+pr.buf	=<prbuf & 7777> + l.reg
+pr.csr	=<prcsr & 7777> + l.reg
+
+PRVEC=154
+
+SNDCSR=161016
+SNDCNR=SNDCSR-6
+VOLCSR=161026
+VOLCNR=VOLCSR-6
+
+.asect
+	. = 0
+	.word	"PC, 0, 2, -1
+	.asciz	/SOUND Controller/
+
+.mcall	.exit
+
+
+.=1000
+start:
+	.exit			;
+	mov	#start, sp	;
+	mov	#6,	@#4	; TRAP TO 4
+	mov	#rti,	@#6	;
+	unpreg	tcsr		; TAKE  
+	PROREG  #tcsr		;     THE 
+	mov	r0,ps.copy	;       REGISTERS
+	unpreg	tbuf		;		OF THE
+	PROREG	#tbuf		;			SOUND
+	SETPRI	#200		;
+	MOV	hr4,	ur4	; MAP HR4 TO UR4
+	MOV	hr5,	ur5	; MAP HR5 TO UR5
+	clr	@#ur6		; CLEAR THE UR6
+;-------------------------------------------------------------
+	newromp	#pl.init		; CREATE THE NEW PROCESS FOR PLAY
+	mov	r0, pl.proc
+;-------------------------------- end of init
+loop:
+	cmp	#7,	chflag		;ARE ALL VOICES FINISH CURRENT MELODY?
+	bne	10$			; NO
+	tst	cnt			; YES, IS THERE MELODY IN BUFFER?
+	BNE	1$			;  NO
+	BIS	#40,@#PR.CSR
+	BIS	#40,@PS.COPY
+	BR	10$
+1$: 
+	mov	pr.csr, r0		;  YES, PRCSR -> R0
+	bic	#^C7, r0		;  CLEAR ALL BIT, EXCLUDE 0,1,2
+	cmp	#7, r0			;  ARE ALL THIS BITS = 1?
+	beq	10$			;   YES
+	dec	cnt			;   NO, CNT=CNT-1
+	mov	r0, chflag		;   R0 -> CHFLAG
+
+	TIMEOFF				;   TAKE THE CHANNEL OF TIMER
+
+	mov	pl.proc, r0		;   SET PRIORITET FOR
+	himpri	#47745			;    PLAY PROOCESS
+10$:	
+	tstb	@#pr.csr		; IS THE REGISTER READY?
+	bmi	20$			;  YES
+	cmp	wptr1,	rptr1		; IS THE FIRST BUF EMPTY?
+	beq	20$			;  YES
+	cmp	wptr2,	rptr2		; IS THE SECOND BUF EMPTY?
+	beq	20$			;  YES
+	cmp	wptr3,	rptr3		; IS THE THIRD BUF EMPTY?
+	beq	20$			;  YES
+	bis	#200, @#pr.csr		; SET THE READY BIT IN CSR
+	bis	#200, @ps.copy		;  AND IN IT'S COPY
+20$:
+	mov     #ret,r0			; BRANCHING 
+	mov	r0,	r1		;   TO
+	WAITINT	#0			;     THE
+	.push	<#loop>			;       PROOCESS
+	jsr	r0,	(r1)		;           OF REGISTERS
+;-------------------------------------------------------
+; IF IT IS THE WAITINT FOR PRCSR
+;-------------------------------------------------------
+P.CSR:	
+	mov	pr.csr,	r0		; 
+	aslb	r0			;
+	cmpb	r0,	p.cs1		;
+	beq	ret			;
+	movb	r0,	p.cs1		;
+	movb	r0,	p.cs0		;
+	bne	p.vrq			;
+	resint	#prvec			;
+	return
+;--------------------------------------------------
+; IF IT IS HE WAITINT FOR PRBUF
+;-------------------------------------------------
+P.BUF:  
+	tstb	@#pr.csr		; IS THE CSR READY?
+	bpl	ret			;  NO, RETURN
+	mov	@#pr.buf,	r0	; MOVE THE NEW BYTE TO R0
+	bne	2$			; IS IT END OF MELODY? NO
+	TST	COMFLG
+	BNE	100$
+	INC	COMFLG
+	BR	RET
+100$:	
+	mov	#4,	r1		; YES
+1$:
+	call	put			; PUT THE END OF MELODY TO ALL BUF
+11$:
+	dec	r1			;
+	dec	r1			;
+	bpl	1$			;
+	inc	cnt			; CNT:=CNT+1
+	CLR	COMFLG
+	br	p.vrq			; 
+2$:
+	TST	COMFLG
+	BEQ	10$
+	CLR	COMFLG
+	mov	r0,	r1		; 
+	cmp	#ch3,	r1		; COMPUTE
+	bcs	10$			;   THE NUMBER
+	sub	#ch1,	r1		;      OF VOICE
+	bcs	10$
+	asl	r1
+	mov	r1,	chnum		;
+	RETURN
+10$:
+	mov	chnum,	r1		; MOVE NUMBER OF CHANNEL TO R1
+	call	put			; PUT THE NEW BYTE
+;................................
+p.vrq:	bitb	p.cs0,	@ps.copy	; 
+	beq	ret
+	SETINT	#prvec
+	clrb	p.cs0	
+ret:	return
+;................................
+put:
+	mov	wptr1(r1),r2
+	movb	r0,(r2)+
+	cmp	bufa1+2(r1),r2
+	bne	1$
+	mov	bufa1(r1),r2
+1$:
+	mov	r2,wptr1(r1)
+	cmp	r2,rptr1(r1)
+	bne	2$
+	bic	#200,@#pr.csr
+	bic	#200,@ps.copy
+2$:
+	return
+;--------------------------------------------------
+name:	.asciz	/SOUND Generator/
+
+pl.init::
+	sub	#100,	sp
+	add	#p.name,r0
+	mov	#name,	r1
+	mov	#16.,	r5
+10$:
+	movb	(r1)+,	(r0)+
+	beq	pl.10
+	sob	r5,	10$
+
+pl.10:
+	TIMEON
+	setpri	#100000
+	BIC	#40, @#PR.CSR
+	BIC	#40, @PS.COPY
+;--------------------------------------------------------------------
+; INIT OF THE SOUND VARIABLES
+;--------------------------------------------------------------------
+	MOV	#4,R5
+1$:
+	MOV	VCONST(R5),VOLCSR
+	MOVB	#10,VOLCNR(R5)
+	MOV	PCONST(R5),SNDCSR
+	CLR	TIME(R5)
+	MOV	#3,OCT(R5)
+	CLR	ENCOUNT(R5)
+	CLR	PERIOD(R5)
+	CLR	POINTER(R5)
+	CLR	S(R5)
+	CLR	FL(R5)
+	DEC	R5
+	DEC	R5
+	BPL	1$
+
+pl.loop::
+	mov	t0,r3
+	waitint	#m.tio
+	call	p.tio
+	cmp	#7,chflag
+	bne	pl.loop
+	mov	pr.csr,@#prcsr
+	br	pl.10
+;*************************************************
+P.TIO::
+	MOV	#4,R5			; WE START FROM REG 2
+60$:
+	CLR	N(R5)
+	DEC	TIME(R5)
+	BGT	1$
+50$:
+	CALL	GETRING 		; GET THE NEXT COMMAND
+	BCS	4$			; IS THE RING EMPTY?
+					;  YES - GO AWAY
+        TSTB    R3			; IS THE COMMAND NOTE?
+        BMI     3$			; NO, IT IS THEN COMMAND 
+	BEQ	4$
+;
+;  WE START TO PROCESS THE NOTE
+;
+	MOV	R3, -(SP)
+	CALL	GETRING
+	MOVB	R3, TIME(R5)
+	BIT	#20, (SP)
+	BEQ	40$
+	CALL	GETRING
+	MOVB	R3, TIME+1(R5)
+	BIC	#20,(SP)
+	BR	41$
+40$:
+	CLRB	TIME+1(R5)
+41$:
+	MOV	(SP)+, R3
+        DEC     R3			; COMPUTE THE NOTE IF GAMMA
+	CMP	#12.,R3
+	BEQ	4$
+	TST	PERIOD(R5)
+	BEQ	10$
+	CALL	SETENV
+	MOVB	@POINTER(R5),VOLCNR(R5)
+10$:
+        ASL     R3			;  USEING IT'S NUMBER
+        MOV     GAMMA(R3),R2		;
+	ADD	DELTAB(R5),R2
+	MOV	OCT(R5),R3  		; ADD THE OCTAVA TO THE NOTE
+	BEQ	11$			;
+	NEG	R3			;
+	MOV	#TMP, R1
+	ASH	R3, R1
+	ASH	R3,R2
+	ASL	R1
+	BIC	R1, R2
+	TST	(PC)+
+4$:
+	CLR	R2			;
+11$:
+        MOV     R2,TNOTE(R5)
+	MOV	#1,N(R5)
+	BR	33$
+;
+; WE START PROCESS THE COMMAND
+;
+
+3$:
+	CALL	PROCCOM
+	BR	50$
+1$:
+	DEC	ENCOUNT(R5)
+	BLE	30$
+	TST	DOB1(R5)
+	BEQ	131$
+	ADD	DOB1(R5),POINTER(R5)
+	CLR	FL1(R5)
+	BR	132$
+131$:
+	MOV	#1, FL1(R5)
+132$:
+	ADD	DOB2(R5),DROB(R5)
+	CMP	DROB(R5),PERIOD(R5)
+	BLT	33$
+	INC	POINTER(R5)
+	INC	FL1(R5)
+	SUB	PERIOD(R5),DROB(R5)
+	BR	33$
+30$:
+	TST	S(R5)
+	BEQ	32$
+	CALL	SETENV
+	BR	33$
+32$:
+	CLR	POINTER(R5)
+33$:
+	DEC	R5
+	DEC	R5
+	BPL	60$
+100$:
+	MOV	#4,R5
+102$:
+	TST	N(R5)
+	BEQ	104$
+	MOV	TNOTE(R5),R2
+	BEQ	101$
+	MOV	R2,SNDCNR(R5)
+	SWAB	R2
+	MOV	R2,SNDCNR(R5)
+	CLR	FL(R5)
+	BR	103$
+101$:
+	TST	FL(R5)
+	BNE	103$
+	MOV	PCONST(R5),SNDCSR
+	INC	FL(R5)
+	BR	103$
+104$:
+	TST	POINTER(R5)
+	BEQ	103$
+	TST	TNOTE(R5)
+	BEQ	103$
+	TST	FL1(R5)
+	BEQ	103$
+	MOVB	@POINTER(R5),VOLCNR(R5)
+103$:
+	DEC	R5
+	DEC	R5
+	BPL	102$
+	RETURN
+;*****************************************
+GETRING::
+	tst	r5
+	bne	1$
+	bit	#1,chflag
+	bne	11$
+	br	33$
+1$:
+	bit	r5,chflag
+	bne	11$
+33$:
+	MOVB	@RPTR1(R5),R3
+	INC	RPTR1(R5)
+	CMP	RPTR1(R5),BUFa1+2(R5)
+	BNE	2$
+	MOV	BUFa1(R5),RPTR1(R5)
+2$:
+	tst	r3
+	beq	22$
+	return
+22$:
+	tst	r5
+	bne	10$
+	bis	#1,	chflag
+	BR	11$
+10$:	bis	r5,	chflag
+11$:
+	sec
+	return
+;****************************************
+PROCCOM::
+	MOV	R3,R2			;
+	CALL	GETRING			;
+	BIC	#177600,R2		;
+	ASL	R2			;
+        ADD     R2,PC			; 	    
+	BR	100$			; BRANCH
+	BR	103$			;		COMMAND
+	BR	104$
+;	BR	105$
+;105$:
+	BIC	#177400,R3
+	MOV	R3,PERIOD(R5)
+	CLR	R2
+	MOV	#15.,R3
+	DIV	PERIOD(R5),R2
+	MOV	R2,DOB1(R5)
+	MOV	R3,DOB2(R5)
+	BR	60$
+104$:
+	CMP	R3,#4
+	BLE	107$
+	MOV	#1,S(R5)
+	BR	108$
+107$:
+	CLR	S(R5)
+108$:
+	ASL	R3
+	MOV	ENVELOPE(R3),ENV(R5)
+	BR	60$
+103$:					;
+	MOVB	VOLUME(R3),VOLCNR(R5)	;
+	BR	60$			;
+100$:
+	DEC	R3
+	MOV	R3,OCT(R5)		; SET THE NEW OCTAVA
+60$:
+	RETURN
+;******************************************
+SETENV::
+	CLR	DROB(R5)
+	MOV	PERIOD(R5),ENCOUNT(R5)
+	MOV	ENV(R5),POINTER(R5)
+	RETURN
+;*******************************************
+TNOTE::
+	.BLKW	3
+PCONST::
+	.WORD	66,166,266
+POINTER::
+	.BLKW	3
+DROB::
+	.BLKW	3
+ENV::
+	.BLKW	3
+DOB1::
+	.BLKW	3
+DOB2::
+	.BLKW	3
+PERIOD::
+	.BLKW	3
+ENCOUNT::
+	.BLKW	3
+S::
+	.BLKW	3
+N::
+	.BLKW	3
+ENVELOPE::
+	.WORD	VOLUME,ENV1,ENV2,ENV3,ENV4,ENV5,ENV6,ENV7,ENV8
+VOLUME::
+ENV7::
+ENV4::
+	.BYTE	0,140,130,127,120,110,100,60,40,30,20,14,10,6,4,3
+ENV1::
+ENV6::
+	.BYTE	3,4,6,10,14,20,30,40,60,100,110,120,127,130,140,0
+ENV2::
+	.BYTE	140,130,127,120,110,100,60,40,30,20,14,10,6,4,3,0
+ENV3::
+	.BYTE	3,4,6,10,14,20,30,40,60,100,110,120,127,130,0,3
+ENV5::
+	.BYTE	0,120,100,60,40,20,10,4,3,10,20,40,60,100,120,140
+ENV8::
+	.BYTE	3,10,20,40,60,100,120,140,0,120,100,60,40,20,10,3
+GAMMA::
+;	.WORD	26770,25643,24367,23332,22177,21151,20215,17271
+;	.WORD	16363,15537,14730,14141
+	.WORD	38223., 36077., 34052., 32141., 30337., 28635., 27027.
+	.WORD	25511., 24079., 22727., 21452., 20248.
+$$=.
+.PRINT $$
+DELTAB::
+	.WORD	0, DELTA, 2*DELTA
+VCONST::
+	.WORD	34,134,234
+VOLTMP::
+	.WORD	22,122,222
+OCT::
+	.BLKW	3
+FL::	.BLKW	3
+FL1::	.BLKW	3
+TIME::
+	.BLKW	3
+;--------------------------------------------------
+; D A T A
+.PRINT
+TCSR:	.word	prcsr, ^c107,	240,	2000,	p.csr,	200
+TBUF:	.word   prbuf, ^c377,     0,    2000,   p.buf,   -1
+pr.mask:.word	0
+p.cs0:	.byte	0
+p.cs1:	.byte	0
+ps.copy:.word	0
+t0:	.word	1
+pl.proc:
+	.word	0
+
+cnt:	.word	0
+chflag:	.word	7
+COMFLG:	.WORD	0
+chnum:	.word	0
+wptr1:	.word	buf1
+wptr2:	.word	buf2
+wptr3:	.word	buf3
+rptr1:	.word	buf1
+rptr2:	.word	buf2
+rptr3:	.word	buf3
+bufa1:	.word	buf1,buf2,buf3,buf4
+$$=.
+db	buf1,buflen
+db	buf2,buflen
+db	buf3,buflen
+buf4=$$
+.print $$
+.iif gt <$$-40000> .error
+.print	<40000-$$>/3+buflen
+	.end	start
+
+
