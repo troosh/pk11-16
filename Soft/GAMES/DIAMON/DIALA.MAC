@@ -1,0 +1,201 @@
+.TITLE	LABIRINTS	; †§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§°
+.ENABL	MCL		; •	   ª–—ÿ‡ÿ›‚Î ﬂ‡ﬁ”‡–‹‹Î DIAMODS .	    •
+			; £§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§¢
+;§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§
+;		¡ææ¬≤µ¬¡¬≤∏µ Ωæºµ¿æ≤ ≤ ª∞±∏¿∏Ω¬µ ¡ø¿∞π¬∞º .
+;§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§
+TABSOOT::
+	.WORD	EMPTY
+	.WORD	KVADS+KVADRED
+	.WORD	KVADS+KVADGREEN
+	.WORD	KVADS+KVADYELLOW
+	.WORD	KVADS+KVADBLUE
+	.WORD	KVADS+KVADWAIT
+	.WORD	KVADS+BRUSRED
+	.WORD	KVADS+BRUSGREEN
+	.WORD	KVADS+BRUSYELLOW
+	.WORD	KVADS+BRUSBLUE
+	.WORD	KVADS+BRUSWAIT
+	.WORD	TOOLS+DETH
+	.WORD	TOOLS+KEYROTATE
+	.WORD	TOOLS+SPEEDMINUS
+	.WORD	TOOLS+SPEEDPLUS
+	.WORD	TOOLS+SN
+	.WORD	TOOLS+LIVE
+	.WORD	TOOLS+SUPERBRUSH
+	.WORD	TOOLS+DIAMOND
+	.WORD	TOOLS+KEYSPR
+	.WORD	TOOLS+LOCK
+;§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§
+;				ø√¡¬æµ ºµ¡¬æ .
+;§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§
+EMPTY::	.BLKW	20*20
+;§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§
+;				    #05
+;§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§
+LAB5::
+.WORD	128.		; ∫ﬁﬁ‡‘ÿ›–‚Î .
+.WORD   128.		;
+.WORD	BALLS+BALLWAIT	; ∆“’‚ .
+.WORD	200.		; ±ﬁ›„·Î .
+.BYTE		   ,KEY,DET,   ,DIA,DIA,DIA,DIA,   ,DET,ATT,
+.BYTE		   ,   ,DET,   ,   ,   ,   ,   ,   ,DET,   ,
+.BYTE		   ,   ,DET,SNP,   ,   ,   ,   ,SNP,DET,   ,
+.BYTE		   ,   ,   ,   ,   ,RBL,RBL,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,RGY,DET,DET,RGY,   ,   ,   ,
+.BYTE		   ,DIA,   ,RGY,   ,   ,   ,   ,RGY,   ,DIA,
+.BYTE		   ,   ,DIA,DET,   ,   ,   ,   ,DET,DIA,   ,
+.BYTE		   ,   ,   ,RGY,   ,   ,   ,   ,RGY,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,ARR,BYL,BRE,LOC,BBL,BBL,DIA,BRE,BYL,ARR,
+.BYTE		   ,DIA,   ,   ,   ,   ,   ,   ,   ,   ,DIA,
+.BYTE		   ,DIA,   ,   ,   ,   ,   ,   ,   ,   ,DIA,
+.BYTE		   ,DET,DIA,RRE,RRE,RRE,RRE,RRE,RRE,DIA,DET,
+;§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§
+;				    #06
+;§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§
+LAB6::
+.WORD	192.		; ∫ﬁﬁ‡‘ÿ›–‚Î .
+.WORD	16.		; ¢
+.WORD	BALLS+BALLWAIT	; ∆“’‚ .
+.WORD	200.		; ±ﬁ›„·Î .
+.BYTE		   ,DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA,BGR,RGY
+.BYTE		   ,RRE,RRE,DIA,   ,   ,   ,   ,   ,   ,   ,RGY
+.BYTE		   ,RGR,RGR,DIA,   ,   ,   ,   ,   ,   ,   ,RGY
+.BYTE		   ,RBL,RBL,DIA,   ,   ,   ,   ,   ,   ,   ,RGY
+.BYTE		   ,   ,   ,DIA,   ,   ,DIA,DIA,   ,   ,   ,RGY
+.BYTE		   ,   ,   ,DIA,   ,   ,   ,   ,   ,   ,   ,SMI
+.BYTE		   ,DIA,LOC,DIA,   ,DIA,DET,DET,DIA,   ,   ,KEY
+.BYTE		   ,RGY,RGY,RGY,   ,   ,   ,   ,   ,   ,   ,BBL
+.BYTE		   ,BGR,   ,   ,   ,   ,DIA,DIA,   ,   ,   ,DET
+.BYTE		   ,BBL,   ,ARR,   ,   ,   ,   ,   ,   ,   ,SNP
+.BYTE		   ,DET,   ,   ,   ,   ,   ,   ,   ,   ,   ,ATT
+.BYTE		   ,BRE,   ,   ,   ,   ,   ,   ,   ,   ,   ,RGY
+.BYTE		   ,RGY,RGY,RGY,RBL,RBL,RBL,RGY,RGY,DET,RGY,BYL
+;§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§
+;				    #01
+;§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§
+LAB1::
+.WORD	128.		; ∫ﬁﬁ‡‘ÿ›–‚Î .
+.WORD	192.		; ¢
+.WORD	BALLS+BALLWAIT	; ∆“’‚ .
+.WORD	100.		; ±ﬁ›„·Î .
+.BYTE		DIA,DIA,DIA,DIA,DIA,RRE,RYL,DIA,DIA,DIA,DIA,DIA
+.BYTE		DIA,DIA,DIA,DIA,RBL,RGR,RYL,RRE,DIA,DIA,DIA,DIA
+.BYTE		DIA,DIA,DIA,RBL,   ,   ,   ,   ,RBL,DIA,DIA,DIA
+.BYTE		DIA,DIA,RBL,RRE,   ,   ,   ,   ,RRE,RBL,DIA,DIA
+.BYTE		DIA,RBL,RRE,RGR,   ,   ,   ,   ,RGR,RRE,RBL,DIA
+.BYTE		RBL,RRE,RGR,RYL,   ,   ,   ,   ,RYL,RGR,RRE,RBL
+.BYTE		RRE,RGR,RYL,   ,   ,   ,   ,   ,   ,RYL,RGR,RRE
+.BYTE		RGR,RYL,   ,   ,   ,   ,   ,   ,   ,   ,RYL,RGR
+.BYTE		RYL,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,RYL
+.BYTE		DIA,DIA,DIA,DIA,DIA,DIA,LOC,DIA,DIA,DIA,DIA,DIA
+.BYTE		BGR,RGY,   ,   ,   ,   ,   ,   ,   ,   ,RGY,BRE
+.BYTE		BYL,RGY,   ,   ,   ,   ,   ,   ,   ,   ,RGY,BBL
+.BYTE		DET,RGY,   ,   ,   ,KEY,   ,   ,   ,   ,RGY,DET
+;§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§
+;				    #02
+;§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§
+LAB2::
+.WORD	0		; ∫ﬁﬁ‡‘ÿ›–‚Î .
+.WORD	0		; ¢
+.WORD	BALLS+BALLWAIT	; ∆“’‚ .
+.WORD	100.		; ±ﬁ›„·Î .
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,RGY,RGY,RGY,RGY,   ,   ,   ,
+.BYTE		   ,   ,   ,BRE,RRE,RRE,RRE,RRE,BBL,   ,   ,
+.BYTE		   ,DET,RGY,RBL,DIA,DIA,DIA,DIA,RBL,RGY,DET,
+.BYTE		   ,   ,RGY,RBL,DIA,DIA,DIA,DIA,RBL,RGY,   ,
+.BYTE		   ,   ,RGY,RBL,DIA,DIA,DIA,DIA,RBL,RGY,   ,
+.BYTE		   ,   ,RGY,RBL,DIA,DIA,DIA,DIA,RBL,RGY,   ,
+.BYTE		   ,DET,RGY,RBL,DIA,DIA,DIA,DIA,RBL,RGY,DET,
+.BYTE		   ,   ,   ,BBL,RRE,RRE,RRE,RRE,BRE,   ,   ,
+.BYTE		   ,   ,   ,   ,RGY,RGY,RGY,RGY,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+;§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§
+;				    #03
+;§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§
+LAB3::
+.WORD	336.		; ∫ﬁﬁ‡‘ÿ›–‚Î .
+.WORD	192.		; ¢
+.WORD	BALLS+BALLWAIT	; ∆“’‚ .
+.WORD	200.		; ±ﬁ›„·Î .
+.BYTE		   ,   ,   ,   ,   ,DIA,RGY,BGR,RGY,RRE,RGR,KEY
+.BYTE		   ,   ,   ,   ,   ,DIA,RGY,   ,RGY,RRE,RGR,RGR
+.BYTE		   ,RRE,RRE,RRE,   ,DIA,RGY,   ,RGY,RRE,RRE,RRE
+.BYTE		   ,DET,DIA,DET,   ,DIA,RGY,   ,RGY,RGY,RGY,RGY
+.BYTE		   ,RYL,DET,RYL,   ,DIA,RGY,BRE,   ,   ,   ,BYL
+.BYTE		   ,RYL,DET,RYL,   ,DIA,RGY,   ,   ,   ,   ,
+.BYTE		   ,RYL,DET,RYL,   ,DIA,RGY,   ,   ,   ,   ,
+.BYTE		   ,RYL,DET,RYL,   ,DIA,RGY,   ,   ,   ,   ,
+.BYTE		   ,RYL,DET,RYL,   ,DIA,RGY,   ,   ,   ,   ,
+.BYTE		   ,DET,DIA,DET,   ,DIA,RGY,RGY,RGY,   ,   ,
+.BYTE		   ,RRE,RRE,RRE,   ,DIA,LOC,DIA,RGY,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,DIA,RGY,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,DIA,RGY,DET,   ,
+;§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§
+;				    #04
+;§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§
+LAB4::
+.WORD	128.		; ∫ﬁﬁ‡‘ÿ›–‚Î .
+.WORD	64.		; ¢
+.WORD	BALLS+BALLWAIT	; ∆“’‚ .
+.WORD	300.		; ±ﬁ›„·Î .
+.BYTE		RRE,RBL,RRE,RBL,RRE,RBL,RRE,RBL,RRE,RBL,RRE,RBL
+.BYTE		RBL,   ,   ,   ,   ,DIA,DIA,   ,   ,   ,   ,RRE
+.BYTE		RRE,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,RBL
+.BYTE		RBL,   ,ARR,SMI,   ,   ,   ,   ,SPU,ARR,   ,RRE
+.BYTE		RRE,   ,   ,   ,   ,BRE,BBL,   ,   ,   ,   ,RBL
+.BYTE		RBL,RGB,   ,   ,   ,RGY,RGY,   ,   ,   ,RGB,RRE
+.BYTE		DET,SNP,SNP,DIA,KEY,ATT,ATT,LOC,DIA,SNP,SNP,DET
+.BYTE		RBL,RGB,   ,   ,   ,RGY,RGY,   ,   ,   ,RGB,RRE
+.BYTE		RRE,   ,   ,   ,   ,BGR,BYL,   ,   ,   ,   ,RBL
+.BYTE		RBL,   ,ARR,SPU,   ,   ,   ,   ,SMI,ARR,   ,RRE
+.BYTE		RRE,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,RBL
+.BYTE		RBL,   ,   ,   ,   ,DIA,DIA,   ,   ,   ,   ,RRE
+.BYTE		RRE,RBL,RRE,RBL,RRE,RBL,RRE,RBL,RRE,RBL,RRE,RBL
+;§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§
+;				    #08
+;§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§
+LAB7::
+.WORD	0		; ∫ﬁﬁ‡‘ÿ›–‚Î .
+.WORD	32.		; ¢
+.WORD	BALLS+BALLWAIT	; ∆“’‚ .
+.WORD	200.		; ±ﬁ›„·Î .
+.BYTE		RGY,DIA,DET,DIA,KEY,DIA,DET,DIA,ATT,RGR,DIA,DET
+.BYTE		   ,   ,   ,   ,   ,   ,   ,DIA,SNP,RGR,DIA,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,DIA,RGR,RGR,DIA,
+.BYTE		RGY,   ,   ,   ,   ,   ,LOC,DIA,DIA,   ,DIA,
+.BYTE		DIA,DET,DIA,DET,BYL,DET,   ,DET,DIA,   ,DIA,
+.BYTE		DIA,DIA,   ,   ,   ,   ,   ,   ,DIA,   ,DIA,
+.BYTE		DIA,   ,   ,   ,   ,   ,   ,   ,DIA,   ,DIA,
+.BYTE		DET,   ,   ,   ,   ,   ,   ,   ,DIA,   ,   ,
+.BYTE		DIA,   ,DET,   ,SMI,DET,DET,ARR,DIA,   ,   ,
+.BYTE		RBL,   ,   ,   ,   ,   ,   ,   ,   ,DET,   ,
+.BYTE		RBL,   ,   ,   ,   ,   ,   ,   ,   ,BGR,   ,
+.BYTE		RRE,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		ATT,RBL,RRE,RRE,   ,SPU,RYL,RBL,   ,   ,   ,RBL
+;§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§
+;				    #07
+;§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§
+LAB8::
+.WORD	0		; ∫ﬁﬁ‡‘ÿ›–‚Î .
+.WORD	0		; ¢
+.WORD	BALLS+BALLWAIT	; ∆“’‚ .
+.WORD	200		; ±ﬁ›„·Î .
+.BYTE		   ,DIA,DIA,ATT,DIA,KEY,DIA,   ,ARR,   ,SNP,DET
+.BYTE		   ,   ,DIA,   ,   ,   ,   ,   ,   ,   ,   ,BBL
+.BYTE		   ,   ,   ,DIA,   ,   ,   ,   ,   ,   ,   ,DET
+.BYTE		DIA,   ,   ,   ,DIA,   ,   ,   ,   ,   ,   ,BYL
+.BYTE		RRE,DIA,   ,   ,   ,DIA,   ,   ,   ,   ,   ,DET
+.BYTE		RGR,   ,DIA,   ,   ,   ,DIA,   ,DET,   ,   ,BGR
+.BYTE		RYL,   ,   ,DIA,   ,   ,   ,DIA,   ,   ,   ,DET
+.BYTE		RBL,   ,   ,   ,DIA,   ,   ,DET,   ,   ,   ,BRE
+.BYTE		DET,   ,   ,   ,   ,DIA,   ,DIA,   ,   ,   ,RBL
+.BYTE		SNP,   ,DIA,   ,   ,DIA,   ,   ,   ,   ,   ,RYL
+.BYTE		DIA,   ,   ,   ,   ,RGY,   ,   ,   ,   ,   ,RGR
+.BYTE		DIA,   ,   ,   ,   ,LOC,   ,   ,   ,   ,   ,RRE
+.BYTE		DIA,DIA,DIA,DIA,DIA,DIA,   ,DET,RBL,RBL,RBL,DET
+.END

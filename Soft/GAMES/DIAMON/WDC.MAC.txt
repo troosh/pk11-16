@@ -1,0 +1,394 @@
+﻿	.sbttl	common definitions for WINDOW-monitor
+
+wcsr	= 177530	;reg for WINDOW control
+xwcsr	= <wcsr & 7777> + l.reg
+wmaph	= wcsr+2	;reg for WINDOW mapping info (static+dynamic)
+xwmaph	= <wmaph & 7777> + l.reg
+wmapl	= wcsr+4	;reg for WINDOW mapping info (TAS+PAL+ELINE+TAO)
+xwmapl	= <wmapl & 7777> + l.reg
+palreg	= 140004	;PAL-reg
+tasreg	= 140010	;TAS-reg
+wpri	= 40000		;normal priority of this process
+scrlins	= 300.		;num of scr lines
+scrdots	= elen*8.	;num of scr dots (for cursor)
+nvll	= 4		;num of v-lines in one log-line
+loglins	= scrlins/nvll	;num of log-lines
+elen	= 52.		;len of empty (eline0+eline1) in words
+ptlen	= 8.+8.+8.+4+2	;tot num of pals
+bmax	= 26.		;tot num of bands on screen
+wtl	= 64.		;max num of known windows !!!!!!!!!!!!!!!
+			;window nums = 0, 2, 4, ... 176
+atl	= 64.		;max num of known areas !!!!!!!!!!!!!!!!!
+			;area nums = 0, 2, 4, ... 176
+lspat	= loglins*bmax/2;length of screen-pattern in words
+
+; VDP defs
+
+nb	= 2000		;mul-const for length of "otrezka"
+vd208	= 1400		;video-density
+vd104	= 1000		;
+vd52	= 0400		;
+vd52s	= 0000		;
+;------------------------------------------------------------------------
+;log TAS defs
+vm1	= 0		;video-mode (bits per point)
+vm2	= 1		;
+vm40	= 2		;
+vm41	= 3		;
+vm8	= 7		;
+pl0	=      0	;pal number
+pl1	=  40000	;
+pl2	= 100000	;
+pl3	= 140000	;
+plb	= 4		; pal bank#
+
+..addr	= 7774		;ADDR bits in first TAS-word
+..par	= 37760		;PAR bits in second TAS-word
+;----------------------------------------------------------------------
+; window	#0	- program
+;		#1	- data
+;		#2	- ....
+hinum	= 2	;num of 8K-blocks for data
+;		#3	- TAS
+;		#4	-	+ PAL
+;		#5	-		+ TAO
+;		#6	-
+lonum	= 8.	;num of 4K-blocks for ^
+
+	win1	= 20000		;start of data
+	win3	= 60000		;start of TAS...
+
+;==================================================
+dsect		;VIEW descriptor
+
+dw	VW.SUCC		;
+dw	VW.PRED		;
+;--------------------------------------------------
+dw	VW.AREA		;addr of area-descriptor
+dw	VW.ARY		;# of 1st line on area
+dw	VW.ARX		;offset from start of line on area in bytes
+dw	VW.SY1		;# of 1st line on scr
+dw	VW.SY2		;# of last line on scr
+dw	VW.SX1		;# of first band on line for USER
+dw	VW.SX2		;# of last band
+dw	VW.DEN		;.BYTE HD,VD [0,1,2]
+;--------------------------------------------------
+dw	VW.TAR		;pointer to real start of TAS
+dw	VW.HD		;.byte [0,1,2], .byte[vd52,vd104,vd108]
+dw	VW.XOF		; ( SX1 shl HD ) - ( ARX / 2 )
+db	VW.VD		;.byte [0,1,2]
+db	VW.NUM		;.byte [2,4,...126.]
+dw	VW.YOF		; ( SY1 shl VD ) - ARY
+dw	VW.DY1		;off to line 1
+dw	VW.DY2		;off to line 2
+dw	VW.DY3		;off to line 3
+VWLEN	= $$		;len of descriptor
+
+;===================================================
+dsect		;AREA descriptor
+
+dw	AR.SUCC		;
+dw	AR.LEN		;
+dw	AR.LINS		;# of lines
+dw	AR.SLEN		;len of line in bytes
+dw	AR.TAS		;start of TAS
+
+;===================================================
+dsect		;FONT descriptor
+
+dw	FN.SUCC		;-pointer to next FONT
+			;-pointer to next FONT descr in list of FNFREE
+dw	FN.PAR		;PAR to map FONT
+FNLEN	= $$		;len of descriptor
+
+;---------------------------------------------------
+dsect		;FONT's file format
+dw	fn.tb, 256.	;addr's of shapes for [0..255] char codes
+dw	fn.hi		;hight of shape in v-lines {10.}
+dw	fn.wi		;width of shape in bits {8.}
+dw	fn.id		;.ascii "PC"	;identifier for checks
+dw	fn.nam, 7	;name of font:	.asciz	"string"
+dw	fn.beg, 0	;start of shape's zone
+
+;================================================================
+dsect	win1		; WINDOW static table
+dw	WHEAP     ;heap pointer
+
+dw	SCREEN    ;v-adr to head of view-list (-> VWSUCC)
+dw	VWSUCC,0  ;pointer to first view
+dw	BVIEW,vwlen/2 ;descriptor of BACK view
+dw	VWFREE    ;pointer to list of free views
+dw	ARFREE    ;pointer to list of free areas
+dw	FNSUCC	  ;pointer to list of FONTs
+dw	FNFREE	  ;pointer to list of free font descrs
+dw	PALTBL,ptlen ;tbl of PAL's usage
+dw	WDTBL,wtl ;window table of descr's addrs + VW.TAR
+dw	ARTBL,atl ;area table of descr's addrs
+dw	proadr    ;pointer to addr of descr of our CALLER
+dw	SPAT,lspat;screen pattern table
+dw	spatzz	  ;the last word (always = 177777)
+dw	TAS0D,4	  ;start of W0 area-descr
+dw	TAS0, 2   ;tas for area0				;*******
+dw	CTAS,     ;tas for cursor (1 line)
+dw	SXCUR	  ;save  pointer for cursor (=0 - no cursor)
+dw	STAS, 2	  ;save area for curs-tas (addr,tas)
+dw	XCUR	  ;
+dw	YCUR	  ;
+dw	PLPAR	  ;par for PAL
+
+ WTOP	= $$	; end of WINDOW static table
+
+dsect	win3
+dw	wstack	  ; bottom of INIT-stack
+
+dsect	win3
+dw 	TAS,0		;tas area
+dsect	$$+<scrlins*2*2>
+dw	tas312,<13.*2>
+;----------------------------------------
+db	xxxxxx,56.
+;----------------------------------------
+
+	PAL	= 60000	;
+;dw	PAL,0		;pal area
+dsect	$$+<16.*8.*2>
+
+dw	CTAO,2		;tao for cursor
+
+dw	TAO,0		;tao area
+dsect	$$+<scrlins*bmax*4>
+.iif ne $$-160000	.error	$$	;illegal LO-mem area
+
+;------------------------
+.MACRO CM5...	SRC,cod
+.if nb <src>
+.if dif <src>, r0
+	mov	src, %0
+.endc
+.endc
+.if nb <src>
+.if nb <cod>
+	mov	#cod, (0)
+.endc
+.endc
+.ENDM
+
+.MACRO CM2...	ARG,OFFSE,INS,BB
+.IF NB <ARG>
+  .IF IDN <ARG>,#0
+	CLR'BB	OFFSE(0)
+  .IFF
+	MOV'BB	ARG,OFFSE(0)
+  .ENDC
+.ENDC
+.IF NB <INS>
+	mov	r0, @#wcsr
+	NOP	;!!!
+.ENDC
+.ENDM
+;------------------------
+ARINST	= 0	;inform W-monitor to registrate area (install area) if anum = #0
+		;modify TAS of area	if anum<> #0
+.macro	ARINST	area,anum,lins,slen
+	cm5...	area,arinst
+	cm2...	anum, ar.len
+	cm2...	lins,ar.lins
+	cm2...	slen,ar.slen,x
+.endm
+;------------------------
+ARKILL	= 2	;kill area and associated views
+.macro	ARKILL	area,anum
+	cm5...	area,arkill
+	cm2...	anum,ar.len,x
+.endm
+;------------------------
+VWCRE	= 4	;create view if desc =  #0 or
+		;modify view if desc <> #0
+.macro	VWCRE	area,wnum,anum,ary,arx,sy1,sy2,sx1,sx2,den
+	cm5...	area,vwcre
+	cm2...	wnum,2.
+	cm2...	anum,vw.area
+	cm2...	ary,vw.ary
+	cm2...	arx,vw.arx
+	cm2...	sy1,vw.sy1
+	cm2...	sy2,vw.sy2
+	cm2...	sx1,vw.sx1
+	cm2...	sx2,vw.sx2
+	cm2...	den,vw.den,x
+.endm
+;------------------------
+VWKILL	= 6	;kill view
+.macro	VWKILL	area,wnum
+	cm5...	area,vwkill
+	cm2...	wnum,2.,x
+.endm
+;-------------------------
+VWTAKE	= ^O10	;take window's descr from system
+.macro	VWTAKE	area,wnum
+	cm5...	area,vwtake
+	cm2...	wnum,2.,x
+.endm
+;-------------------------
+VWFORE	= ^O12	;make view foreground
+.macro	VWFORE	area,wnum
+	cm5...	area,vwfore
+	cm2...	wnum,2.,x
+.endm
+;-------------------------
+VWBACK	= ^O14	;make view background
+.macro	VWBACK	area,wnum
+	cm5...	area,vwback
+	cm2...	wnum,2.,x
+.endm
+;-------------------------
+PLCRE	= ^O16	;allocate pal
+.macro	PLCRE	area,mod
+	cm5...	area,plcre
+	cm2...  mod,2.,x
+.endm
+;-------------------------
+PLFRE	= ^O20	;make pal free
+.macro	PLFRE	area,modnum
+	cm5...	area,plfre
+	cm2...	modnum,2.,x
+.endm
+;-------------------------
+PLMOD	= ^O22	;modify pal
+.macro	PLMOD	area,modnum
+	cm5...	area,plmod
+	cm2...	modnum,2.,x
+.endm
+;-------------------------
+PLSAV	= ^O24	;save pal
+.macro	PLSAV	area,modnum
+	cm5...	area,plsav
+	cm2...	modnum,2.,x
+.endm
+;-------------------------
+PLCREx	= ^O17	;allocate pal
+.macro	PLCREx	area,mod
+	cm5...	area,plcrex
+	cm2...  mod,2.,x
+.endm
+;-------------------------
+PLFREx	= ^O21	;make pal free
+.macro	PLFREx	area,modnum
+	cm5...	area,plfrex
+	cm2...	modnum,2.,x
+.endm
+;-------------------------
+PLMODx	= ^O23	;modify pal
+.macro	PLMODx	area,modnum
+	cm5...	area,plmodx
+	cm2...	modnum,2.,x
+.endm
+;-------------------------
+PLSAVx	= ^O25	;save pal
+.macro	PLSAVx	area,modnum
+	cm5...	area,plsavx
+	cm2...	modnum,2.,x
+.endm
+;-------------------------
+CRSET	= ^O26	;set cursor (or move cursor previously set)
+.macro	CRSET	area,xcur,ycur
+	cm5...	area,crset
+	cm2...	xcur,2.
+	cm2...	ycur,4.,x
+.endm
+;-------------------------
+CRERA	= ^O30	;erase cursor
+.macro	CRERA	area
+	cm5...	area,crera
+	cm2...	,,x
+.endm
+;-------------------------
+FNINST	= ^O32	;install font
+.macro	FNINST	area,par
+	cm5...	area,fninst
+	cm2...	par,fn.par,x
+.endm
+;-------------------------
+FNKILL	= ^O34	;kill font
+.macro	FNKILL	area,par
+	cm5...	area,fnkill
+	cm2...	par,fn.par,x
+.endm
+;-------------------------
+FNFIND	= ^O36	;find font due to it's name
+.macro	FNFIND	area
+	cm5...	area,fnfind
+	cm2...	,,x
+.endm
+;-------------------------
+FNLOOK	= ^O40	;looks for the 1st (xpar = #0) or next to xpar<>#0 font's name
+.macro	FNLOOK	area,xpar
+	cm5...	area,fnlook
+	cm2...	xpar,fn.par,x
+.endm
+;-------------------------
+VWLOOK	= ^O42	;looks for the 1st (wnum = #0)
+		; or next to wnum<>#0 view's descriptor
+.macro	VWLOOK	area,wnum
+	cm5...	area,vwlook
+	cm2...	wnum,2.,x
+.endm
+;-------------------------
+WPRINT	= ^O44	;prints text on area.num
+.macro	WPRINT	area,anum,y0,x0,sadr
+	cm5...	area,wprint
+	cm2...	anum,2.
+	cm2...	y0,4.
+	cm2...	x0,6.
+	cm2...	sadr,8.,x
+.endm
+;------------------------
+ARCRE	= ^o46	;creates and registrates area (install area)
+		;adr - start of area
+.macro	ARCRE	area,adr,lins,slen,mdpl
+	cm5...	area,arcre
+	cm2...	adr, ar.len
+	cm2...	lins,ar.lins
+	cm2...	slen,ar.slen
+	cm2...	mdpl,ar.slen+2,x
+.endm
+;============================================================
+;
+;	cmd format
+;------------------------------------------
+v.mask	=^o200	; mask 
+v.dx	=^O100	; dir. x = back
+v.dy	=^O040	; dir. y = up
+v.vp	=^O030	; vram to process ram
+v.vv	=^O020	; vram to vram
+v.pv	=^O010	; process ram to vram
+v.cv	=^O000	; const to vram
+v.bic	=^O006	; dst:=dst and not src
+v.bis	=^O004	; dst:=dst or src
+v.xor	=^O002	; dst:=dst xor src
+v.mov	=^O000	; dst:=src
+v.byte	=^O001	; move byte
+;----------------------------------------
+;	request format
+;----------------------------------------
+;	.byte	ar1num,	cmd	;
+;	.word	ar1y		; dst
+;	.word	ny		;
+;	.word	ar1x		;
+;	.word	nx		;	
+;	.word	ar2num	/ buf addr / const	; src
+;	.word	ar2y	/ buf len		;
+;	.word	ar2x	/ buf wid		;
+
+HBMOVE	= ^O50	;high-speed video-block move
+.macro	HBMOVE	area,ar1num,cmd,ar1y,ny,ar1x,nx,ar2num,ar2y,ar2x
+	cm5...	area,hbmove
+	cm2...	ar1num,2.
+	cm2...	cmd,3.,,b
+	cm2...	ar1y,4.
+	cm2...	ny,6.
+	cm2...	ar1x,8.
+	cm2...	nx,10.
+	cm2...	ar2num,12.
+	cm2...	ar2y,14.
+	cm2...	ar2x,16.,x
+.endm

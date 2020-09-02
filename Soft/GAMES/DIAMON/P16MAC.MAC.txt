@@ -1,0 +1,665 @@
+﻿.macro	.push	args
+.irp	x,<args>
+.if b <x>
+	clr	-(6.)
+.iff
+.if	idn	<x>,#0
+	clr	-(6.)
+.iff
+	mov	x,-(6.)
+.endc
+.endc
+.endr
+.endm	.push
+
+.macro	.pop	args
+.irp	x,<args>
+	mov	(6.)+,x
+.endr
+.endm	.pop
+;---------------------------------------------------------
+; dchar (word)	- put a code to the pos of indicator
+; cod	- control code for lighting the mask
+; pos	- position of indicator (0..8)
+
+.macro  dchar   n
+	mov     n,	@#^o174100
+	nop
+.endm
+;---------------------------------------------------------
+; dstring (adr)	- put a string to indicator, starting at pos
+; adr	- address of table (.even) :
+;	.byte	n*16.+pos	; n - length of string; pos - 0..8
+;	.blkb	n		; the string of codes
+
+.macro	dstring adr
+	mov	adr,	@#^o174102
+	nop
+.endm
+;---------------------------------------------------------
+; dval (adr)	- puts a number to indicator, starting at pos
+; adr	- address of table (.even) :
+;	.word	val		; a number's value
+;	.byte	n*16.+pos	; n - number of chars
+;	.byte	rad		; radix (1..16) of the number
+
+.macro	dval	adr
+	mov	adr,	@#^o174104
+	nop
+.endm
+;---------------------------------------------------------
+; kstring (adr)	- 1. assign string to key (or combination) or
+;		  2. connects it to emulating reg
+; adr	- address of table (.even):
+;		(1)	.byte	cod	; programming key(combination)
+;			.byte	a,b,c,...,0 ;string of codes (0=end)
+;		(2)	.byte	cod	;
+;			.byte	0	;
+;			.word	reg	; reg's address
+; c-set	- no memory to store the string
+
+.macro	kstring adr
+	mov	adr,	@#^o174106
+	nop
+.endm
+;---------------------------------------------------------
+; respon (adr)	- simulates input of string from keyboard
+; adr	- address of asciz-string (ended with 0-byte)
+
+.macro	respon	adr
+	mov	adr, @#^o174110
+	nop
+.endm
+;---------------------------------------------------------
+; initsem (var sem : semaphore; ival)
+; ival  - r5    - initial value of sem counter
+; sem   - p.r0  - pointer to semaphore (returned)
+; c-set         - no memory
+
+ .macro initsem n
+        mov     n,@#^o174142
+        nop
+ .endm
+
+;---------------------------------------------------------
+; relsem (sem : semaphore)
+; sem   - r5    - pointer to semaphore
+
+ .macro relsem  n
+        mov     n,@#^o174144
+        nop
+ .endm
+
+;---------------------------------------------------------
+; waitsem (sem : semaphore);
+; sem   - r5    - pointer to semaphore
+
+ .macro waitsem n
+        mov     n,@#^o174146
+        nop
+ .endm
+
+;---------------------------------------------------------
+; sigsem (sem : semaphore)
+; sem   - r5    - pointer to semaphore
+
+ .macro sigsem  n
+        mov     n,@#^o174150
+        nop
+ .endm
+
+;---------------------------------------------------------
+; setpriority to current process
+; setpriority (pri)
+; pri   - r5    -  new priority
+
+ .macro setpri  n
+        mov     n,@#^o174152
+        nop
+ .endm
+
+;---------------------------------------------------------
+; provec(vecadr,par)- protect vec for exclussive use
+; vecadr- r5    - vector addr
+; par	- p.r0	- a parameter word (stored in the 2nd word of vector)
+; returned:
+;       c=0     - normar return (r0=0)
+;       c=1 ::
+;        r0 =0  - invalid vector
+;        r0<>0  - vector already protected ,
+;                 r0 = descriptor addr of owner process
+
+ .macro provec  n
+        mov     n,@#^o174154
+        nop
+ .endm
+
+;---------------------------------------------------------
+; unpvec(vecadr)- unprotect vector
+; vecadr- r5    - vector addr
+; returned:
+;       c=0     - ok (even we are not owner !!!)
+;       c=1     - invalid vector
+
+ .macro unpvec  n
+        mov     n,@#^o174156
+        nop
+ .endm
+
+;---------------------------------------------------------
+; proreg(dreg)   - protect reg for emulation
+; dreg   - r5    - addr of register's table
+;	.word	reg	; reg's address
+;	.word	r.mask, r.copy
+;	.byte	r.rqst, r.stat
+;	.word	r.strt, r.reset
+; returned:
+;       c=0     - ok
+;        r0 - addr r.copy of reg-descriptor
+;       c=1     - no memory or busy reg
+;        r0=0  - no memory
+;        r0<>0 - addr of process-owner of register
+
+ .macro proreg  n
+        mov     n,@#^o174160
+        nop
+ .endm
+
+;---------------------------------------------------------
+; unpreg(reg)   - unprotect reg and free it's descriptor
+; reg   - r5    - addr of reg
+
+ .macro unpreg  n
+        mov     n,@#^o174162
+        nop
+ .endm
+
+;---------------------------------------------------------
+; waitint(mask) - makes process wait any interrupt
+; mask  - r5    - a mask to enable/disable external ints
+;		low byte - mask;
+;		m.tio  = 1 => need time-out:
+;				p.r3 - timer interval in ticks
+;				p.r4 - user defined parameter (will be
+;					copied to r2, if time-out occur)
+;		m.vrq  = 1 => enabled vectored ints
+; p.r0, p.r1, p.r2	- user defined and would be changed in
+;			situations mentioned below
+; returned:
+;       c=0     - reg's emulation int
+;        r0 / r1 <>0 - one or two r.strt-words from reg-descriptors
+;       c=1     - interrupt occur flag !!!
+;        r2 - 2nd word from vector - the interruptera, or
+;	    - a copy of r4 in case of time-out
+;  common:	contents of r0,r1,r2 changed only if reg's emulation needed
+;		and/or interrupt occur or time-out !!!
+;		in case of interrupt or time-out only r2 changed !!!
+
+ .macro waitint n
+        mov     n,@#^o174164
+        nop
+ .endm
+
+;---------------------------------------------------------
+; newromprocess (startaddr)
+; startaddr     - r5    - pc of creating process
+; returned:
+;       c=0     - process is created and r0 points to its descriptor
+;                 (r1-r6, ur0-ur7 - copy of parent's)
+;		- priority = max (077777)
+;       c=1     - no memory
+
+ .macro newromp n
+        mov     n,@#^o174166
+        nop
+ .endm
+
+;---------------------------------------------------------
+; setint (vec)          - set request for int on vector vec
+; vec   - r5    - vector (from v.low up to v.high)
+
+.macro  setint  n
+        mov     n+vrqtbl-v.low+4, @#^o174170
+        nop
+.endm
+
+;---------------------------------------------------------
+; resint (vec)          - reset int request for vector vec
+; vec   - r5    - vector
+
+.macro  resint  n
+        mov     n+vrqtbl-v.low+4, @#^o174172
+        nop
+.endm
+
+;---------------------------------------------------------
+; get4k(n4k)	- take contin. area of mem (n4k blocks in length)
+; 		from the lower memory
+; n4k	- r5	- length of area in 4k blocks.    1 <= n <= 16.
+;		max = 64k bytes
+; returned:
+;       c=0, r0 - contents of mmu reg to map the block
+;       c=1     - no memory for creation map or no free blocks
+
+.macro  get4k	n
+        mov	n, @#^o174176
+        nop
+.endm
+
+;---------------------------------------------------------
+; get8k(n8k)	- take contin. area of mem (n8k blocks in length)
+;		from the higher memory
+; n8k	- r5	- length of area in 8k blocks
+; returned:
+;	c=0, r0	= contents of mmu reg to map first block of all
+;	c=1, r0,- no free mem; r0 - length of max free area in 8k blocks;
+;		r0=0, if cannot allocate process's map
+
+.macro	get8k	n
+	mov	n, @#^o174200
+	nop
+.endm
+
+;---------------------------------------------------------
+; fremem(n8k,bln) - release n8k blocks of mem, starting from bln (reg mmu)
+; n8k	- r5	- num of 8k blocks to make free
+; bln	p.r0(r3)- starting mmu reg contents
+; returned:
+;		none
+
+.macro	fremem	n
+	mov	n, @#^o174202
+	nop
+.endm
+.macro	fre4k	n
+	mov	n, @#^o174174
+	nop
+.endm
+
+;---------------------------------------------------------
+; putbmap	- write process's mem-map (create if needed)
+; returned:
+;	c=0	- ok
+;	c=1	- cannot allocate mem-map table
+
+.macro	putbmap	map
+	mov	map, @#^o174204
+	nop
+.endm
+
+;---------------------------------------------------------
+; getbmap	- read process's mem-map
+; returned:
+;	c=0,r0	- ok, r0= length of mem-map in words
+;	c=1	- no mem-map for this process
+
+.macro	getbmap	map
+	mov	map, @#^o174206
+	nop
+.endm
+
+;---------------------------------------------------------
+; getsmap	- reads system's mem-map
+; returned:
+;	r0	- length of mem-map in bytes
+
+.macro	getsmap	map
+	mov	map, @#^o174210
+	nop
+.endm
+
+;---------------------------------------------------------
+; himpri(pri,proc)	- sets new priority pri to process proc
+; returned:	- none
+
+.macro	himpri	pri
+	mov	pri, @#^o174212
+	nop
+.endm
+
+;---------------------------------------------------------
+; newproc(desc,umap)	- creates new process
+; desc	- r5	- addr of descr.table in user mapping
+; umap	- p.r0	- addr of map for the proc in user mapping
+; returned:
+;	c=1	- no mem to create map or descriptor
+
+.macro	newproc	desc
+	mov	desc, @#^o174214
+	nop
+.endm
+;--------------------------------------------------
+; mthlt(addr)	- mov  r0, addr/hlt
+.macro	mthlt addr
+	mov	addr,	@#^o174216
+	nop
+.endm
+;--------------------------------------------------
+; mfhlt(addr)	- mov addr/hlt, r0
+.macro	mfhlt addr
+	mov	addr,	@#^o174220
+	nop
+.endm
+;--------------------------------------------------
+;kilproc num_proc
+.macro	kilproc num
+	mov	num,	@#^o174222
+	nop
+.endm
+;--------------------------------------------------
+.macro	timeon
+	clr	r0
+	mthlt	#tcflg
+.endm
+;--------------------------------------------------
+.macro	timeoff
+	mov	#1,	r0
+	mthlt	#tcflg
+.endm
+;--------------------------------------------------
+; getpds(pds,area) - get process descriptor
+;	pds	- p.r0:	process descr or 0 - caller descr
+;	area:		area for descr, prolen bytes
+; return:	c=0	ok
+;		c=1	invalid descr
+.macro	getpds	area
+	mov	area,	@#^o174224
+	nop
+.endm
+;--------------------------------------------------
+; putpds(pds,area) - put process descriptor
+;	pds	- p.r0:	process descr or 0 - caller descr
+;	area:		area for descr, prolen bytes
+; return:	c=0	ok
+;		c=1	invalid descr
+.macro	putpds	area
+	mov	area,	@#^o174226
+	nop
+.endm
+;--------------------------------------------------
+; getrds(radr,area) - get register descriptor
+;	radr	- p.r0:	register adr
+;	area:		area for descr, reglen bytes
+; return:	c=0	ok
+;		c=1	invalid register
+.macro	getrds	area
+	mov	area,	@#^o174230
+	nop
+.endm
+;--------------------------------------------------
+; putrds(radr,area) - put register descriptor
+;	radr	- p.r0:	register adr
+;	area:		area for descr, reglen bytes
+; return:	c=0	ok
+;		c=1	invalid register
+.macro	putrds	area
+	mov	area,	@#^o174232
+	nop
+.endm
+;--------------------------------------------------
+; getpar(pds,area) - get process par contents
+;	pds	- p.r0:	process descr or 0 - caller descr
+;	area:		area for par contents, 20 bytes
+; return:	c=0	ok
+;		c=1	invalid descr
+.macro	getpar	area
+	mov	area,	@#^o174234
+	nop
+.endm
+;--------------------------------------------------
+; putpar(pds,area) - put process par contents
+;	pds	- p.r0:	process descr or 0 - caller descr
+;	area:		area for par contents, 20 bytes
+; return:	c=0	ok
+;		c=1	invalid descr
+.macro	putpar	area
+	mov	area,	@#^o174236
+	nop
+.endm
+	
+;************************************************************
+; halt-instructions
+;------------------------------------------------------------
+.macro	go			; ps:=cps
+	.word	12		; pc:=cpc
+.endm				; return from halt-mode
+;------------------------------
+.macro	step			; ps:=cps
+        .word	16		; pc:=cpc
+.endm				; return from halt-mode (inhibit hlt-syg trap)
+;------------------------------
+.macro	rsel			; r0:=sw_reg
+	.word	20		; 
+.endm				; move sw_reg to r0
+;------------------------------
+.macro	mfus			; mov (r5)+/user, r0
+	.word	21		;
+.endm				;
+;------------------------------
+.macro	rcpc			; r0:=cpc
+	.word	22		;
+.endm				;
+;------------------------------
+.macro	rcps			; r0:=cps
+	.word	24		;
+.endm				;
+;------------------------------
+.macro	mtus			; mov r0, -(r5)/user
+	.word	31		;
+.endm				;
+;------------------------------
+.macro	wcpc			; cpc:=r0
+	.word	32		;
+.endm				;
+;------------------------------	
+.macro	wcps			; cps:=r0
+	.word	34		;
+.endm				;
+;------------------------------
+
+;************************************************************
+
+	.sbttl	common definitions for bios monitor
+
+.macro	dsect	adr
+.if nb	<adr>
+	$$ = adr
+.iff
+	$$ = 0
+.endc
+.endm	dsect
+.macro	dw	name,len
+.iif nb	<name>,	name	= $$
+.if nb	<len>
+	$$ = $$+<<len>*2>
+.iff
+	$$ = $$+2
+.endc
+.endm	dw
+.macro	db	name,len
+.iif nb	<name>,	name	= $$
+.if nb	<len>
+	$$ = $$+<len>
+.iff
+	$$ = $$+1
+.endc
+.endm	db
+
+        l.reg	== 140000
+	l.rda	== 150000
+
+	v.high	== 500	; the most high vector
+	v.low	== 60	; the most lower vector
+
+dsect	100000		; bios static table
+dw	heap      ;heap pointer
+dw	maplen	  ;length of ram-bit-map in bytes
+dw	freereg   ;pointer to first free register-descriptor
+dw	freepr    ;pointer to first free process-descriptor
+dw	freesem   ;pointer to first free semaphore
+dw	freemap   ;pointer to first free proc-ram-map (32 bytes)
+dw	memuse    ;pointer to monitor ram-map (32 bytes)
+dw	running   ;pointer to current process
+dw	readyque  ;pointer to head of queue of ready-to-run processes
+dw	rdsucc    ;dummy process,
+dw	rdpred    ; in ready-to-run queue
+dw	timeque   ;pointer to head of queue of time-waiting processes
+dw	tmsucc    ;dummy process,
+dw	tmpred    ; in time-waiting queue
+dw	top$$     ;pointer to allowed top og heap
+dw	vrqflg	  ;flag of request for vectored int (only c.irq bit is used)
+
+dw	sav.r0		;; work area
+dw	sav.r1		;;  for
+dw	sav.r2		;;   console
+dw	sav.r3		;;    and
+dw	sav.r4		;;     debugger
+dw	sav.r5		;;      module
+dw	sav.sp		;;
+dw	sav.pc		;;
+dw	sav.ps		;;
+
+ 		;sync interrupt vectors
+dw	v.cpuh ,2   ;halt-instruction
+dw	v.tr4h ,2   ;trap to 4 in halt
+dw	v.but  ,2   ;"stop" button on keyboard
+dw	v.supr ,2   ;unexpected interrupt (no process waiting for it)
+dw	v.2tio ,2   ;double time-out
+		;async interrupt vectors
+dw	v.init ,2   ;reset-instruction
+dw	v.flop ,2   ;floppy disk int
+dw	v.rcrd ,2   ;dl-receiver ready
+dw	v.trrd ,2   ;dl-transmitter ready
+dw	v.kbd  ,2   ;keyboard request
+dw	v.scrn ,2   ;screen interrupt
+dw	v.prrd ,2   ;printer ready
+dw	v.slot ,2   ;request from slot
+	veclen	== $$-v.cpuh
+
+		;masks to enable/disable interrupts
+	m.init	==  1	;
+	m.flop	==  2	;
+	m.rcrd	==  4	;
+	m.trrd	== 10	;
+	m.kbd	== 20	;
+	m.scrn	== 40	;
+	m.prrd	==100	;
+	m.slot	==200	;
+
+	m.tio	==000400	; time-out in waitint
+	m.run	==040000	; proc is ready to run
+	m.vrq	==100000	; can eat vectored ints
+
+dw	vrqtbl, <v.high-v.low+4/2> ; table for list+map of vectored ints
+dw	pdptr		;pointer to first process-descriptor
+dw	c.tim0		;cpu-clock counter
+dw	c.tim1		;
+dw	tcflg		;
+
+ heap$$	= $$	; end of bios static table
+
+dsect	140000
+dw	hstack	  ; bottom of halt-stack
+
+dsect			;register descriptor
+dw	r.mask    ;bit-mask to restore reg
+dw	r.copy    ;copy of r/o bits
+db	r.rqst    ;requested operation on reg
+db	r.stat    ;proper actions on reg
+dw	r.proc    ;pointer to process to operate the reg
+dw	r.strt	  ;parameter word for processing (user defined)
+dw	r.reset	  ;this word moved to the reg on reset (nothing if -1)
+	reglen	== $$
+dsect			;process descriptor
+dw	p.succ    ;pointer to succ proc in queues
+dw	p.pred    ;pointer to pred proc in queues
+dw	p.r0      ;contents of cpu regs
+dw	p.r1
+dw	p.r2
+dw	p.r3
+dw	p.r4
+dw	p.r5
+dw	p.sp
+dw	p.pc
+dw	p.ps
+dw	p.ur0     ;contents of memory control regs
+dw	p.ur1
+dw	p.ur2
+dw	p.ur3
+dw	p.ur4
+dw	p.ur5
+dw	p.ur6
+dw	p.ur7
+dw	p.mask    ;bit-mask to desable ints during processing
+			;(bit15=1 => can have vectored ints, i.e. simulated)
+dw	p.cprc    ;pointer to process, waiting reg's emulation
+dw	p.tim     ;time period for sleepping
+dw	p.pri     ;priority of the process
+dw	p.mem     ;pointer to ram-map for the process (or 0, if none)
+dw	p.name,8. ;process name
+dw	p.tim0	  ;
+dw	p.tim1    ;
+dw	p.dsucc	  ;ptr on succ
+	prolen	== $$
+
+dsect			;semaphore
+dw	s.cntr    ;sem's counter
+dw	s.frst    ;pointer to queue of waiting processes
+dw	s.succ    ;dummy queue-head of
+dw	s.pred    ; waiting processes
+	semlen	== $$
+
+;************************************************************
+
+	piccsr	== 161000	 ; 8259
+	picmr	== 161002
+
+	sndc0r	== 161010	 ; 8253.f
+	sndc1r	== 161012	 ;  
+	sndc2r	== 161014
+	sndcsr	== 161016
+
+	snlc0r	== 161020	 ; 8253.l
+	snlc1r	== 161022	 ;  
+	snlc2r	== 161024
+	snlcsr	== 161026
+
+	ppia	== 161030	 ; ppi
+	ppib	== 161032
+				b.ef0	==  1
+				b.ef1	==  2
+				b.int	==  4
+	ppic	== 161034
+				c.irq	== 10 ; инв.
+				c.hlt	==  4 ; инв.
+	ppip	== 161036
+				i.hlt	==200  
+
+
+	dlbuf	== 161060	 ; 8251A RS
+	dlcs	== 161062
+
+	kbdbuf	== 161064
+	kbdcsr	== 161066	 ; 8279
+
+	hr0	== 161200	 ; mmu reg.        
+	hr1	== 161202			      
+	hr2	== 161204
+	hr3	== 161206
+	hr4	== 161210
+	hr5	== 161212
+	hr6	== 161214
+	hr7	== 161216
+	ur0	== 161220
+	ur1	== 161222
+	ur2	== 161224
+	ur3	== 161226
+	ur4	== 161230
+	ur5	== 161232
+	ur6	== 161234
+	ur7	== 161236
+
+
+	cr      == 15
+	lf      == 12
+

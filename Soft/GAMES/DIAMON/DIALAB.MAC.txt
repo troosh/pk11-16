@@ -1,0 +1,516 @@
+﻿.TITLE	LABIRINTS	; ┌─────────────────────────────────────────────────┐
+.ENABL	MCL		; │	   Лабиринты программы DIAMODS .	    │
+			; └─────────────────────────────────────────────────┘
+;────────────────────────────────────────────────────────────────────────────
+;		СООТВЕТСТВИЕ НОМЕРОВ В ЛАБИРИНТЕ СПРАЙТАМ .
+;────────────────────────────────────────────────────────────────────────────
+TABSOOT::
+	.WORD	EMPTY
+	.WORD	KVADS+KVADRED
+	.WORD	KVADS+KVADGREEN
+	.WORD	KVADS+KVADYELLOW
+	.WORD	KVADS+KVADBLUE
+	.WORD	KVADS+KVADWAIT
+	.WORD	KVADS+BRUSRED
+	.WORD	KVADS+BRUSGREEN
+	.WORD	KVADS+BRUSYELLOW
+	.WORD	KVADS+BRUSBLUE
+	.WORD	KVADS+BRUSWAIT
+	.WORD	TOOLS+DETH
+	.WORD	TOOLS+KEYROTATE
+	.WORD	TOOLS+SPEEDMINUS
+	.WORD	TOOLS+SPEEDPLUS
+	.WORD	TOOLS+SN
+	.WORD	TOOLS+LIVE
+	.WORD	TOOLS+SUPERBRUSH
+	.WORD	TOOLS+DIAMOND
+	.WORD	TOOLS+KEYSPR
+	.WORD	TOOLS+LOCK
+;────────────────────────────────────────────────────────────────────────────
+;				ПУСТОЕ МЕСТО .
+;────────────────────────────────────────────────────────────────────────────
+EMPTY::	.BLKW	20*20
+;────────────────────────────────────────────────────────────────────────────
+;				    #01
+;────────────────────────────────────────────────────────────────────────────
+LAB1::
+.WORD	0		; Координаты .
+.WORD	0		; ┘
+.WORD	BALLS+BALLWAIT	; Цвет .
+.WORD	100.		; Бонусы .
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,RGY,RGY,RGY,RGY,RGY,RGY,RGY,RGY,RGY,RGY,
+.BYTE		   ,RGY,RBL,RBL,RBL,RBL,RBL,RBL,RBL,RBL,RGY,
+.BYTE		   ,RGY,RBL,RRE,RRE,RRE,RRE,RRE,RRE,RBL,RGY,
+.BYTE		   ,DET,RBL,RRE,DIA,DIA,DIA,DIA,RRE,RBL,DET,
+.BYTE		   ,BBL,RBL,RRE,DIA,DET,DET,DIA,RRE,RBL,BRE,
+.BYTE		   ,DET,RBL,RRE,DIA,DIA,DIA,DIA,RRE,RBL,DET,
+.BYTE		   ,RGY,RBL,RRE,RRE,RRE,RRE,RRE,RRE,RBL,RGY,
+.BYTE		   ,RGY,RBL,RBL,RBL,RBL,RBL,RBL,RBL,RBL,RGY,
+.BYTE		   ,RGY,RGY,RGY,RGY,RGY,RGY,RGY,RGY,RGY,RGY,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+;────────────────────────────────────────────────────────────────────────────
+;				    #01
+;────────────────────────────────────────────────────────────────────────────
+LAB2::
+.WORD	0		; Координаты .
+.WORD	0		; ┘
+.WORD	BALLS+BALLWAIT	; Цвет .
+.WORD	100.		; Бонусы .
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   
+.BYTE		   ,   ,   ,   ,RGY,RGY,RGY,RGY,   ,   ,   ,
+.BYTE		   ,   ,   ,BRE,RRE,RRE,RRE,RRE,BBL,   ,   ,
+.BYTE		   ,DET,RGY,RBL,DIA,DIA,DIA,DIA,RBL,RGY,DET,
+.BYTE		   ,   ,RGY,RBL,DIA,DIA,DIA,DIA,RBL,RGY,   ,
+.BYTE		   ,   ,RGY,RBL,DIA,DIA,DIA,DIA,RBL,RGY,   ,
+.BYTE		   ,   ,RGY,RBL,DIA,DIA,DIA,DIA,RBL,RGY,   ,
+.BYTE		   ,DET,RGY,RBL,DIA,DIA,DIA,DIA,RBL,RGY,DET,
+.BYTE		   ,   ,   ,BBL,RRE,RRE,RRE,RRE,BRE,   ,   ,
+.BYTE		   ,   ,   ,   ,RGY,RGY,RGY,RGY,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   
+;────────────────────────────────────────────────────────────────────────────
+;				    #02
+;────────────────────────────────────────────────────────────────────────────
+LAB3::
+.WORD	336.		; Координаты .
+.WORD	192.		; ┘
+.WORD	BALLS+BALLWAIT	; Цвет .
+.WORD	200.		; Бонусы .
+.BYTE		   ,   ,   ,   ,   ,DIA,RGY,BGR,RGY,RRE,RGR,KEY
+.BYTE		   ,   ,   ,   ,   ,DIA,RGY,   ,RGY,RRE,RGR,RGR
+.BYTE		   ,RRE,RRE,RRE,   ,DIA,RGY,   ,RGY,RRE,RRE,RRE
+.BYTE		   ,DET,DIA,DET,   ,DIA,RGY,   ,RGY,RGY,RGY,RGY
+.BYTE		   ,RYL,DET,RYL,   ,DIA,RGY,BRE,   ,   ,   ,BYL
+.BYTE		   ,RYL,DET,RYL,   ,DIA,RGY,   ,   ,   ,   ,
+.BYTE		   ,RYL,DET,RYL,   ,DIA,RGY,   ,   ,   ,   ,
+.BYTE		   ,RYL,DET,RYL,   ,DIA,RGY,   ,   ,   ,   ,
+.BYTE		   ,RYL,DET,RYL,   ,DIA,RGY,   ,   ,   ,   ,
+.BYTE		   ,DET,DIA,DET,   ,DIA,RGY,RGY,RGY,   ,   ,
+.BYTE		   ,RRE,RRE,RRE,   ,DIA,LOC,DIA,RGY,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,DIA,RGY,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,DIA,RGY,DET,   ,
+;────────────────────────────────────────────────────────────────────────────
+;				    #01
+;────────────────────────────────────────────────────────────────────────────
+LAB4::
+.WORD	128.		; Координаты .
+.WORD	64.		; ┘
+.WORD	BALLS+BALLWAIT	; Цвет .
+.WORD	300.		; Бонусы .
+.BYTE		RRE,RBL,RRE,RBL,RRE,RBL,RRE,RBL,RRE,RBL,RRE,RBL
+.BYTE		RBL,   ,   ,   ,   ,DIA,DIA,   ,   ,   ,   ,RRE
+.BYTE		RRE,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,RBL
+.BYTE		RBL,   ,ARR,SMI,   ,   ,   ,   ,SPU,ARR,   ,RRE
+.BYTE		RRE,   ,   ,   ,   ,BRE,BBL,   ,   ,   ,   ,RBL
+.BYTE		RBL,RGB,   ,   ,   ,RGY,RGY,   ,   ,   ,RGB,RRE
+.BYTE		DET,SNP,SNP,DIA,KEY,ATT,ATT,LOC,DIA,SNP,SNP,DET
+.BYTE		RBL,RGB,   ,   ,   ,RGY,RGY,   ,   ,   ,RGB,RRE
+.BYTE		RRE,   ,   ,   ,   ,BGR,BYL,   ,   ,   ,   ,RBL
+.BYTE		RBL,   ,ARR,SPU,   ,   ,   ,   ,SMI,ARR,   ,RRE
+.BYTE		RRE,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,RBL
+.BYTE		RBL,   ,   ,   ,   ,DIA,DIA,   ,   ,   ,   ,RRE
+.BYTE		RRE,RBL,RRE,RBL,RRE,RBL,RRE,RBL,RRE,RBL,RRE,RBL
+;────────────────────────────────────────────────────────────────────────────
+;				    #05
+;────────────────────────────────────────────────────────────────────────────
+LAB5::
+.WORD	128.		; Координаты .
+.WORD   128.		;
+.WORD	BALLS+BALLWAIT	; Цвет .
+.WORD	200.		; Бонусы .
+.BYTE		   ,KEY,DET,   ,DIA,DIA,DIA,DIA,   ,DET,ATT,
+.BYTE		   ,   ,DET,   ,   ,   ,   ,   ,   ,DET,   ,
+.BYTE		   ,   ,DET,SNP,   ,   ,   ,   ,SNP,DET,   ,
+.BYTE		   ,   ,   ,   ,   ,RBL,RBL,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,RGY,DET,DET,RGY,   ,   ,   ,
+.BYTE		   ,DIA,   ,RGY,   ,   ,   ,   ,RGY,   ,DIA,
+.BYTE		   ,   ,DIA,DET,   ,   ,   ,   ,DET,DIA,   ,
+.BYTE		   ,   ,   ,RGY,   ,   ,   ,   ,RGY,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,ARR,BYL,BRE,LOC,BBL,BBL,DIA,BRE,BYL,ARR,
+.BYTE		   ,DIA,   ,   ,   ,   ,   ,   ,   ,   ,DIA,
+.BYTE		   ,DIA,   ,   ,   ,   ,   ,   ,   ,   ,DIA,
+.BYTE		   ,DET,DIA,RRE,RRE,RRE,RRE,RRE,RRE,DIA,DET,
+;────────────────────────────────────────────────────────────────────────────
+;				    #06
+;────────────────────────────────────────────────────────────────────────────
+LAB6::
+.WORD	192.		; Координаты .
+.WORD	16.		; ┘
+.WORD	BALLS+BALLWAIT	; Цвет .
+.WORD	200.		; Бонусы .
+.BYTE		   ,DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA,RGY
+.BYTE		   ,RRE,RRE,DIA,   ,   ,   ,   ,   ,   ,BGR,RGY
+.BYTE		   ,RGR,RGR,DIA,   ,   ,   ,   ,   ,   ,   ,RGY
+.BYTE		   ,RBL,RBL,DIA,   ,   ,   ,   ,   ,   ,   ,RGY
+.BYTE		   ,   ,   ,DIA,   ,   ,DIA,DIA,   ,   ,   ,RGY
+.BYTE		   ,   ,   ,DIA,   ,   ,   ,   ,   ,   ,   ,SMI
+.BYTE		   ,DIA,LOC,DIA,   ,DIA,DET,DET,DIA,   ,   ,KEY
+.BYTE		   ,RGY,RGY,RGY,   ,   ,   ,   ,   ,   ,   ,BBL
+.BYTE		   ,BGR,   ,   ,   ,   ,DIA,DIA,   ,   ,   ,DET
+.BYTE		   ,BBL,   ,ARR,   ,   ,   ,   ,   ,   ,   ,SNP
+.BYTE		   ,DET,   ,   ,   ,   ,   ,   ,   ,   ,   ,ATT
+.BYTE		   ,BRE,   ,   ,   ,   ,   ,   ,   ,   ,   ,RGY
+.BYTE		   ,RGY,RGY,RGY,RBL,RBL,RBL,RGY,RGY,DET,RGY,BYL
+;────────────────────────────────────────────────────────────────────────────
+;				    #01
+;────────────────────────────────────────────────────────────────────────────
+LAB7::
+.WORD	128.		; Координаты .
+.WORD	192.		; ┘
+.WORD	BALLS+BALLWAIT	; Цвет .
+.WORD	150.		; Бонусы .
+.BYTE		DIA,DIA,DIA,DIA,DIA,RRE,RRE,DIA,DIA,DIA,DIA,DIA
+.BYTE		DIA,DIA,DIA,DIA,RYL,RGR,RGR,RYL,DIA,DIA,DIA,DIA
+.BYTE		DIA,DIA,DIA,RBL,   ,   ,   ,   ,RBL,DIA,DIA,DIA
+.BYTE		DIA,DIA,RBL,RRE,   ,   ,   ,   ,RRE,RBL,DIA,DIA
+.BYTE		DIA,RBL,RRE,RGR,   ,   ,   ,   ,RGR,RRE,RBL,DIA
+.BYTE		RBL,RRE,RGR,RYL,   ,   ,   ,   ,RYL,RGR,RRE,RBL
+.BYTE		RRE,RGR,RYL,   ,   ,   ,   ,   ,   ,RYL,RGR,RRE
+.BYTE		RGR,RYL,   ,   ,   ,   ,   ,   ,   ,   ,RYL,RGR
+.BYTE		RYL,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,RYL
+.BYTE		DIA,DIA,DIA,DIA,DIA,DIA,LOC,DIA,DIA,DIA,DIA,DIA
+.BYTE		BGR,RGY,   ,   ,   ,   ,   ,   ,   ,   ,RGY,BRE
+.BYTE		BYL,RGY,   ,   ,   ,   ,   ,   ,   ,   ,RGY,BBL
+.BYTE		DET,RGY,   ,   ,   ,KEY,   ,   ,   ,   ,RGY,DET
+;────────────────────────────────────────────────────────────────────────────
+;				    #08
+;────────────────────────────────────────────────────────────────────────────
+LAB8::
+.WORD	0		; Координаты .
+.WORD	32.		; ┘
+.WORD	BALLS+BALLWAIT	; Цвет .
+.WORD	200.		; Бонусы .
+.BYTE		RGY,DIA,DET,DIA,KEY,DIA,DET,DIA,ATT,RGR,DIA,DET
+.BYTE		   ,   ,   ,   ,   ,   ,   ,DIA,SNP,RGR,DIA,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,DIA,RGR,RGR,DIA,
+.BYTE		RGY,   ,   ,   ,   ,   ,LOC,DIA,BRE,   ,DIA,
+.BYTE		DIA,DET,DIA,DET,BYL,DET,   ,DET,BBL,   ,DIA,
+.BYTE		DIA,DIA,   ,   ,   ,   ,   ,   ,DIA,   ,DIA,
+.BYTE		DIA,   ,   ,   ,   ,   ,   ,   ,DIA,   ,BGR,
+.BYTE		DET,   ,   ,   ,   ,   ,   ,   ,DIA,   ,   ,
+.BYTE		DIA,   ,DET,   ,DET,SMI,DET,ARR,DIA,   ,   ,
+.BYTE		RBL,   ,   ,   ,   ,   ,   ,   ,   ,DET,   ,
+.BYTE		RBL,   ,   ,   ,   ,   ,   ,   ,   ,DIA,   ,
+.BYTE		RRE,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		ATT,RBL,RRE,RRE,   ,SPU,RYL,RBL,   ,   ,   ,RBL
+;────────────────────────────────────────────────────────────────────────────
+;				    #07
+;────────────────────────────────────────────────────────────────────────────
+LAB9::
+.WORD	0		; Координаты .
+.WORD	0		; ┘
+.WORD	BALLS+BALLWAIT	; Цвет .
+.WORD	200.		; Бонусы .
+.BYTE		   ,DIA,DIA,ATT,DIA,KEY,DIA,   ,ARR,   ,SNP,DET
+.BYTE		   ,   ,DIA,   ,   ,   ,   ,   ,   ,   ,   ,BBL
+.BYTE		   ,   ,   ,DIA,   ,   ,   ,   ,   ,   ,   ,DET
+.BYTE		DIA,   ,   ,   ,DIA,   ,   ,   ,   ,   ,   ,BYL
+.BYTE		RRE,DIA,   ,   ,   ,DIA,   ,   ,   ,   ,   ,DET
+.BYTE		RGR,   ,DIA,   ,   ,   ,DIA,   ,DET,   ,   ,BGR
+.BYTE		RYL,   ,   ,DIA,   ,   ,   ,DIA,   ,   ,   ,DET
+.BYTE		RBL,   ,   ,   ,DIA,   ,   ,DET,   ,   ,   ,BRE
+.BYTE		DET,   ,   ,   ,   ,DIA,   ,DIA,   ,   ,   ,RBL
+.BYTE		SNP,   ,DIA,   ,   ,DIA,   ,   ,   ,   ,   ,RYL
+.BYTE		DIA,   ,   ,   ,   ,RGY,   ,   ,   ,   ,   ,RGR
+.BYTE		DIA,   ,   ,   ,   ,LOC,   ,   ,   ,   ,   ,RRE
+.BYTE		DIA,DIA,DIA,DIA,DIA,DIA,   ,DET,RBL,RBL,RBL,DET
+;────────────────────────────────────────────────────────────────────────────
+;				    #01
+;────────────────────────────────────────────────────────────────────────────
+LAB10::
+.WORD	32.		; Координаты .
+.WORD	16.		; ┘
+.WORD	BALLS+BALLWAIT	; Цвет .
+.WORD	150.		; Бонусы .
+.BYTE		RGY,RRE,RRE,RRE,RRE,RGY,RGY,RRE,RRE,RRE,RRE,RGY
+.BYTE		RGY,   ,   ,   ,   ,RGY,RGY,   ,   ,   ,   ,RGY
+.BYTE		RGY,   ,DET,KEY,   ,RGY,RGY,   ,BYL,ATT,   ,RGY
+.BYTE		RGY,   ,   ,   ,   ,RGY,RGY,   ,   ,   ,   ,RGY
+.BYTE		RGY,   ,   ,   ,   ,RGY,RGY,   ,   ,   ,   ,RGY
+.BYTE		RGY,   ,   ,   ,   ,RGY,RGY,   ,   ,   ,   ,RGY
+.BYTE		DIA,DIA,LOC,DIA,DIA,DIA,DIA,DIA,DIA,LOC,DIA,DIA
+.BYTE		RYL,   ,   ,   ,   ,RYL,RYL,   ,   ,   ,   ,RYL
+.BYTE		RYL,   ,   ,   ,   ,RYL,RYL,   ,   ,   ,   ,RYL
+.BYTE		RYL,   ,   ,BRE,   ,RYL,RYL,   ,BBL,   ,   ,RYL
+.BYTE		RYL,   ,ATT,   ,   ,RYL,RYL,   ,   ,RGB,   ,RYL
+.BYTE		RYL,   ,   ,   ,   ,RYL,RYL,   ,   ,   ,   ,RYL
+.BYTE		RYL,RRE,RRE,RRE,RRE,RYL,RYL,RRE,RRE,RRE,RRE,RYL
+;────────────────────────────────────────────────────────────────────────────
+;				    #01
+;────────────────────────────────────────────────────────────────────────────
+LAB11::
+.WORD	32.		; Координаты .
+.WORD	32.		; ┘
+.WORD	BALLS+BALLWAIT	; Цвет .
+.WORD	150.		; Бонусы .
+.BYTE		DET,   ,   ,RYL,DET,BBL,BRE,DET,RGR,   ,   ,DET
+.BYTE		RBL,DIA,   ,   ,   ,   ,   ,   ,   ,   ,DIA,RRE
+.BYTE		RBL,   ,SNP,   ,   ,   ,   ,   ,   ,SNP,   ,RRE
+.BYTE		RBL,   ,   ,DIA,   ,   ,   ,   ,DIA,   ,   ,RRE
+.BYTE		RBL,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,RRE
+.BYTE		RBL,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,RRE
+.BYTE		DIA,DIA,ARR,DIA,   ,   ,   ,   ,DIA,ARR,DIA,DIA
+.BYTE		RGR,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,RYL
+.BYTE		RGR,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,RYL
+.BYTE		RGR,   ,   ,DIA,   ,   ,   ,   ,DIA,   ,   ,RYL
+.BYTE		RGR,   ,SNP,   ,   ,   ,   ,   ,   ,SNP,   ,RYL
+.BYTE		RGR,DIA,   ,   ,   ,   ,   ,   ,   ,   ,DIA,RYL
+.BYTE		DET,   ,   ,RRE,DET,BGR,BYL,DET,RBL,   ,   ,DET
+;────────────────────────────────────────────────────────────────────────────
+;				    #01
+;────────────────────────────────────────────────────────────────────────────
+LAB12::
+.WORD	192.		; Координаты .
+.WORD	0		; ┘
+.WORD	BALLS+BALLWAIT	; Цвет .
+.WORD	200.		; Бонусы .
+.BYTE		DET,   ,DET,   ,DET,   ,   ,DET,   ,DET,   ,DET
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,DET,   ,   ,   ,   ,   ,   ,   ,   ,DET,
+.BYTE		   ,RGY,DIA,   ,   ,DIA,DIA,   ,   ,DIA,RGY,
+.BYTE		   ,RYL,DIA,   ,   ,SMI,SPU,   ,   ,DIA,RYL,
+.BYTE		RGY,ATT,DIA,DET,   ,BYL,BYL,   ,DET,DIA,ATT,RGY
+.BYTE		   ,RYL,DIA,   ,   ,SPU,SMI,   ,   ,DIA,RYL,
+.BYTE		   ,RGY,DIA,   ,   ,DIA,DIA,   ,   ,DIA,RGY,
+.BYTE		   ,DET,   ,   ,   ,   ,   ,   ,   ,   ,DET,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		DET,   ,DET,   ,DET,   ,   ,DET,   ,DET,   ,DET
+;────────────────────────────────────────────────────────────────────────────
+;				    #01
+;────────────────────────────────────────────────────────────────────────────
+LAB13::
+.WORD	192.		; Координаты .
+.WORD	0		; ┘
+.WORD	BALLS+BALLWAIT	; Цвет .
+.WORD	200.		; Бонусы .
+.BYTE		BYL,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,BYL
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,DET,ARR,RGY,RGY,RGY,RGY,RGY,RGY,ARR,DET,
+.BYTE		   ,   ,DIA,RGR,SMI,RGR,RGR,SPU,RGR,DIA,   ,
+.BYTE		   ,   ,DIA,RRE,DIA,DIA,DIA,DIA,RBL,DIA,   ,
+.BYTE		BBL,   ,DIA,RRE,DIA,ATT,ATT,DIA,RBL,DIA,   ,BRE
+.BYTE		   ,   ,DIA,RRE,DIA,DIA,DIA,DIA,RBL,DIA,   ,
+.BYTE		   ,   ,DIA,RYL,SPU,RYL,RYL,SMI,RYL,DIA,   ,
+.BYTE		   ,DET,ARR,RGY,RGY,RGY,RGY,RGY,RGY,ARR,DET,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		BGR,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,BGR
+;────────────────────────────────────────────────────────────────────────────
+;				    #01
+;────────────────────────────────────────────────────────────────────────────
+LAB14::
+.WORD	192.		; Координаты .
+.WORD	96.		; ┘
+.WORD	BALLS+BALLWAIT	; Цвет .
+.WORD	200.		; Бонусы .
+.BYTE		DIA,DIA,DET,DIA,DET,DIA,DIA,DET,DIA,DET,DIA,DIA
+.BYTE		DIA,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,DIA
+.BYTE		DIA,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,DIA
+.BYTE		DIA,   ,   ,   ,   ,LOC,LOC,   ,   ,   ,   ,DIA
+.BYTE		RGY,   ,DIA,DET,DIA,BBL,BRE,DIA,DET,DIA,   ,RGY
+.BYTE		RGY,   ,   ,   ,   ,DIA,DIA,   ,   ,   ,   ,RGY
+.BYTE		RGY,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,RGY
+.BYTE		RGY,   ,KEY,   ,   ,   ,   ,   ,   ,KEY,   ,RGY
+.BYTE		RGY,   ,DIA,RRE,RBL,SPU,SMI,RBL,RRE,DIA,   ,RGY
+.BYTE		RGY,   ,DIA,ARR,DIA,BYL,BYL,DIA,ARR,DIA,   ,RGY
+.BYTE		DIA,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,DIA
+.BYTE		DIA,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,DIA
+.BYTE		DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA
+;────────────────────────────────────────────────────────────────────────────
+;				    #01
+;────────────────────────────────────────────────────────────────────────────
+LAB15::
+.WORD	288.		; Координаты .
+.WORD	80.		; ┘
+.WORD	BALLS+BALLWAIT	; Цвет .
+.WORD	150.		; Бонусы .
+.BYTE		ATT,DIA,RYL,RGR,RBL,RRE,RRE,RBL,RGR,RYL,DIA,ATT
+.BYTE		DIA,RYL,RGR,RBL,RRE,BRE,BBL,RRE,RBL,RGR,RYL,DIA
+.BYTE		RYL,RGR,RBL,RRE,RGY,   ,   ,RGY,RRE,RBL,RGR,RYL
+.BYTE		RGR,RBL,RRE,RGY,   ,   ,   ,   ,RGY,RRE,RBL,RGR
+.BYTE		RBL,RRE,RGY,   ,   ,   ,   ,   ,   ,RGY,RRE,RBL
+.BYTE		RRE,RGY,   ,   ,   ,   ,   ,   ,   ,   ,RGY,RRE
+.BYTE		RGY,   ,   ,DET,   ,   ,   ,   ,DET,   ,   ,RGY
+.BYTE		RRE,RGY,   ,   ,   ,   ,   ,   ,   ,   ,RGY,RRE
+.BYTE		RBL,RRE,RGY,   ,   ,   ,   ,   ,   ,RGY,RRE,RBL
+.BYTE		RGR,RBL,RRE,RGY,   ,   ,   ,   ,RGY,RRE,RBL,RGR
+.BYTE		RYL,RGR,RBL,RRE,RGY,   ,   ,RGY,RRE,RBL,RGR,RYL
+.BYTE		DIA,RYL,RGR,RBL,RRE,BGR,BYL,RRE,RBL,RGR,RYL,DIA
+.BYTE		ATT,DIA,RYL,RGR,RBL,RRE,RRE,RBL,RGR,RYL,DIA,ATT
+;────────────────────────────────────────────────────────────────────────────
+;				    #01
+;────────────────────────────────────────────────────────────────────────────
+LAB16::
+.WORD	96.		; Координаты .
+.WORD	0		; ┘
+.WORD	BALLS+BALLWAIT	; Цвет .
+.WORD	150.		; Бонусы .
+.BYTE		   ,RRE,RRE,   ,RGR,RGR,RGR,   ,RBL,RBL,RBL,
+.BYTE		RRE,   ,RRE,   ,RGR,   ,   ,   ,RBL,   ,RBL,
+.BYTE		RRE,   ,RRE,   ,RGR,RGR,RGR,   ,RBL,   ,RBL,
+.BYTE		RRE,RRE,RRE,   ,   ,   ,RGR,   ,RBL,RBL,RBL,
+.BYTE		RRE,   ,RRE,   ,   ,   ,RGR,   ,RBL,   ,   ,
+.BYTE		RRE,   ,RRE,BRE,RGR,RGR,RGR,BGR,RBL,   ,BBL,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,DIA,DIA,DIA,   ,DIA,DIA,DIA,   ,DIA,DIA,DIA
+.BYTE		   ,   ,   ,DIA,   ,DIA,   ,   ,   ,DIA,   ,
+.BYTE		   ,   ,   ,DIA,   ,DIA,DIA,   ,   ,DIA,DIA,DIA
+.BYTE		   ,   ,   ,DIA,   ,DIA,   ,   ,   ,   ,   ,DIA
+.BYTE		   ,DIA,DIA,   ,   ,DIA,DIA,DIA,   ,DIA,DIA,DIA
+;────────────────────────────────────────────────────────────────────────────
+;				    #01
+;────────────────────────────────────────────────────────────────────────────
+LAB17::
+.WORD	32.		; Координаты .
+.WORD	32.		; ┘
+.WORD	BALLS+BALLWAIT	; Цвет .
+.WORD	150.		; Бонусы .
+.BYTE		DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA
+.BYTE		DIA,RGY,RYL,RGR,RBL,RRE,RRE,RBL,RGR,RYL,RGY,DIA
+.BYTE		DET,   ,RGY,RYL,RGR,RBL,RBL,RGR,RYL,RGY,   ,DET
+.BYTE		BRE,   ,   ,RGY,RYL,RGR,RGR,RYL,RGY,   ,   ,BRE
+.BYTE		DET,   ,   ,   ,RGY,RYL,RYL,RGY,   ,   ,   ,DET
+.BYTE		BBL,   ,   ,   ,   ,RGY,RGY,   ,   ,   ,   ,BBL
+.BYTE		DET,   ,SNP,   ,   ,   ,   ,   ,   ,SNP,   ,DET
+.BYTE		BGR,   ,   ,   ,   ,RGY,RGY,   ,   ,   ,   ,BGR
+.BYTE		DET,   ,   ,   ,RGY,RYL,RYL,RGY,   ,   ,   ,DET
+.BYTE		BYL,   ,   ,RGY,RYL,RGR,RGR,RYL,RGY,   ,   ,BYL
+.BYTE		DET,   ,RGY,RYL,RGR,RBL,RBL,RGR,RYL,RGY,   ,DET
+.BYTE		DIA,RGY,RYL,RGR,RBL,RRE,RRE,RBL,RGR,RYL,RGY,DIA
+.BYTE		DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA
+;────────────────────────────────────────────────────────────────────────────
+;				    #01
+;────────────────────────────────────────────────────────────────────────────
+LAB18::
+.WORD	0		; Координаты .
+.WORD	0		; ┘
+.WORD	BALLS+BALLWAIT	; Цвет .
+.WORD	150.		; Бонусы .
+.BYTE		   ,DIA,   ,   ,   ,   ,   ,   ,   ,   ,   ,KEY
+.BYTE		   ,DIA,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,DIA,   ,RRE,RRE,RRE,RRE,RRE,RRE,RRE,RRE,BRE
+.BYTE		   ,DIA,   ,DET,DET,DET,DET,DET,DET,DET,DET,DET
+.BYTE		   ,DIA,   ,RYL,RYL,RYL,RYL,RYL,RYL,RYL,RYL,KEY
+.BYTE		   ,DIA,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,DIA,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,DIA,   ,RBL,RBL,RBL,RBL,RBL,RBL,RBL,RBL,RGB
+.BYTE		   ,DIA,   ,DET,DET,DET,DET,DET,DET,DET,DET,DET
+.BYTE		   ,DIA,   ,DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA
+.BYTE		   ,BYL,   ,DIA,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,LOC,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,LOC,   ,RYL,RYL,RYL,RYL,RYL,RYL,RYL
+;────────────────────────────────────────────────────────────────────────────
+;				    #01
+;────────────────────────────────────────────────────────────────────────────
+LAB19::
+.WORD	0		; Координаты .
+.WORD	16.		; ┘
+.WORD	BALLS+BALLWAIT	; Цвет .
+.WORD	150.		; Бонусы .
+.BYTE		SMI,   ,DET,   ,   ,   ,   ,   ,   ,   ,   ,DET
+.BYTE		   ,DIA,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,BBL,   ,   ,DIA,DIA,DIA,DIA,DIA,DIA,   ,
+.BYTE		   ,DIA,   ,DIA,RRE,RBL,RYL,RGR,   ,DET,DIA,
+.BYTE		   ,BGR,   ,DIA,RRE,RBL,RYL,RGR,   ,   ,DIA,
+.BYTE		   ,BYL,   ,DIA,RRE,RBL,RYL,RGR,   ,   ,DIA,
+.BYTE		   ,DIA,   ,DIA,RRE,RBL,RYL,RGR,DIA,   ,DIA,
+.BYTE		   ,BRE,   ,   ,DIA,DIA,DIA,DIA,   ,   ,DIA,
+.BYTE		   ,DIA,   ,   ,   ,   ,   ,   ,   ,   ,DIA,
+.BYTE		   ,DIA,DET,   ,   ,   ,   ,   ,   ,DET,DIA,
+.BYTE		   ,   ,DIA,DIA,DIA,DIA,DIA,DIA,DIA,DIA,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		DET,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,DET
+;────────────────────────────────────────────────────────────────────────────
+;				    #01
+;────────────────────────────────────────────────────────────────────────────
+LAB20::
+.WORD	192.		; Координаты .
+.WORD	96.		; ┘
+.WORD	BALLS+BALLWAIT	; Цвет .
+.WORD	200.		; Бонусы .
+.BYTE		BBL,RBL,RRE,RBL,DET,DIA,DIA,DET,RBL,RRE,RBL,BBL
+.BYTE		RGY,RBL,RRE,RBL,RGY,DIA,DIA,RGY,RBL,RRE,RBL,RGY
+.BYTE		RGY,RBL,RRE,SMI,RGY,DIA,DIA,RGY,SMI,RRE,RBL,RGY
+.BYTE		   ,RBL,RBL,RBL,   ,DIA,DIA,   ,RBL,RBL,RBL,
+.BYTE		   ,RGY,RGY,RGY,   ,DIA,DIA,   ,RGY,RGY,RGY,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		DET,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,DET
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,RGY,RGY,RGY,   ,DIA,DIA,   ,RGY,RGY,RGY,
+.BYTE		   ,RBL,RBL,RBL,   ,DIA,DIA,   ,RBL,RBL,RBL,
+.BYTE		RGY,RBL,RRE,SPU,RGY,DIA,DIA,RGY,SPU,RRE,RBL,RGY
+.BYTE		RGY,RBL,RRE,RBL,RGY,DIA,DIA,RGY,RBL,RRE,RBL,RGY
+.BYTE		BRE,RBL,RRE,RBL,DET,DIA,DIA,DET,RBL,RRE,RBL,BRE
+;────────────────────────────────────────────────────────────────────────────
+;				    #01
+;────────────────────────────────────────────────────────────────────────────
+LAB21::
+.WORD	0		; Координаты .
+.WORD	0		; ┘
+.WORD	0		; Цвет .
+.WORD	0		; Бонусы .
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+;────────────────────────────────────────────────────────────────────────────
+;				    #01
+;────────────────────────────────────────────────────────────────────────────
+LAB22::
+.WORD	0		; Координаты .
+.WORD	0		; ┘
+.WORD	0		; Цвет .
+.WORD	0		; Бонусы .
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+;────────────────────────────────────────────────────────────────────────────
+;				    #01
+;────────────────────────────────────────────────────────────────────────────
+;LAB18::
+.WORD	0		; Координаты .
+.WORD	0		; ┘
+.WORD	0		; Цвет .
+.WORD	0		; Бонусы .
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.BYTE		   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,
+.END
