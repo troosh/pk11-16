@@ -1,0 +1,156 @@
+					;******	File gc.mac ******
+
+;===============================	constant definition
+x.csr	=	<g.csr & 7777> + l.reg
+c.8kb	=	020000		; memory page size
+c.4kb	=	c.8kb/2		; half page
+w.4kb	=	20		; half page in memory register item
+c.radr	=	c.8kb*3		; raster description virtual address
+c.len	=	c.8kb		; raster maximum length (8kb)
+c.hgt	=	c.8kb/4		; raster maximum height
+c.max	=	128.		; raster maximum size (in 8kb page)
+c.badr	=	c.8kb*2		; bimap virtual address
+p.csr	=	x.csr + <c.8kb/2>
+r.clr	=	177000		; instruction field clearing
+;-------------------------------	point status
+c.l	=	1
+c.r	=	2
+c.b	=	4
+c.t	=	10
+;===============================	raster - data structure
+	dsect	c.radr
+;-------------------------------	geometry
+	dw	r.xmax			; right
+	dw	r.ymax			;	bottom corner
+;...............................	window
+	dw	w.xmin			
+	dw	w.ymin
+	dw	w.xmax
+	dw	w.ymax
+;...............................	aspect ratio
+					; if r.x > r.y then 
+	dw	r.x			;    x := x * r.y / r.x else
+	dw	r.y			;    y := y * r.x / r.y
+;-------------------------------	memory
+	dw	r.len			; raster's length in bytes, including
+					; even word if needed
+	dw	r.div			; 8kb div r.len
+	dw	r.mod			; 8kb mod r.len 
+	dw	r.full			; number of full 8kb pages in bitmap
+	dw	r.rest			; incomplete page line number
+	dw	r.bp			; bits per pixel 
+	dw	r.pw			; pixel per word
+;-------------------------------	drawing
+	dw	r.cm			; color mask
+	dw	r.fg			; foreground color
+	dw	r.bg			; background color
+	dw	r.typ			; line pattern
+	dw	r.rop			; raster operation
+	dw	r.tr			; transparent flag
+;...............................	figure pattern	
+	dw	r.ur4			; memory register
+	dw	r.ur5			; memory register
+	dw	r.vadr			; virtual address (ur4)
+	dw	r.plen			; lengh in bytes
+	dw	r.phgt			; height in lines
+	dw	r.psiz			; size in bytes
+	dw	r.pwid			; length in words
+;-------------------------------	raster 8kb pages
+	dw	r.8kb,	c.max
+;-------------------------------	current point
+	dw	p.x
+	dw	p.y
+	dw	p.s			; point status
+;-------------------------------	temporary  cells
+	dw	r.tmp
+;...............................	line generation parameters
+	dsect	r.tmp
+	dw	p.wadr			; current memory window address
+	dw	p.wnxt			; jump to next window
+	dw	p.lnxt			; jump to next line
+	dw	p.cnt			; step counter
+	dw	p.crit			; next step criterium
+;...............................	block transfer parameters
+	dsect	r.tmp
+	dw	t.x
+	dw	t.y
+	dw	t.hgt			; number of moving line
+	dw	t.shft			; transfer shift value
+	dw	t.step			; step number inside windows
+	dw	t.comp			; compression flag
+;. . . . . . . . . . . . . . . .	source
+	dw	s.ur			; memory register address
+	dw	s.wadr			; memory window address
+	dw	s.winc			; window address increment
+	dw	s.wnxt			; jump to next window
+	dw	s.lnxt			; jump to next line
+	dw	s.step			; vertical step number in window
+	dw	s.div			; full line number in window
+	dw	s.len			; line length in words - 2
+;. . . . . . . . . . . . . . . .	destination
+	dw	d.mski			; initial word mask
+	dw	d.mskf			; final
+	dw	d.ur			; memory register address
+	dw	d.wadr			; memory window address
+	dw	d.winc			; window address increment
+	dw	d.wnxt			; jump to next window
+	dw	d.lnxt			; jump to next line
+	dw	d.step			; vertical step number in window
+	dw	d.div			; full line number in window
+	dw	d.len			; line length in words - 2
+;...............................	arc generation parameters
+	dsect	r.tmp
+	dw	a.xc			; centre
+	dw	a.yc			;   coordinates
+	dw	a.rad			; radius of circle
+	dw	a.crit			; movement criterium
+	dw	a.inco			; octant increment
+	dw	a.wadr			; memory window address
+	dw	a.winc			; window address increment
+	dw	a.wnxt			; jump to next window
+	dw	a.lnxt			; jump to next line
+	dw	a.step			; vertical step number in window
+	dw	a.pnxt			; jump to next pixel
+	dw	a.octf			; final octant number
+	dw	a.xf			; final point
+	dw	a.yf			;   coordinates
+	dw	a.incx			; coordinates increments
+	dw	a.incy			;   in centre circle system
+	dw	a.asp			; aspect ratio valuer
+	dw	a.cm			; most signif. pixel extracting mask
+	dw	a.cms			; most signif. pixel clearing mask
+	dw	a.fg			; most significant foreground pixel
+;...............................	contour filling parameters
+	dsect	r.tmp
+;. . . . . . . . . . . . . . . .	slot for saving
+	dw	f.xr			; previous right margin
+	dw	f.xl			; previous left margin
+	dw	f.y			; current y
+;. . . . . . . . . . . . . . . .	parameters with sign change
+	dw	f.yext			; extremal y value
+	dw	f.winc			; window address increment
+	dw	f.wnxt			; jump to next window
+	dw	f.lnxt			; jump to next line
+	dw	f.pvol			; jump through all pattern
+	dw	f.pnxt			; jump to next pattern line
+;. . . . . . . . . . . . . . . .	calculated for each slot
+	dw	f.x			; current x
+	dw	f.wadr			; memory window address
+	dw	f.step			; vertical step number in window
+	dw	f.vadl			; left margin address
+	dw	f.pl			; left margin pixel number
+	dw	f.py			; vertical pattern counter
+	dw	f.px			; horizontal pattern counter
+	dw	f.pxl			; left margin pattern counter
+	dw	f.padl			; left margin pattern address
+;. . . . . . . . . . . . . . . .	constant
+	dw	f.lsp			; least significant pixel mask
+	dw	f.msp			; most significant pixel mask
+	dw	f.bp			; -r.bp
+	dw	f.cor			; slot correction flag:
+					; 1 - left, 2 - right, 4 - new slot
+	dw	f.slp			; slot pointer
+	dw	f.sbt			; slot bottom
+;-------------------------------	work region for TAS initialization
+	dsect	c.badr
+	dw	r.tas

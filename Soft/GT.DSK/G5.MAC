@@ -1,0 +1,800 @@
+					;******	File g5.mac ******
+
+;===============================	contour filling by connectivity
+g$fill:					; method from seed with regular
+	mov	(r2)+, r1		; figure and undetermined border
+	mov	(r2), r3
+	mov	r2, r4
+	sub	#6, r4
+	call	p$st
+	tst	r2
+	beq	10$
+	return
+10$:
+	.push	r4
+	mov	#f.xr, r2
+	mov	r1, (r2)+		; f.xr
+	mov	r1, (r2)+		; f.xl
+	mov	r3, (r2)+		; f.y
+	mov	@#w.ymax, (r2)+		; f.yext
+	mov	#2, (r2)+		; f.winc
+	mov	#c.8kb, (r2)
+	sub	@#r.mod, (r2)+		; f.wnxt
+	mov	@#r.len, (r2)+		; f.lnxt
+	mov	@#r.psiz, (r2)+		; f.pvol
+	mov	@#r.plen, (r2)+		; f.pnxt
+	call	s$calc
+	mov	@#r.cm, r3
+	com	r3
+	mov	r3, (r2)+		; f.lsp
+	mov	@#r.bp, r4
+	neg	r4
+	ashc	r4, r3
+	mov	r3, (r2)+		; f.msp
+	mov	r4, (r2)+		; f.bp
+	clr	(r2)+			; f.cor
+	mov	#c.radr+c.4kb, (r2)+	; f.slp
+	mov	(r0), r2
+	mov	r1, r3
+	mul	r4, r3
+	ash	r3, r2
+	bic	@#r.cm, r2		; figure color
+	mov	@#r.pw, r3
+	dec	r3
+	mov	r2, r4
+20$:
+	ash	@#r.bp, r4
+	bis	r2, r4
+	sob	r3, 20$
+	mov	@#r.ur4, @#ur4
+	mov	@#r.ur5, @#ur5
+;-------------------------------	initial margins determination
+	mov	@#r.pwid, r2
+	sub	@#f.pxl, r2
+	inc	r2
+	mov	r2, @#f.px
+	call	f$rght
+	mov	@#f.x, @#f.xr
+	mov	@#f.xl, @#f.x
+	dec	@#f.x
+	mov	@#f.padl, r5
+	mov	@#f.pxl, @#f.px
+	mov	@#f.vadl, r0
+	mov	@#f.pl, r1
+	dec	r1
+	bpl	25$
+	add	@#r.pw, r1
+	cmp	-(r0), -(r5)
+	dec	@#f.px
+	bne	25$
+	add	@#r.plen, r5
+	mov	@#r.pwid, @#f.px
+25$:
+	call	f$left
+	mov	@#f.x, @#f.xl
+	mov	r0, @#f.vadl
+	mov	r1, @#f.pl
+	mov	r5, @#f.padl
+	mov	@#f.px, @#f.pxl
+	neg	@#f.y
+	call	s$put
+	neg	@#f.y
+	br	40$
+;-------------------------------	main loop
+30$:
+	mov	#10, @#f.cor		; set new slot flag
+	call	s$get			; get new slot
+	bcc	50$
+	tst	(sp)+
+	return
+;...............................	current slot loop
+40$:
+	clr	@#f.cor
+50$:
+	cmp	@#f.y, @#f.yext		; is it window border ?
+	beq	30$			; yes
+	inc	@#f.y
+	mov	#f.xr, r2
+	call	s$chk			; has the slot been processed ?
+	bcs	30$			; yes
+	bit	#15, @#f.cor
+	beq	60$
+	bit	#4, @#f.cor
+	beq	52$
+	mov	#f.y, r2
+	call	s$sgn
+	mov	#10, @#f.cor
+	br	50$
+52$:
+	mov	#f.x, r2
+	mov	@#f.xl, r1
+	mov	@#f.y, r3
+	bpl	55$
+	neg	r3
+55$:
+	.push	r4
+	call	s$calc			; calculate slot parameters
+	.pop	r4
+	br	80$
+60$:
+	add	@#f.lnxt, @#f.vadl
+	dec	@#f.step
+	bne	70$
+	mov	@#r.div, @#f.step
+	sub	@#f.wnxt, @#f.vadl
+	add	@#f.winc, @#f.wadr
+	mov	@f.wadr, @#ur2
+	bic	@#r.tr, @#ur2
+70$:
+	add	@#f.pnxt, @#f.padl
+	dec	@#f.py
+	bne	75$
+	mov	@#r.phgt, @#f.py
+	sub	@#f.pvol, @#f.padl
+75$:
+	mov	@#f.xl, @#f.x
+	mov	@#f.vadl, r0
+	mov	@#f.pl, r1
+	mov	@#f.padl, r5
+	mov	@#f.pxl, @#f.px
+;. . . . . . . . . . . . . . . .	scan figure left
+80$:
+	call	f$left
+	bcc	85$
+	jmp	180$			; border goes to right
+85$:
+	cmp	@#f.xl, @#f.x
+	beq	165$			; border remains the same
+	.push	<@#f.vadl, @#f.pl, @#f.padl, @#f.pxl, @#f.xl, @#f.y>
+	mov	r0, @#f.vadl
+	mov	r1, @#f.pl
+	mov	r5, @#f.padl
+	mov	@#f.px, @#f.pxl
+	mov	@#f.xl, r2
+	mov	@#f.x, @#f.xl
+	sub	#2, r2
+	cmp	r2, @#f.xl
+	bmi	160$			; the old and new borders are adjacent
+;. . . . . . . . . . . . . . . .	previous line investigation
+	tst	@#f.y
+	bpl	90$
+	neg	@#f.y
+	cmp	@#f.y, @#w.ymax
+	bne	100$
+	br	160$
+90$:
+	cmp	@#f.y, @#w.ymin
+	beq	160$
+	neg	@#f.y
+100$:
+	inc	@#f.y
+	.push 	<@#f.xl, @#f.xr>
+	mov	r2, @#f.xr
+	clr	@#f.cor
+	mov	#f.xr, r2
+	call	s$chk
+	bcs	150$
+	bit	#4, @#f.cor
+	beq	130$
+	call	s$put
+	bcc	150$
+110$:
+	add	#8.*2, sp
+120$:
+	mov	#err.04, @(sp)+
+	return
+130$:
+	mov	@#f.xl, r1
+	mov	r1, @#f.x
+	mov	@#f.y, r3
+	bpl	140$
+	neg	r3
+140$:
+	.push	r4
+	call	p$ad
+	.pop	r4
+	call	b$rgch
+	bcs	150$
+	mov	@#f.x, @#f.xl
+	dec	@#f.y
+	call	s$put
+	bcs	110$
+150$:
+	.pop	<@#f.xr, @#f.xl>
+	mov	@f.wadr, @#ur2
+	bic	@#r.tr, @#ur2
+160$:
+	.pop	<@#f.y, @#f.x, @#f.px, r5, r1, r0>
+165$:
+	neg	@#f.px
+	add	@#r.pwid, @#f.px
+	inc	@#f.px
+	inc	@#f.x
+	inc	r1
+	cmp	r1, @#r.pw
+	bne	170$
+	clr	r1
+	cmp	(r0)+, (r5)+
+	dec	@#f.px
+	bne	170$
+	mov	@#r.pwid, @#f.px
+	sub	@#r.plen, r5	
+;. . . . . . . . . . . . . . . .	scan figure right
+170$:
+	call	f$rght
+	cmp	@#f.xr, @#f.x
+	bmi	220$
+	beq	175$			; right border remains the same
+	.push	@#f.x			; save new right border
+	mov	@#f.x, r2
+	inc	r2
+	cmp	@#f.xr, r2
+	bne	190$
+	.pop	@#f.xr
+175$:
+	jmp	40$
+180$:
+	neg	@#f.px
+	add	@#r.pwid, @#f.px
+	inc	@#f.px
+	.push	#-1
+;. . . . . . . . . . . . . . . .	border is meeting early
+190$:
+	call	b$rght			; scan border right
+	.pop	r2			; rest. previous segment right border
+	bcs	210$
+;  .   .   .   .   .   .   .   .	border isn't close
+	bmi	200$			; no previous segment
+	.push	@#f.xr			; save previous slot right border
+	mov	r2, @#f.xr
+	call	s$put			; save slot of previous segment
+	.pop	@#f.xr
+	bcs	120$
+200$:
+	mov	@#f.x, @#f.xl
+	mov	r0, @#f.vadl
+	mov	r1, @#f.pl
+	mov	r5, @#f.padl
+	mov	@#f.px, @#f.pxl
+	neg	@#f.pxl
+	add	@#r.pwid, @#f.pxl
+	inc	@#f.pxl
+	br	170$
+;  .   .   .   .   .   .   .   .	border is close
+210$:
+	mov	r2, @#f.xr
+	bpl	175$
+	jmp	30$
+;. . . . . . . . . . . . . . . .	border is meeting later
+220$:
+	mov	@#f.xr, r2
+	add	#2, r2
+	mov	@#f.x, @#f.xr
+	cmp	@#f.x, r2
+	bmi	175$			; the old and new borders are adjacent
+;  .   .   .   .   .   .   .   .	previous line investigation
+	.push	@#f.y
+	tst	@#f.y
+	bpl	230$
+	neg	@#f.y
+	cmp	@#f.y, @#w.ymax
+	bne	240$
+	br	300$
+230$:
+	cmp	@#f.y, @#w.ymin
+	beq	300$
+	neg	@#f.y
+240$:
+	inc	@#f.y
+	.push 	<@#f.xl, @#f.xr>
+	mov	r2, @#f.xl
+	clr	@#f.cor
+	mov	#f.xr, r2
+	call	s$chk
+	bcs	290$
+	bit	#4, @#f.cor
+	beq	270$
+	call	s$put
+	bcc	290$
+250$:
+	add	#3*2, sp
+	jmp	120$
+270$:
+	mov	@#f.xl, r1
+	mov	r1, @#f.x
+	mov	@#f.y, r3
+	bpl	280$
+	neg	r3
+280$:
+	.push	r4
+	call	p$ad
+	.pop	r4
+	call	b$rgch
+	bcs	290$
+	mov	@#f.x, @#f.xl
+	dec	@#f.y
+	call	s$put
+	bcs	250$
+290$:
+	.pop	<@#f.xr, @#f.xl>
+	mov	@f.wadr, @#ur2
+	bic	@#r.tr, @#ur2
+300$:
+	.pop	@#f.y
+	jmp	175$
+;-------------------------------	scan figure left (right in memory)
+	.enabl	lsb			; r0,r1	most left figure pixel
+f$left:					; r5	pattern address
+	.push	r1			; r4	figure mask
+	mov	(r0), r3		;-----------------------------
+	mov	(r5), r2		; r0,r1	most left figure pixel
+	xor	r4, r3			; c = 0	border goes to left
+	beq	20$			;	or remains the same
+	inc	r1			; c = 1	border goes to right
+	sub	@#r.pw, r1
+	mul	@#f.bp, r1
+	ash	r1, r3
+	beq	20$
+	mov	(sp), r1
+	bit	@#f.msp, r3
+	beq	10$
+	dec	@#f.x			; border go to right
+	.pop	r1
+	dec	r1
+	sec
+	return
+10$:
+	ash	@#r.bp, r3
+	bit	@#f.msp, r3
+	bne	30$
+	sob	r1, 10$
+20$:
+	clr	r1
+30$:
+	.pop	r3
+	add	r1, @#f.x
+	sub	r3, @#f.x
+40$:
+	cmp	@#f.x, @#w.xmin
+	bge	60$
+50$:
+	add	@#w.xmin, r1
+	sub	@#f.x, r1
+	mov	@#w.xmin, @#f.x
+60$:
+	cmp	r3, r1
+	bmi	110$
+	call	f$grp
+	tst	r1
+	beq	70$
+	return
+70$:
+	dec	@#f.px
+	bne	75$
+	add	@#r.plen, r5		
+	mov	@#r.pwid, @#f.px
+75$:
+	mov	-(r0), r3
+	mov	-(r5), r2
+	xor	r4, r3
+	bne	80$
+	sub	@#r.pw, @#f.x
+	cmp	@#f.x, @#w.xmin
+	blt	100$
+f$000:
+	bis	r2, (r0)
+	br	70$
+80$:
+	bit	@#f.msp, r3
+	bne	90$
+	dec	r1
+	ash	@#r.bp, r3
+	br	80$
+90$:
+	add	r1, @#f.x
+	mov	@#r.pw, r3
+	add	r3, r1
+	dec	r3
+	br	40$
+100$:
+	mov	@#r.pw, r3
+	dec	r3
+	br	50$
+110$:
+	cmp	@#r.pwid, @#f.px
+	bne	120$
+	clr	@#f.px
+	sub	@#r.plen, r5
+120$:
+	inc	@#f.px
+	cmp	(r0)+, (r5)+
+	clr	r1
+	return
+	.dsabl	lsb
+;-------------------------------	scan figure right (left in memory)
+	.enabl	lsb			; r0,r1	initial figure pixel
+f$rght:					; r5	pattern address
+	.push	r1			; r4	figure mask
+	mov	(r0), r3		;------------------------------
+	mov	(r5), r2		; r0,r1	most right figure pixel
+	xor	r4, r3
+	beq	20$
+	mul	@#f.bp, r1
+	beq	10$
+	inc	r1
+	clc
+	ror	r3
+	ash	r1, r3
+	beq	20$		
+	mov	(sp), r1
+10$:
+	bit	@#f.lsp, r3
+	bne	30$
+	ash	@#f.bp, r3
+	inc	r1
+	br	10$
+20$:
+	mov	@#r.pw, r1
+30$:
+	dec	r1
+	mov	r1, r3
+	.pop	r1
+	add	r3, @#f.x
+	sub	r1, @#f.x
+40$:
+	cmp	@#f.x, @#w.xmax
+	ble	60$
+50$:
+	add	@#w.xmax, r3
+	sub	@#f.x, r3
+	mov	@#w.xmax, @#f.x
+60$:
+	cmp	r3, r1
+	bmi	120$
+	call	f$grp
+	mov	r3, r1
+	inc	r3
+	cmp	r3, @#r.pw
+	beq	70$
+	return
+70$:
+	clr	r1
+80$:
+	cmp	(r0)+, (r5)+			
+	dec	@#f.px
+	bne	85$
+	sub	@#r.plen, r5
+	mov	@#r.pwid, @#f.px
+85$:
+	mov	(r0), r3
+	mov	(r5), r2
+	xor	r4, r3
+	bne	90$
+	add	@#r.pw, @#f.x
+	cmp	@#f.x, @#w.xmax
+	bgt	110$
+f$010:
+	bis	r2, (r0)
+	br	80$
+90$:
+	bit	@#f.lsp, r3
+	bne	100$
+	inc	r1
+	ash	@#f.bp, r3
+	br	90$
+100$:
+	add	r1, @#f.x
+	mov	r1, r3
+	dec	r3
+	clr	r1
+	br	40$
+110$:
+	mov	@#r.pw, r3
+	dec	r3
+	br	50$
+120$:
+	tst	r3
+	bpl	140$
+	cmp	@#r.pwid, @#f.px
+	bne	130$
+	clr	@#f.px
+	add	@#r.plen, r5
+130$:
+	inc	@#f.px
+	cmp	-(r0), -(r5)
+	add	@#r.pw, r3
+140$:
+	mov	r3, r1
+	return
+	.dsabl	lsb
+;-------------------------------	paint pixel group inside word
+	.enabl	lsb			; r0	raster address,
+f$grp:					; r1	lsp,
+	.push	<r3, r1>		; r3	msp,
+	mov	@#f.msp, r1		; r2	pattern word
+	add	#2, r3
+	sub	@#r.pw, r3
+	bgt	10$
+	mul	@#r.bp, r3
+	ash	r3, r1
+	bic	r1, r2
+10$:
+	mov	(sp), r3
+	beq	f$020
+	clr	r1
+20$:
+	ash	@#r.bp, r1
+	bis	@#f.lsp, r1
+	sob	r3, 20$
+	bic	r1, r2
+f$020:
+	bis	r2, (r0)
+	.pop	<r1, r3>
+	return
+	.dsabl	lsb
+;-------------------------------	scan border  right (left in memory)
+	.enabl	lsb		; r0,r1	most right figure pixel
+b$rght:	
+	add	#2, @#f.x
+	cmp	@#f.xr, @#f.x
+	bcs	50$
+	add	#2, r1
+	cmp	r1, @#r.pw
+	bmi	b$rgch
+	dec	@#f.px
+	bne	5$
+	sub	@#r.plen, r5
+	mov	@#r.pwid, @#f.px	
+5$:
+	sub	@#r.pw, r1
+	cmp	(r0)+, (r5)+
+;-------------------------------	scan border  right for checking
+b$rgch:					; r0,r1	initial border pixel
+	mov	(r0), r2		; r4	figure mask
+	xor	r4, r2			;-----------------------------
+	beq	40$			; c = 1	border is closing
+	mov	r1, r3			; c = 0 then
+	beq	10$			; r0,r1	first non-border pixel
+	mul	@#f.bp, r3
+	inc	r3
+	clc
+	ror	r2
+	ash	r3, r2
+	beq	40$
+	mov	r1, r3
+10$:
+	bit	@#f.lsp, r2
+	beq	20$
+	ash	@#f.bp, r2
+	inc	r1
+	cmp	r1, @#r.pw
+	bne	10$
+20$:
+	add	r1, @#f.x
+	sub	r3, @#f.x
+	cmp	@#f.xr, @#f.x
+	bcs	50$
+	cmp	@#r.pw, r1
+	bne	40$
+	dec	@#f.px
+	bne	30$
+	sub	@#r.plen, r5
+	mov	@#r.pwid, @#f.px
+30$:
+	clr	r1
+	cmp	(r0)+, (r5)+
+	br	b$rgch
+40$:
+	clc	
+50$:
+	return
+	.dsabl	lsb
+;-------------------------------	put slot
+	.enabl	lsb			; f.lsp	slot pointer
+s$put:					;-----------------------
+	mov	@#f.slp, r3		; c = 1	no free slot
+	cmp	r3, #f.sbt+<3*2>	; c = 0 then
+	bcs	30$			; f.slp	new slot pointer
+	.push	r1			; r2,r3	#
+	mov	#3, r1
+	mov	#f.y, r2		
+	neg	(r2)+			; change current slot sign
+10$:
+	mov	-(r2), -(r3)
+	sob	r1, 10$
+	neg	4(r2)			; restore current slot sign
+20$:
+	mov	r3, @#f.slp
+	clc
+	.pop	r1
+30$:
+	return
+;-------------------------------	get slot and redefine some parameters
+s$get:					; f.slp	slot pointer
+	mov	@#f.slp, r3		;---------------------------
+	cmp	#c.radr+c.4kb-2, r3	; c = 1	no slot
+	bcs	30$			; c = 0 then 
+	.push	r1
+	mov	#3, r1			; f.slp new slot pointer
+	mov	#f.xr, r2
+40$:
+	mov	(r3)+, (r2)+
+	sob	r1, 40$
+	neg	-(r2)			; restore original direction
+	call	s$sgn
+	br	20$
+	.dsabl	lsb
+;...............................	check slot sign
+s$sgn:					; r2	addres of f.y
+	tst	(r2)+			;.....................
+	bgt	30$			; r2	#
+	tst	(r2)
+	ble	20$
+	mov	@#w.ymin, (r2)
+	neg	(r2)+			; f.yext
+10$:
+	neg	(r2)+			; f.winc
+	neg	(r2)+			; f.wnxt
+	neg	(r2)+			; f.lnxt
+	neg	(r2)+			; f.pvol
+	neg	(r2)+			; f.pnxt
+20$:
+	return
+30$:
+	tst	(r2)
+	bgt	20$
+	mov	@#w.ymax, (r2)+		; f.yext
+	br	10$
+;-------------------------------	calculate slot parameters
+s$calc:					; r1,r3	most left pixel coordinates
+	clr	r4			; r2	address of f.x
+	mov	r3, r5			;----------------------------------
+	div	@#r.phgt, r4		; r0,r1	most left pixel address
+	mov	r5, r4			; r5	pattern address
+	mul	@#r.plen, r5		; r2	address of f.msp
+	mov	r1, (r2)+		; r4	#
+	.push	<r5, r4, r2>
+	call	p$ad
+	bic	@#r.tr, @#ur2
+	.pop	r5
+	mov	r2, (r5)+		; f.wadr
+	.pop	r2
+	tst	@#f.winc
+	bmi	10$
+	neg	r3
+	add	@#r.div, r3
+	neg	r2
+	add	@#r.phgt, r2
+	br	20$
+10$:
+	inc	r3
+	inc	r2
+20$:
+	mov	r3, (r5)+		; f.step
+	mov	r0, (r5)+		; f.vadl
+	mov	r1, (r5)+		; f.pl
+	mov	r2, (r5)+		; f.py
+	mov	r5, r2
+	mov	r4, r5
+	clr	r4
+	div	@#r.pwid, r4
+	inc	r5
+	mov	r5, (r2)+		; f.px
+	mov	r5, (r2)+		; f.pxl
+	dec	r5
+	asl	r5
+	add	(sp)+, r5
+	add	@#r.vadr, r5
+	mov	r5, (r2)+		; f.padl
+	return
+;-------------------------------	check existance of the slot that
+s$chk:					; have common point with current
+	.push	r1			; and correct current slot
+	mov	#c.radr+c.4kb, r3	; f.slp	slot pointer
+10$:					; f.cor	slot correction flag
+	cmp	r3, @#f.slp		; r2	pointer to current slot
+	bne	30$			;-------------------------------
+20$:					; c = 1	all slot are absorbed
+	.pop	r1			; c = 0 remains all slot or its part
+	return				; f.slp new slot pointer
+30$:					; f.cor new slot correction flag
+	sub	#3*2, r3
+	cmp	4(r2), 4(r3)		; yc ? ys
+	bne	10$
+	cmp	2(r2), (r3)		; xcl ? xsr
+	bmi	90$
+	beq	80$
+	mov	(r3), r1
+	inc	r1
+	cmp	r1, 2(r2)
+	bne	10$
+	dec	(r3)
+	inc	2(r2)
+40$:
+	bis	#1, @#f.cor		; left border correction
+50$:
+	cmp	(r3), 2(r3)
+	bge	60$
+	call	s$pr
+60$:
+	cmp	(r2), 2(r2)
+	bge	10$
+70$:
+	sec
+	br	20$
+80$:
+	sub	#2, (r3)
+	add	#2, 2(r2)
+	br	40$
+90$:
+	cmp	2(r3), (r2)		; xsl ? xcr
+	bmi	120$
+	beq	110$
+	mov	(r2), r1
+	inc	r1
+	cmp	r1, 2(r3)
+	bne	10$
+	dec	(r2)
+	inc	2(r3)
+100$:
+	bis	#2, @#f.cor
+	br	50$
+110$:
+	sub	#2, (r2)
+	add	#2, 2(r3)
+	br	100$
+120$:
+	cmp	(r2), (r3)		; xcr ? xsr
+	bmi	140$
+	cmp	2(r2), 2(r3)		; xcl ? xsl
+	bmi	130$
+	mov	2(r2), r1
+	sub	#2, r1
+	add	#2, (r3)
+	mov	(r3), 2(r2)
+	mov	r1, (r3)
+	br	40$
+130$:
+	mov	2(r3), r1
+	sub	#2, r1
+	add	#2, (r3)
+	mov	(r3), 2(r3)
+	mov	(r2), (r3)
+	mov	r1, (r2)
+	br	100$
+140$:
+	cmp	2(r2), 2(r3)		; xc1 ? xs1
+	bpl	150$
+	mov	2(r3), r1
+	sub	#2, r1
+	add	#2, (r2)
+	mov	(r2),  2(r3)
+	mov	r1, (r2)
+	br	100$
+150$:
+	mov	2(r2), r1
+	sub	#2, r1
+	add	#2, (r2)
+	mov	(r2), 2(r2)
+	mov	(r3), (r2)
+	mov	r1, (r3)
+	neg	4(r2)			; restore original direction
+	bis	#4, @#f.cor		; new slot
+	br	50$		
+;...............................	slot magazine compression
+s$pr:					; r3	pointer to deleted slot
+	.push	<r1, r2>
+	mov	r3, r2			; from
+	add	#3*2, r3		; to
+	.push	r3
+	mov	r2, r1
+	sub	@#f.slp, r1
+	beq	20$
+	asr	r1
+10$:
+	mov	-(r2), -(r3)
+	sob	r1, 10$
+20$:
+	mov	r3, @#f.slp
+	.pop	<r3, r2, r1>
+	return

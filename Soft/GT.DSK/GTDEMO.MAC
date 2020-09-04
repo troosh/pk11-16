@@ -1,0 +1,457 @@
+	.title	gtest
+	.mcall .exit, .print
+.nlist
+	.include "sy:p16mac"
+	.include "sy:wdc"
+	.include "sy:gm"
+.list
+;-------------------------------	colors
+c0	= ^B00000000			;	black
+c1	= ^B00001100			; dark	red
+c2	= ^B00011100			;	red
+c3	= ^B01011100			; light	red
+c4	= ^B01100000			; dark	green
+c5	= ^B11100000			;	green
+c6	= ^B11110000			; light	green
+c7	= ^B00100001			; dark	blue
+c8	= ^B00000011			;	blue
+c9	= ^B10100011			; light	blue
+c10	= ^B11111100			;       yellow
+c11	= ^B00011110			;	violet
+c12	= ^B00011101			;	magenta
+c13	= ^B11100011			;	cyan
+c14	= ^B10010010			;	gray
+c15	= ^B11111111			;	white
+test:
+	plcre	#view1,#vm1
+	tst	view1
+	bpl	10$
+	jmp	200$
+10$:
+	plcre	#view2,#vm2
+	tst	view2
+	bpl	20$
+	jmp	200$
+20$:
+	plcre	#view40,#vm40
+	tst	view40
+	bpl	30$
+	jmp	200$
+30$:
+	gcrea	#area1,#200.,#200.,view1+2
+	tst	area1
+	bpl	50$
+	jmp	400$
+50$:
+	gcrea	#area2,#200.,#200.,view2+2
+	tst	area2
+	bpl	60$
+	jmp	410$
+60$:
+	gcrea	#area40,#200.,#200.,view40+2
+	tst	area40
+	bpl	70$
+	jmp	420$
+70$:
+	vwcre	#vw,#0,area1+4,#0,#0,#20.,#220.,#2.,#14.,#2*400
+	tst	vw
+	bpl	90$
+	jmp	600$
+90$:
+	vwcre	#vw,#0,area2+4,#0,#0,#5.,#205.,#14.,#26.,#2*400+1
+	tst	vw
+	bpl	100$
+	jmp	600$
+100$:
+	vwcre	#vw,#0,area40+4,#0,#0,#100.,#300.,#5.,#17.,#2*400+2
+	tst	vw
+	bpl	110$
+	jmp	600$
+110$:
+	mov	#5, r1
+	mov	#195., r2
+	mov	r1, r3
+	mov	#type, r5
+130$:
+	gtype	#area1,,(r5)+
+	gmove	#area1,,r1, r1
+	gline	#area1,,r2, r1
+	gline	#area1,,r1, r2
+	gline	#area1,,r1, r1
+	add	#5,r1
+	sub	#15., r2
+	sob	r3, 130$
+	mov	#46.,r1
+	mov	#50.,r2
+	mov	#16.,r3
+	gmove	#area40,,#10.,#100.
+	clr	r4
+140$:
+	garcc	#area40,,#100.,#100.,#10.,#100.
+	gasp	#area40,,r1,r2
+	inc	r4
+	gfgc	#area40,,r4
+	sub	#3,r1
+	sob	r3,140$
+	mov	#46.,r1
+	mov	#50.,r2
+	mov	#15.,r3
+	gmove	#area40,,#100.,#10.
+	clr	r4
+150$:
+	gasp	#area40,,r2,r1
+	inc	r4
+	gfgc	#area40,,r4
+	garcc	#area40,,#100.,#100.,#100.,#10.
+	sub	#3,r1
+	sob	r3,150$
+	mov	#100.,r1
+	mov	r1,r2
+	grop	#area2,,#2
+	mov	#4, r4
+	clr	r5
+160$:
+	inc	r5
+	bic	#^c3,r5
+	beq	160$
+	gfgc	#area2,,r5
+	mov	#40., r3
+170$:
+	sub	#2,r1
+	add	#2,r2
+	gmove	#area2,,r1,r1
+	gline	#area2,,r2,r1
+	gline	#area2,,r2,r2
+	gline	#area2,,r1,r2
+	gline	#area2,,r1,r1
+	gline	#area2,,r2,r1
+	gline	#area2,,r2,r2
+	gline	#area2,,r1,r2
+	gline	#area2,,r1,r1
+	dec	r3
+	beq	180$
+	jmp	170$
+180$:
+	dec	r4
+	beq	190$
+	mov	r1,r0
+	mov	r2,r1
+	mov	r0,r2
+	jmp	160$
+190$:
+	gclrr	#area1
+	gptrn	#area1,,#ptrn1
+	gfill	#area1,,#20.,#20.
+	gfgc	#area2,,#1
+	grop	#area2,,#0
+	gmove	#area2,,#30.,#10.
+	gline	#area2,,#30.,#30.
+	gline	#area2,,#50.,#30.
+	garcc	#area2,,#50.,#20.,#50.,#10.
+	gline	#area2,,#30.,#10.
+	gmove	#area2,,#30.,#15.
+	gline	#area2,,#25.,#15.
+	gmove	#area2,,#30.,#25.
+	gline	#area2,,#25.,#25.
+	gmove	#area2,,#60.,#20.
+	gline	#area2,,#65.,#20.
+;-----	house
+	gclrr	#area40
+	gfgc	#area40,,#14.
+	gmove	#area40,,#70.,#128.
+	gline	#area40,,#70.,#150.
+	gline	#area40,,#130.,#150.
+	gline	#area40,,#130.,#126.
+	gmove	#area40,,#130.,#150.
+	gline	#area40,,#142.,#140.
+	gline	#area40,,#142.,#118.
+	gfgc	#area40,,#1
+	gline	#area40,,#136.,#112.
+	gmove	#area40,,#137.,#111.
+	gline	#area40,,#143.,#118.
+	gmove	#area40,,#144.,#118.
+	gline	#area40,,#138.,#110.
+	gline	#area40,,#128.,#127.
+	gline	#area40,,#68.,#127.
+	gline	#area40,,#80.,#110.
+	gline	#area40,,#138.,#110.
+	gclrr	#area1
+	gptrn	#area1,,#ptrn2
+	gfill	#area1,,#20.,#20.
+	gvrvr	#area2,,#25.,#10.,#65.,#30.,#35.,#60.
+;	door
+	gfgc	#area40,,#10.
+	gmove	#area40,,#74.,#150.
+	gline	#area40,,#74.,#132.
+	gline	#area40,,#84.,#132.
+	gline	#area40,,#84.,#150.
+	gptrn	#area40,,#door
+	gfill	#area40,,#80.,#140.
+	gfgc	#area40,,#15.
+	grop	#area40,,#3
+	gdot	#area40,,#82.,#140.
+	gclrr	#area1
+	gptrn	#area1,,#ptrn3
+	gfill	#area1,,#20.,#20.
+	gfgc	#area2,,#3
+	gmove	#area2,,#25.,#15.
+	gline	#area2,,#15.,#15.
+	gmove	#area2,,#35.,#75.
+	gline	#area2,,#15.,#75.
+	gmove	#area2,,#65.,#20.
+	gline	#area2,,#75.,#20.
+	gmove	#area2,,#75.,#70.
+	gline	#area2,,#85.,#70.
+;	windows
+;	1
+	gfgc	#area40,,#1
+	grop	#area40,,#0
+	gmove	#area40,,#92.,#144.	
+	gline	#area40,,#92.,#132.	
+	gline	#area40,,#102.,#132.	
+	gline	#area40,,#102.,#144.
+	gline	#area40,,#92.,#144.
+	mov	#^b1001100110011001,door+4
+	gfill	#area40,,#100.,#140.
+	gmove	#area40,,#92.,#136.	
+	gline	#area40,,#102.,#136.	
+	gmove	#area40,,#97.,#136.	
+	gline	#area40,,#97.,#144.
+	gclrr	#area1
+	gptrn	#area1,,#ptrn4
+	gfill	#area1,,#20.,#20.
+	gmove	#area2,,#25.,#25.
+	gline	#area2,,#20.,#25.
+	gline	#area2,,#20.,#30.
+	gline	#area2,,#80.,#65.
+	gline	#area2,,#80.,#70.
+	gmove	#area2,,#35.,#65.
+	gline	#area2,,#30.,#65.
+	gline	#area2,,#30.,#60.
+	gline	#area2,,#70.,#25.
+	gline	#area2,,#70.,#20.
+;	2
+	gvrvr	#area40,,#92.,#144.,#102.,#132.,#110.,#144.
+	gfgc	#area2,,#1
+	gmove	#area2,,#6,#12.
+	gline	#area2,,#9.,#15.
+	gline	#area2,,#6,#18.
+	gmove	#area2,,#9.,#15.
+	gline	#area2,,#14.,#15.
+	gvrvr	#area2,,#6.,#12.,#14.,#18.,#6.,#72.
+	gmove	#area2,,#76.,#20.
+	gline	#area2,,#81.,#20.
+	gline	#area2,,#78.,#17.
+	gmove	#area2,,#81.,#20.
+	gline	#area2,,#78.,#23.
+	gvrvr	#area2,,#78.,#17.,#85.,#23.,#86.,#67.
+;	paint house
+	mov	#-1,door+4
+	gfill	#area40,,#128.,#140.
+	mov	#^b1110111011101110,door+4
+	gfill	#area40,,#132.,#140.
+	mov	#^b0010001000100010,door+4
+	gfill	#area40,,#80.,#125.
+	gclrr	#area1
+	gptrn	#area1,,#ptrn5
+	gfill	#area1,,#20.,#20.
+	grop	#area2,,#2
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#5.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#5.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#10.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#10.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#15.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#15.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#20.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#20.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#25.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#25.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#30.,#100.
+;	grass
+	gfgc	#area40,,#6
+	gmove	#area40,,#0,#130.
+	gline	#area40,,#70.,#130.
+	gmove	#area40,,#143.,#130.
+	gline	#area40,,#200.,#130.
+	gptrn	#area40,,#grass
+	gfill	#area40,,#100.,#180.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#30.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#35.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#35.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#40.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#40.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#45.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#45.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#50.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#50.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#55.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#55.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#60.,#100.
+;	forest
+	gasp	#area40,,#1,#1
+	gfgc	#area40,,#4
+	gmove	#area40,,#200.,#80.
+	garcc	#area40,,#175.,#130.,#150.,#80.
+	garcc	#area40,,#135.,#120.,#120.,#80.
+	garcc	#area40,,#85.,#125.,#50.,#80.
+	garcc	#area40,,#25.,#130.,#0,#80.
+	mov	#^b0100010001000100,door+4
+	gptrn	#area40,,#door
+	gfill	#area40,,#25.,#80.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#60.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#65.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#65.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#70.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#70.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#75.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#75.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#80.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#80.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#85.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#85.,#100.
+	gvrvr	#area2,,#5.,#5.,#90.,#90.,#90.,#100.
+;	sky
+	mov	#^b1000100010001000,door+4
+	gfill	#area40,,#25.,#20.
+210$:
+	gkill	#area40
+220$:
+	gkill	#area2
+230$:
+	gkill	#area1
+1000$:
+	plfre	#view1
+	plfre	#view2
+	plfre	#view40
+	.exit
+200$:
+	.print	#300$
+	br	1000$
+300$:
+	.asciz	/no palette/
+	.even
+400$:
+	.print	#500$
+	br	1000$
+410$:
+	.print	#510$
+	br	230$
+420$:
+	.print	#520$
+	br	220$
+500$:
+	.asciz	/no raster1/
+	.even
+510$:
+	.asciz	/no raster2/
+	.even
+520$:
+	.asciz	/no raster3/
+	.even
+600$:
+	.print	#700$
+	br	210$
+700$:
+	.asciz	/no view/
+	.even
+door:
+	.word	4
+	.word	1
+	.word	^b1010101010101010
+grass:
+	.word	8.
+	.word	8.
+	.word	^b0110011001100110,^b0110011001100110
+	.word	^b0110011001100110,^b0110011001100110
+	.word	^b0110011001100110,^b0110011001100110
+	.word	^b0110011001101011,^b0110011001100110
+	.word	^b0110100001100100,^b0110100001100110
+	.word	^b0110010001100100,^b0110010001100110
+	.word	^b0110011001000101,^b0100011001100110
+	.word	^b0110011001100100,^b0110011001100110
+ptrn1:
+	.word	16.
+	.word	16.
+	.word	377
+	.word	377
+	.word	377
+	.word	377
+	.word	377
+	.word	377
+	.word	377
+	.word	377
+	.word	177400
+	.word	177400
+	.word	177400
+	.word	177400
+	.word	177400
+	.word	177400
+	.word	177400
+	.word	177400
+ptrn2:
+	.word	16.
+	.word	6
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	0
+	.word	0
+	.word	0
+ptrn3:
+	.word	16.
+	.word	1.
+	.word	^b0000111100001111
+ptrn4:
+	.word	16.
+	.word	9.
+	.word	^b0000000000000000
+	.word	^b1100000000000000
+	.word	^b1111000000000000
+	.word	^b1111110000000000
+	.word	^b1111111100000000
+	.word	^b1111110000000000
+	.word	^b1111000000000000
+	.word	^b1100000000000000
+	.word	^b0000000000000000
+ptrn5:
+	.word	16.
+	.word	7
+	.word	^b1100000000000011
+	.word	^b0011000000001100
+	.word	^b0000110000011000
+	.word	^b0000001111100000
+	.word	^b0000110000011000
+	.word	^b0011000000001100
+	.word	^b1100000000000011
+type:
+	.word	177777, 023777, 037777,	037477,	052525
+area1:
+	.blkw	16.
+area2:
+	.blkw	16.
+area40:
+	.blkw	16.
+area41:
+	.blkw	16.
+view1:
+	.blkw	2
+p.vm1:
+	.byte	c15,	0,	0,	0,	0,	0,	0,	c15
+	.byte	0,	0,	0,	c15,	0,	c15,	c15,	c0
+view2:
+	.blkw	2
+p.vm2:
+	.byte	c4,	0,	0,	c4,	0,	0,	0,	c15
+	.byte	0,	0,	0,	c7,	c4,	c15,	c2,	c0
+view40:
+	.blkw	2
+p.vm40:
+	.byte	c0,	c1,	c2,	c3,	c4,	c5,	c6,	c7
+	.byte	c8,	c9,	c10,	c11,	c12,	c13,	c14,	c15
+view41:
+	.blkw	2
+p.vm41:
+	.byte	c8,	c9,	c10,	c11,	c12,	c13,	c14,	c15
+	.byte	c0,	c1,	c2,	c3,	c4,	c5,	c6,	c7
+vw:
+	.end	test

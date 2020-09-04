@@ -1,0 +1,284 @@
+					;******	File g2.mac ******
+
+;===============================	move
+g$move:
+	mov	(r2)+, r1		; x
+	mov	(r2), r3		; y
+	call	p$st
+	mov	r1, @#p.x
+	mov	r3, @#p.y
+	mov	r2, @#p.s
+	return	
+;===============================	set/reset pixel
+	.enabl	lsb
+g$dot:
+	call	g$move
+	bne	10$
+	call	p$ad
+	bic	@#r.tr, @#ur2
+	call	p$msk
+s$dot:
+	bis	r5, (r0)
+10$:
+	return
+	.dsabl	lsb
+;===============================	get pixel value
+g$val:					; -1, if point lies outside window
+	.push	r2
+	mov	#-1, r5
+	call	g$move
+	bne	10$
+	call	p$ad
+	mov	(r0), r5
+	mul	@#r.bp, r1
+	neg	r1
+	ash	r1, r5
+	bic	@#r.cm, r5
+10$:
+	mov	r5, @(sp)+		; return color
+	return
+;===============================	draw line
+g$line:
+	mov	(r2)+, r1
+	mov	(r2), r3
+	call	p$st			; final point's state
+	.push	<r2, r1, r3>
+;-------------------------------	clip by Cone and  Sutherland 
+10$:					; algorithm (Foley J.D., Van Dam A.,
+	bit	r2, @#p.s		; Fundamentals of Interactive
+	beq	20$			; Computer Graphic, "Mir", Moscow,
+	jmp	240$			; 1985, vol.1, pp. 176-180)
+20$:
+	tst	r2
+	bne	30$
+	tst	@#p.s
+	beq	100$
+;...............................	exchange point
+	mov	@#p.x, r0
+	mov	r1, @#p.x
+	mov	r0, r1
+	mov	@#p.y, r0
+	mov	r3, @#p.y
+	mov	r0, r3
+	mov	@#p.s, r0
+	mov	r2, @#p.s
+	mov	r0, r2
+;...............................	carry point to window margin
+30$:
+	asr	r2
+	bcc	60$
+	mov	@#w.xmin, r4
+40$:
+	.push	r4
+	sub	r1, r4			; xedge - x1
+	mov	@#p.y, r0		; y2
+	sub	r3, r0			; y2 - y1
+	mul	r0, r4			; (y2 - y1)*(xedge - x1)
+	mov	@#p.x, r0		; x2
+	sub	r1, r0			; x2 - x1
+	div	r0, r4			; (y2 - y1)*(xedge - x1)/(x2 - x1)
+	add	r4, r3			; y1 := y1 + ...
+	.pop	r1			; x1 := xedge
+50$:
+	call	p$st
+	br	10$
+60$:
+	asr	r2
+	bcc	70$
+	mov	@#w.xmax, r4
+	br	40$
+70$:
+	asr	r2
+	bcc	90$
+	mov	@#w.ymin, r4
+80$:
+	.push	r4
+	sub	r3, r4			; yedge - y1
+	mov	@#p.x, r0		; x2
+	sub	r1, r0			; x2 - x1
+	mul	r0, r4			; (x2 - x1)*(yedge - y1)
+	mov	@#p.y, r0		; y2
+	sub	r3, r0			; y2 - y1
+	div	r0, r4			; (x2 - x1)*(yedge - y1)/(y2 - y1)
+	add	r4, r1			; x1 := x1 + ...
+	.pop	r3			; y1 := yedge
+	br	50$
+90$:
+	mov	@#w.ymax, r4
+	br	80$
+;-------------------------------	line generation by MDCM algorithm
+100$:					; (IEEE Trans. on comp., vol. C-28,
+	mov	#2, @#p.s		;  No. 10, October 1979, pp. 729-736)
+	mov	@#r.len, @#p.lnxt
+	mov	#c.8kb, @#p.wnxt
+	sub	@#r.mod, @#p.wnxt
+	sub	r3, @#p.y
+	sub	r1, @#p.x		; abs(x2-x1)
+	bge	110$
+	add	@#p.x, r1
+	neg	@#p.x
+	add	@#p.y, r3
+	neg	@#p.y
+110$:
+	call	p$ad
+	bic	@#r.tr, @#ur2
+	mov	r2, @#p.wadr		; window address
+	call	p$msk
+	mov	@#r.typ, r1
+	call	p$set
+	tst	@#p.y 
+	bge	130$
+	neg	@#p.y			; abs(y2-y1)
+	neg	@#p.s			; window address incremet
+	neg	@#p.lnxt
+	neg	@#p.wnxt
+	br	140$
+130$:
+	inc	r3
+	neg	r3
+	add	@#r.div, r3		; first window y-step number 
+140$:
+	clr	r2			; function
+	cmp	@#p.x, @#p.y
+	bgt	190$
+	mov	@#p.y, @#p.cnt
+	mov	@#p.y, @#p.crit
+	asr	@#p.crit
+	adc	@#p.crit
+	tst	r3
+	beq	180$
+150$:
+	tst	@#p.cnt
+	ble	240$
+	bic	@#r.tr, @#ur2
+	sub	r3, @#p.cnt
+	bge	160$
+	add	@#p.cnt, r3
+160$:
+	add	@#p.lnxt, r0
+	add	@#p.x, r2
+	cmp	r2, @#p.crit
+	blt	170$
+	sub	@#p.y, r2
+	ashc	@#r.bp, r4
+	tst	r5
+	bne	170$
+	tst	(r0)+
+	mov	r4, r5
+	mov	@#r.bg, r4
+170$:
+	call	p$set
+	sob	r3, 160$
+180$:
+	add	@#p.s, @#p.wadr
+	mov	@p.wadr, @#ur2
+	sub	@#p.wnxt, r0
+	mov	@#r.div, r3
+	br	150$
+190$:
+	mov	r3, @#p.cnt
+	mov	@#p.x, r3
+	mov	r3, @#p.crit
+	asr	@#p.crit
+	adc	@#p.crit
+200$:
+	ashc	@#r.bp, r4
+	tst	r5
+	bne	210$
+	tst	(r0)+
+	mov	r4, r5
+	mov	@#r.bg, r4
+210$:
+	add	@#p.y, r2
+	cmp	r2, @#p.crit
+	blt	230$
+	tst	@#p.cnt
+	bne	220$
+	add	@#p.s, @#p.wadr
+	mov	@p.wadr, @#ur2
+	sub	@#p.wnxt, r0
+	mov	@#r.div, @#p.cnt
+220$:
+	add	@#p.lnxt, r0
+	sub	@#p.x, r2
+	dec	@#p.cnt
+230$:
+	call	p$set
+	sob	r3, 200$
+240$:
+	.pop	<@#p.y, @#p.x, @#p.s>
+	return
+;-------------------------------	calculate pixel address
+p$ad:					; r1	x
+	clr	r0			; r3	y
+	div	@#r.pw, r0		;----------------------
+	mov	r0, r4			; r0	virtual address
+	asl	r0			; r1	pixel number
+	clr	r2			; r2	window address
+	div	@#r.div, r2		; r3	line number
+	asl	r2			; r4	word number in line
+	add	#r.8kb, r2		; r5	#
+	mov	(r2), @#ur2
+	mov	r3, r5
+	mul	@#r.len, r5
+	add	r5, r0
+	add	#c.badr, r0
+	return
+;-------------------------------	remap caller address
+u$ad:					; r2	pointer to user address
+	clr	r4			;------------------------------
+	mov	(r2)+, r5		; r5	virtual address
+	ashc	#3, r4			; r2	ur4
+	asl	r4			; (r4)	ur5
+	ror	r5
+	ror	r5
+	sec
+	ror	r5
+	mov	#40, @#ur4
+	mov	#100, @#ur5
+	add	@(pc)+, r4
+g.cprc:
+	.word	0
+	add	#p.ur0, r4
+	mov	(r4)+, r2
+	mov	(r4), @#ur5
+	mov	r2, @#ur4
+	return
+;-------------------------------	estimate point status
+p$st:
+	clr	r2			; r1	x
+	cmp	@#w.ymax, r3		; r3	y
+	bge	10$			;--------------------
+	bis	#c.t, r2		; r2	p.s
+10$:
+	cmp	r3, @#w.ymin
+	bge	20$
+	bis	#c.b, r2
+20$:
+	cmp	@#w.xmax, r1
+	bge	30$
+	bis	#c.r, r2
+30$:
+	cmp	r1, @#w.xmin
+	bge	40$
+	inc	r2
+40$:
+	return
+;-------------------------------	form pixel mask
+p$msk:					; r1	pixel number
+	mul	@#r.bp, r1		;-------------------
+	mov	@#r.fg, r5		; r5	foreground mask
+	mov	@#r.bg, r4		; r4	background mask
+	ashc	r1, r4
+	return
+;-------------------------------	set pixel
+p$set:
+	asl	r1
+	bcc	b$set
+f$set:
+	bis	r5, (r0)
+	inc	r1
+	return
+b$set:
+	bis	r4, (r0)
+	return

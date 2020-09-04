@@ -1,0 +1,373 @@
+					;******	File g1.mac ******
+
+;===============================	raster creation
+g$init:
+	mov	#16., r4
+	mov	#g.plan, r5
+10$:
+	tst	-(r5)
+	beq	20$
+	sob	r4, 10$
+	mov	#err.03, -(r2)		; to many rasters
+	return
+20$:
+	.push	r2
+	get4k	#1			; get memory for raster description
+	bcs	90$
+	mov	r0, (r5)
+	mov	r0, @#ur3
+	mov	(r2), r1		; width in pixel
+	ble	100$
+	cmp	r1, #c.8kb
+	bgt	100$
+	dec	r4
+	mov	r4, (r2)+		; raster identifier
+	mov	r4, g.idn		; make raster current
+	dec	r1
+	mov	r1, @#r.xmax
+	mov	r1, @#w.xmax
+	inc	r1
+	mov	(r2)+, r3		; height in lines
+	ble	100$
+	cmp	r3, #c.hgt
+	bgt	100$
+	dec	r3
+	mov	r3, @#r.ymax
+	mov	r3, @#w.ymax
+	inc	r3
+	movb	(r2), r0		; mode
+	cmp	r0, #vm40
+	bne	30$
+	inc	r0
+30$:
+	inc	r0
+	mov	r0, @#r.bp
+	.push	r5
+	clr	r4
+	mov	#16., r5
+	div	r0, r4			; pixel per word
+	mov	r4, @#r.pw
+;-------------------------------	bitmap size calculation	
+	clr	r0
+	div	r4, r0
+	cmp	#0, r1
+	adc	r0
+	asr	r0
+	adc	r0			; guarantee even word
+	inc	r0			; add two extra words
+	ash	#2, r0			; full raster length in bytes
+	mov	r0, @#r.len
+	clr	r4
+	mov	#c.8kb, r5
+	div	r0, r4
+	mov	r4, @#r.div		; number of full lines in 8kb page
+	mov	r5, @#r.mod
+	.pop	r5
+	mov	r3, r1
+	clr	r0
+	div	r4, r0
+	mov	r0, @#r.full		; number of full pages in bitmap
+	mov	r1, @#r.rest		; incomplete page line number
+	beq	40$
+	inc	r0
+;------------------------------		bitmap memory allocation
+40$:
+	mov	r0, r1
+	mov	#r.8kb, r4
+50$:
+	get8k	#1
+	bcs	60$	
+	bic	#170017, r0
+	bis	(r2), r0		; mode & palette 
+	mov	r0, (r4)+
+	sob	r1, 50$
+	bic	#170017, r0
+	mov	r0, @#ur2		; set memory mapping for TAS
+	br	120$
+;-------------------------------	error processing
+60$:
+	mov	@#r.full, r2
+	cmp	#0, @#r.rest
+	adc	r2
+	sub	r1, r2
+	beq	80$
+	mov	#r.8kb, r4
+70$:
+	mov	(r4)+, r0
+	bic	#170017, r0
+	fremem	#1
+	sob	r2, 70$
+80$:
+	mov	(r5), r0
+	fre4k	#1
+90$:
+	.pop	r2
+	mov	#err.00, -(r2)		; no memory
+	br	110$
+100$:
+	mov	(r5), r0
+	fre4k	#1
+	.pop	r2
+	mov	#err.01, -(r2)	 	; invalid parameters
+110$:
+	clr	(r5)
+	return
+;-------------------------------	system registration of TAS
+120$:
+	.push	<r2, r5>
+	mov	#r.tas+2, r0
+	clr	(r0)+			; TAS creation
+	mov	r3, (r0)+
+	mov	@#r.len, (r0)+
+	mov	#r.8kb, r1		; table of bitmap 8kb pages
+	mov	@#r.full, r2
+	beq	160$
+130$:
+	mov	@#r.div, r3
+	clr	r4
+	mov	(r1)+, r5
+140$:
+	mov	r4, (r0)+
+	mov	r5, (r0)+
+	add	@#r.len, r4
+	cmp	r4, #c.4kb
+	blt	150$
+	sub	#c.4kb, r4
+	add	#w.4kb, r5
+150$:
+	sob	r3, 140$
+	sob	r2, 130$
+160$:
+	mov	@#r.rest, r3
+	beq	190$
+	clr	r4
+	mov	(r1)+, r5
+170$:
+	mov	r4, (r0)+
+	mov	r5, (r0)+
+	add	@#r.len, r4
+	cmp	r4, #c.4kb
+	blt	180$
+	sub	#c.4kb, r4
+	add	#w.4kb, r5
+180$:
+	sob	r3, 170$
+190$:
+	arinst	#r.tas
+	.pop	<r5, r2>
+	tst	@#r.tas
+	bpl	200$
+	clr	r1
+	br	60$
+200$:
+	add	#g.plan-g.ur, r5
+	mov	@#r.tas+2, (r5)		; plane idn
+	mov	(r5), -(r2)
+ ;-------------------------------	raster initialization
+	mov	#1, r0
+	mov	r0, @#r.x
+	mov	r0, @#r.y
+	clr	@#w.xmin
+	clr	@#w.ymin
+	clr	@#p.x
+	clr	@#p.y
+	clr	@#r.bg
+	clr	@#r.tr
+	neg	r0
+	mov	r0, @#r.typ
+	ash	@#r.bp, r0
+	mov	r0, @#r.cm
+	com	r0
+	mov	r0, @#r.fg
+	clr	@#p.s
+	mov	#r.vadr, r2
+	mov	#r.fg, (r2)+		; r.vadr
+	mov	#2, (r2)+		; r.plen
+	mov	#1, (r2)+		; r.phgt
+	mov	#2, (r2)+		; r.psiz
+	mov	#1, (r2)+		; r.pwid
+	mov	#r.rop, r2
+	clr	(r2)
+	call	g$rop
+	tst	(sp)+			; pop unused error address
+;===============================	bitmap clearing
+g$clrr:
+	mov	#r.8kb, r0
+	mov	@#r.full, r1
+	beq	30$
+	mov	#c.8kb, r2
+	sub	@#r.mod, r2
+	asr	r2
+10$:
+	mov	r2, r3
+	mov	(r0)+, @#ur2
+	bic	#3, @#ur2
+	mov	#c.badr, r4
+20$:
+	clr	(r4)+
+	sob	r3, 20$
+	sob	r1, 10$
+30$:
+	mov	@#r.rest, r3
+	beq	50$
+	mul	@#r.len, r3
+	asr	r3
+	mov	(r0)+, @#ur2
+	bic	#3, @#ur2
+	mov	#c.badr, r4
+40$:
+	clr	(r4)+
+	sob	r3, 40$
+50$:
+	return
+;===============================	kill raster, his plane & views
+g$kill:					; r4	raster identifier
+	asl	r4
+	clr	g.ur(r4)
+	bic	#3, @#ur2
+	mov	g.plan(r4), @#r.tas+2
+	arkill	#r.tas			; delete raster for window system
+	mov	#-1, g.idn
+	mov	@#r.full, r3
+	cmp	#0, @#r.rest
+	adc	r3
+	mov	#r.8kb, r4
+10$:
+	mov	(r4)+, r0
+	bic	#170017, r0
+	fremem	#1			; free bitmap memory
+	sob	r3, 10$
+	mov	@#ur3, r0
+	fre4k	#1			; free raster structure memory
+	return
+;===============================	set raster operation
+g$rop:					; 0	mov
+	mov	(r2), r0		; 1	bis
+	bic	#^c3, r0		; 2	xor
+	bne	10$			; 3	bic
+	clr	@#r.tr
+	mov	@#r.bp,	r1
+	asr	r1			; if r.bp = 1 then
+	adc	r0			;    "bis" replace "mov"
+	beq	20$			; else "mov" remains "mov"
+10$:
+	mov	#3, @#r.tr
+20$:
+	mov	r0, @#r.rop
+	asl	r0
+	mov	#r.list, r2
+	mov	(r2)+, r1
+30$:
+	bic	#r.clr, @(r2)
+	bis	r.opr(r0), @(r2)+
+	sob	r1, 30$
+	return
+r.opr:
+	mov	r0, r0
+	bis	r0, r0
+	xor	r0, r0
+	bic	r0, r0
+r.list:
+	.word	26.
+	.word	s$dot,	f$set,	b$set,	b$000
+	.word	b$010,	b$020,	b$030,	b$040
+	.word	b$050,	b$060,	b$070,	b$080
+	.word	b$090,	b$100,	b$110,	b$120
+	.word	b$130,	b$140,	b$150,	b$160
+	.word	b$170,	b$180,	b$190,	f$000
+	.word	f$010,	f$020
+	.dsabl	lsb
+;===============================	set window
+g$wndw:
+	mov	(r2)+, r0		; x1
+	mov	(r2)+, r1		; y1
+	mov	(r2)+, r4		; x2
+	mov	(r2), r5		; y2
+	cmp	r0, r4
+	ble	10$
+	mov	r0, r2
+	mov	r4, r0
+	mov	r2, r4
+10$:
+	cmp	r1, r5
+	ble	20$
+	mov	r1, r2
+	mov	r5, r1
+	mov	r2, r5
+20$:
+	mov	#r.ymax+2, r2
+	cmp	r5,  -(r2)
+	ble	30$
+	mov	(r2), r5
+30$:
+	cmp	r4, -(r2)
+	ble	40$
+	mov	(r2), r4
+40$:
+	tst	r1
+	bge	50$
+	clr	r1
+50$:
+	tst	r0
+	bge	60$
+	clr	r0
+60$:
+	mov	#w.xmin, r2
+	mov	r0, (r2)+
+	mov	r1, (r2)+
+	mov	r4, (r2)+
+	mov	r5, (r2)
+	mov	#p.x, r0
+	mov	(r0)+, r1
+	mov	(r0)+, r3
+	call	p$st
+	mov	r2, (r0)
+	return
+;===============================	set colors
+g$colr:
+	mov	(r2), r0
+	bic	@#r.cm, r0		; valid color
+	mov	r0, r.fg-<gfgc*2>(r3)
+	return
+;===============================	set line pattern
+g$type:
+	mov	(r2), @#r.typ
+	return
+;===============================	set figure pattern
+g$ptrn:
+	call	u$ad
+	clr	r0
+	mov	(r5)+, r1		; length in pixels
+	ble	10$
+	div	@#r.pw, r0
+	cmp	#0, r1
+	adc	r0			; length in words
+	asl	r0
+	mov	r0, r1
+	mov	(r5)+, r3		; height
+	ble	10$
+	mul	r3, r1			; size
+	cmp	r1, #c.8kb
+	bhis	10$
+	.push	r2
+	mov	#r.ur4, r2
+	.pop	(r2)+			; ur4
+	mov	(r4), (r2)+		; ur5
+	mov	r5, (r2)+		; vadr
+	mov	r0, (r2)+		; length in bytes
+	mov	r3, (r2)+		; height
+	mov	r1, (r2)+		; size
+	asr	r0
+	mov	r0, (r2)+		; length in words
+10$:
+	return
+;===============================	set aspect ratio
+g$asp:
+	mov	(r2)+, r0
+	ble	10$
+	mov	(r2), r1
+	ble	10$
+	mov	r0, @#r.x
+	mov	r1, @#r.y
+10$:
+	return

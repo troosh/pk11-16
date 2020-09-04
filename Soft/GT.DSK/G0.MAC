@@ -1,0 +1,91 @@
+					;******	File g0.mac ******
+	.enabl	lsb
+	.mcall	.exit,	.push,	.pop
+;===============================	simulator's initialization
+.	= 1000
+start::
+	.exit
+	mov	#1000, sp		; set stack pointer
+	unpreg	#g.csr			; release registers
+	proreg	#d.csr			; protect registers for simulation
+	setpri	#30000			; set priority
+        clr     @#ur6			; map to emulator register region 
+	mov	#40, @#ur4		; map to bios tables and
+	mov	#100, @#ur5		; communication area
+	mov	@#p.csr, r0		; register descriptor address
+	mov	r.proc(r0), r0		; process descriptor address
+	add	#p.cprc, r0		; pointer to caller desc. address
+	mov	r0, g.cprc
+;===============================	main loop
+main:
+	waitint	#0			; wait interrupt on csr
+        mov     #x.csr, r2		; get address of memory cell,
+					; corresponding to csr
+	call	u$ad			; get area address
+	mov	r5, r2
+	mov	(r2)+, r3		; get function
+	beq	10$
+	cmp	r3, #f.len
+	bge	main
+	mov	(r2)+, r4		; get ident
+	bic	#^c17, r4
+	cmp	r4, (pc)+		; is it current raster ?
+g.idn:
+	.word	-1
+	beq	10$			; yes
+	asl	r4
+	mov	g.ur(r4), r0
+	beq	20$
+	mov	r0, @#ur3
+	asr	r4
+	mov	r4, g.idn
+	mov	r2, r5
+	mov	#r.rop, r2
+	call	g$rop
+	mov	r5, r2
+10$:
+	asl	r3
+	call	@f.tbl(r3)		; function call 
+	br	main
+20$:
+	mov	#err.02, (r5)		; no raster
+	br	main
+;===============================	data structures
+;-------------------------------	function call table
+f.tbl:
+	.word	g$init			; create raster
+	.word	g$kill			; kill raster, his plane & vies
+	.word	g$clrr			; clear raster
+	.word	g$asp			; set aspect ratio
+	.word	g$wndw			; set window
+	.word	g$colr			; set foreground color
+	.word	g$colr			; set background color
+	.word	g$rop			; set raster operation
+	.word	g$type			; set line pattern
+	.word	g$ptrn			; set figure pattern
+	.word	g$move			; move to point
+	.word	g$dot			; set/reset pixel
+	.word	g$val			; get value of pixel
+	.word	g$line			; draw line
+	.word	g$arc			; draw counter-clock wise arc
+	.word	g$arc			; draw clock wise arc
+	.word	g$fill			; fill contour (figure)
+	.word	g$rvr			; move block from memory to raster
+	.word	g$vrr			; move block from raster to memory
+	.word	g$vrvr			; move block from raster to raster
+	f.len	==	<.-f.tbl>/2
+;-------------------------------	register descriptors
+d.csr:
+	.word	g.csr			; csr	
+	.word	^c177777		; r.mask	no read bits
+	.word	0			; r.copy
+	.byte	0			; r.rqst
+	.byte	4			; r.stat :	write only call
+	.word	0			; r.strt
+	.word	-1			; r.reset
+;-------------------------------	; table of available rasters
+g.ur:					; memory registers
+	.word	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+g.plan:					; plane identifiers
+	.word	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.dsabl	lsb

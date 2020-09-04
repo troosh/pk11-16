@@ -1,0 +1,1018 @@
+					;******	File g4.mac ******
+
+;===============================	draw arc
+g$arc:
+	sub	#garcc+garcw, r3
+	asl	r3
+	mov	r3, @#a.inco
+	mov	@#r.bp, r1
+	neg	r1
+	mov	@#r.cm, r3
+	ashc	r1, r3
+	mov	r3, @#a.cm
+	com	r3
+	mov	r3, @#a.cms
+	mov	@#r.fg, r3
+	ashc	r1, r3
+	mov	r3, @#a.fg
+;-------------------------------	evaluate radius
+	mov	(r2)+, @#a.xc
+	mov	(r2)+, @#a.yc
+	.push	r2			; save pointer to (xf,yf)
+	mov	r2, r0
+	mov	@#p.x, r1
+	mov	@#p.y, r2
+	call	con$cc
+	mov	r1, @#p.x
+	mov	r2, @#p.y
+	mov	r1, r4
+	mul	r2, r2
+	mul	r4, r4
+	add	r5, r3
+	adc	r2
+	add	r4, r2
+	call	sq$rt
+	cmp	r3, #3
+	bge	10$
+	.pop	r2
+	jmp	g$dot
+;-------------------------------	converts to system of arc's centre
+10$:
+	mov	r3, @#a.rad
+	asr	r3
+	adc	r3
+	mov	r3, @#a.crit
+	.push	<@#w.xmin, @#w.ymin, @#w.xmax, @#w.ymax>
+	mov	(r0)+, r1		; xf
+	mov	(r0)+, r2		; yf
+	call	con$cc
+	call	oct$df
+	.push	<r1, r2, r5>
+	mov	sp, r1
+	add	#6, r1
+	sub	dm.arc(r5), r1
+	mov	(r1), r2
+	bge	12$
+	neg	r2	
+12$:
+	cmp	@#a.rad, r2
+	bge	16$
+	mov	@#a.rad, r2
+	tst	(r1)
+	bge	14$
+	neg	r2
+14$:
+	mov	r2, (r1)
+16$:
+	mov	@#p.x, r1
+	mov	@#p.y, r2
+	call	oct$df
+	.push	<r1, r2, r5>
+;-------------------------------	compare initial and final point
+	mov	sp, r1
+	mov	r1, r2
+	add	#3*2, r2
+	call	c$arc
+	.push	r5			; saves result of comparision
+;-------------------------------	convert window to arc system
+	mov	@#w.xmin, r1
+	mov	@#w.ymin, r2
+	call	con$cc
+	mov	r1, @#w.xmin
+	mov	r2, @#w.ymin
+	mov	@#w.xmax, r1
+	mov	@#w.ymax, r2
+	call	con$cc
+	mov	r1, @#w.xmax
+	mov	r2, @#w.ymax
+;-------------------------------	clip the full circle by Cone and
+	mov	@#a.rad, r1		; Sutherland algorithm, modified by
+	neg	r1			; B. Tkach for circle clipping
+	clr	r3
+	call	p$st
+	.push	<r1, r3, r2>		; (-r, 0) -	start point
+	mov	sp, r4
+	sub	#6*3*2, sp		; space reservation for
+					; intermediate points
+	.push	<r1, r3, r2>		; (-r, 0) -	final point
+	mov	r1, r3
+	clr	r1
+	call	p$st
+	mov	r1, -(r4)		; (0, -r)
+	mov	r3, -(r4)
+	mov	r2, -(r4)
+	mov	r1, -(r4)		; (0, -r)
+	mov	r3, -(r4)
+	mov	r2, -(r4)
+	mov	@#a.rad, r1
+	clr	r3
+	call	p$st
+	mov	r1, -(r4)		; (r, 0)
+	mov	r3, -(r4)
+	mov	r2, -(r4)
+	mov	r1, -(r4)		; (r, 0)
+	mov	r3, -(r4)
+	mov	r2, -(r4)
+	mov	r1, r3
+	clr	r1
+	call	p$st
+	mov	r1, -(r4)		; (0, r)
+	mov	r3, -(r4)
+	mov	r2, -(r4)
+	mov	r1, -(r4)		; (0, r)
+	mov	r3, -(r4)
+	mov	r2, -(r4)
+	mov	sp, r5			; pointer to last quadrant
+	mov	#4, r0			; quadrant number
+	mov	r3, r2			; radius
+;-------------------------------	quadrant clipping
+20$:
+	call	q$clp
+	add	#2*3*2, r5		; after cycle r1 points to stack
+	sob	r0, 20$			; zone with needed arc parameters
+;-------------------------------	outsiding quadrants collapsation
+	mov	sp, r0			; and tangent quadrants merging
+30$:
+	tst	(r0)			; is current quadrant outside window ?
+	beq	80$			; no
+	cmp	r0, sp			; are all previous quadrants
+					; outside window ?
+	beq	60$			; yes,- remove the current quadrant
+					; by stack pointer updating
+	mov	r0, r3			; no,-collapse the current quadrant
+					; by previous quadrants moving
+	add	#2*3*2, r3		; initial address to
+	mov	r0, r2			; initial address from
+40$:
+	mov	r2, r4
+	sub	sp, r4
+	asr	r4			; word counter
+50$:
+	mov	-(r2), -(r3)
+	sob	r4, 50$
+60$:
+	add	#2*3*2, sp
+70$:
+	add	#2*3*2, r0		; pointer to next quadrant
+	cmp	r0, r5			; are all quadrants processed ?
+	bne	30$			; no
+	br	90$			; yes
+80$:
+	cmp	r0, sp			; are all previous quadrants
+					; outside window ?
+	beq	70$			; yes
+	cmp	4(r0), -2(r0)		; are current and previous
+					; quadrant tangent ?
+	bne	70$			; no
+	cmp	2(r0), -4(r0)
+	bne	70$			; no
+	mov	r0, r3
+	add	#3*2, r3		; initial address to
+	mov	r0, r2
+	sub	#3*2, r2		; initial address from
+	br	40$
+90$:
+	cmp	sp, r0			; are all circle outside window ?
+	bne	100$			; no
+	jmp	450$
+;-------------------------------	are first and last quadrant tangent ?
+100$:
+	cmp	-2(r0), 4(sp)		; are x-coordinates equal ?
+	bne	140$			; no
+	cmp	-4(r0), 2(sp)		; are y-coordinates equal ?
+	bne	140$			; no
+	mov	sp, r1
+	add	#2*3*2, r1		; initial address from
+	cmp	r1, r0			; are full circle inside viewport ?
+	beq	120$			; yes
+	mov	r0, r3			; initial address to
+	mov	#3, r4
+110$:
+	mov	-(r1), -(r3)
+	sob	r4, 110$
+	add	#2*3*2, sp
+	br	140$
+;-------------------------------	full real arc generation
+120$:
+	mov	r1, sp
+	tst	(r1)+
+	mov	r1, r2
+	add	#<3*2>, r2
+	call	a$arc
+	jmp	450$
+;-------------------------------	investigation of relation between
+140$:					; enabled and needed arcs
+	tst	@#a.inco		; is direction counter clock-wise ?
+	blt	160$			; yes
+	mov	sp, r2			; no,-change points
+150$:
+	mov	2(r2), r1
+	mov	10(r2), 2(r2)
+	mov	r1, 10(r2)
+	mov	4(r2), r1
+	mov	12(r2), 4(r2)
+	mov	r1, 12(r2)
+	add	#2*3*2, r2
+	cmp	r0, r2
+	bne	150$
+;-------------------------------	arc point octant determination
+160$:
+	mov	r0, r3
+170$:
+	mov	-(r3), r1
+	mov	-(r3), r2
+	call	oct$df
+	mov	r5, -(r3)
+	cmp	r3, sp
+	bne	170$
+	br	190$
+;-------------------------------	jump to next enabled arc
+180$:
+	add	#2*3*2, sp
+	cmp	sp, r0
+	bne	190$
+	jmp	450$			; all arcs processed
+;...............................	what is current enabled arc ?
+190$:
+	mov	sp, r1			; pointer to first point of
+					; current enabled arc
+	mov	r1, r2
+	add	#3*2, r2		; ... second
+	call	c$arc			; evaluates relation between first
+					; and second points in current
+					; enabled arc
+	mov	r0, r2
+	mov	(r2)+, r3		; relation between initial and
+					; final points in needed arc
+	tst	r5			; what is current enabled arc ?
+	blt	230$
+	bgt	360$
+;...............................	current enabled arc is point only
+	tst	r3			; is needed arc a circle?
+	beq	210$			; yes, - set point
+	call	c$arc			; does enabled point lie after
+					; initial needed ?
+	blt	220$			; no
+	tst	r3			; is needed arc complex ?
+	bgt	210$			; yes, - set point
+200$:
+	add	#3*2, r2		; pointer to final needed point
+	call	c$arc			; does enabled point lie before final?
+	bgt	180$			; no, - go to next arc processing
+210$:
+	call	d$arc
+	br	180$
+220$:
+	tst	r3			; is needed arc complex ?
+	bgt	200$			; yes
+	br	180$
+;...............................	current enabled arc is simple
+;. . . . . . . . . . . . . . . .	what is needed arc ?
+230$:
+	tst	r3
+	blt	260$	
+	bgt	310$
+;. . . . . . . . . . . . . . . .	needed arc is a circle
+240$:
+	mov	r1, r2
+	add	#3*2, r2
+250$:
+	call	a$arc
+	br	180$
+;. . . . . . . . . . . . . . . .	both arcs are simple
+260$:
+	call	c$arc			; ie, in ?
+	blt	300$
+	add	#3*2, r2		; ie => in
+	call	c$arc			; ie, fn ?
+	beq	210$			; ie = fn
+	bgt	180$			; ie > fn
+	.push	r1			; (ie > in) and (ie < fn)
+	add	#3*2, r1
+270$:
+	call	c$arc			; fe, fn ?
+	bge	290$			; fe >= fn
+280$:
+	mov	r1, r2
+290$:
+	.pop	r1
+	br	250$
+300$:					; ie < in
+	add	#3*2, r1
+	call	c$arc			; fe, in ?
+	beq	210$			; fe = in
+	blt	180$
+	.push	r2			; (ie < in) and (fe > in)
+	add	#3*2, r2		; fn
+	br	270$
+;. . . . . . . . . . . . . . . .	needed arc is complex
+310$:
+	call	c$arc			; ie, in ?
+	bge	240$			; ie >= in
+	.push	r1			; ie
+	add	#3*2, r1		; fe
+	call	c$arc			; fe, in ?
+	bgt	320$			; fe > in
+	blt	330$			; fe < in
+	call	d$arc
+	br	340$
+320$:					; (ie < in) and (fe > in)
+	mov	r2, r3
+	mov	r1, r2			; fe
+	mov	r3, r1			; in
+	call	a$arc			; (in, fe)
+	mov	r1, r2
+	br	340$
+330$:					; (ie < in) and (fe < in)
+	add	#3*2, r2		; fn
+	call	c$arc			; fe, fn ?
+	bgt	350$			; fe > fn
+	br	280$
+340$:
+	add	#3*2, r2		; fn
+350$:
+	.pop	r1			; ie
+	call	c$arc			; ie, fn ?
+	bgt	180$			; ie > fn
+	beq	210$			; ie = fn
+	br	250$			; ie < fn
+;...............................	enabled arc is complex
+;. . . . . . . . . . . . . . . .	what is needed arc ?
+360$:
+	tst	r3
+	beq	240$			; full circle
+	bgt	370$			; also complex
+	mov	r1, r5			; enabled <==> needed
+	mov	r2, r1
+	mov	r5, r2
+	br	310$
+;. . . . . . . . . . . . . . . .	both arcs are complex
+370$:
+	call	c$arc			; ie, in ?
+	bge	420$			; ie >= in
+	.push	r2			; ie < in
+	add	#3*2, r2		; fn
+	call	c$arc			; ie, fn ?
+	bgt	410$			; ie > fn
+	blt	390$			; ie < fn
+380$:
+	call	d$arc			; ie = fn
+	br	400$
+390$:					; (ie < in) and (ie < fn)
+	call	a$arc			; (ie,fn)
+400$:
+	add	#3*2, r1		; fe
+	br	280$			; (in,fe)
+410$:					; (ie > fn) and (ie < in)
+	add	#3*2, r1		; fe
+	call	c$arc			; fe, fn ?
+	bgt	290$			; fe > fn
+	br	280$
+420$:					; ie >= in
+	.push	r1			; ie
+	add	#3*2, r1		; fe
+	call	c$arc			; fe, in ?
+	bgt	430$			; fe > in
+	blt	440$			; fe < in
+	call	d$arc
+	add	#3*2, r2
+	br	290$			; fe = in
+430$:					; (fe > in) and (ie >= in)
+	mov	r2, r3
+	mov	r1, r2			; fe
+	mov	r3, r1			; in
+	call	a$arc			; (in,fe)
+	br	400$
+440$:					; (fe < in) and (ie >= in)
+	add	#3*2, r2
+	br	270$
+;-------------------------------	restore window in original system
+450$:
+	add	#7*2, sp
+	.pop	<@#w.ymax, @#w.xmax, @#w.ymin, @#w.xmin, r2>
+	jmp	g$move
+;-------------------------------	set arc point
+d$arc:					; r1	pointer to point
+	.push	<r0, r1, r2>
+	mov	r1, r2
+	tst	(r2)+			; pop octant
+	mov	(r2)+, r3		; y
+	mov	(r2), r1		; x
+	call	con$os
+	mov	r3, (r2)
+	mov	r1, -(r2)
+	call	g$dot
+	.pop	<r2, r1, r0>
+	return
+;-------------------------------	square root from integer number
+sq$rt:					; r2,r3	integer number
+	.push	<r0, r1, r4, r5>	;---------------------
+	mov	#1, r1			; r3	result
+	tst	r2
+	beq	30$
+	mov	#16., r0
+	br	20$
+10$:
+	asl	r1
+20$:
+	cmp	r1, r2
+	inc	r0
+	bcs	10$
+	br	60$
+30$:
+	tst	r3
+	beq	90$
+	clr	r0
+	br	50$
+40$:
+	asl	r1
+50$:
+	cmp	r1, r3
+	inc	r0
+	bcs	40$
+60$:
+	asr	r0
+	neg	r0
+	mov	r2, r4
+	mov	r3, r5
+	ashc	r0, r4
+70$:
+	mov	r2, r0
+	mov	r3, r1
+	mov	r5, r4
+	div	r5, r0
+	add	r0, r5
+	asr	r5
+	mov	r1, r1
+	beq	80$
+	adc	r5
+80$:
+	cmp	r4, r5
+	bne	70$
+	mov	r5, r3
+90$:
+	.pop	<r5, r4, r1, r0>
+	return
+;-------------------------------	calculate second coordinate
+xy$arc:					; of circle's point
+	.push	r2			; r2	radius,
+	add	r2, r3			; r3	some coordinate
+	asl	r2			;-------------------------
+	sub	r3, r2			; r3	another coordinate
+	mul	r3, r2
+	call	sq$rt
+	.pop	r2
+	return
+;-------------------------------	clip one quadrant of arc
+q$clp:					; r5	pointer to quadrant block,
+	.push	r5			; r2	radius
+	mov	r5, r4			;----------------------------------
+	add	#3*2, r4		; r5	pointer to clipped quadrant
+5$:					; r1,r4	destroyed
+	bit	(r5), (r4)		; does all quadrant lie outside
+					; window ?
+	bne	65$			; yes
+	tst	(r5)
+	bne	10$
+	tst	(r4)
+	beq	65$
+	mov	r4, r1
+	mov	r5, r4
+	mov	r1, r5
+10$:
+	asr	(r5)
+	bcc	35$
+	mov	@#w.xmin, r3
+15$:
+	mov	r3, 4(r5)		; new x-coordinate
+	call	xy$arc			; evaluates corresponding y-coordinate
+	tst	2(r5)			; checks sign of previous y-coordinate
+	bne	20$
+	tst	2(r4)
+20$:
+	bgt	25$			; sign was plus
+	neg	r3			; ... minus
+25$:
+	mov	r3, 2(r5)		; new y-coordinate
+	.push	r2			; saves radius
+	mov	4(r5), r1		; new x
+30$:
+	call	p$st			; evaluates the state of new point
+	mov	r2, (r5)		; puts status
+	.pop	r2			; restores radius
+	br	5$
+35$:
+	asr	(r5)
+	bcc	40$
+	mov	@#w.xmax, r3
+	br	15$
+40$:
+	asr	(r5)
+	bcc	60$
+	mov	@#w.ymin, r3
+45$:
+	mov	r3, 2(r5)		; new y-coordinate
+	call	xy$arc			; evaluates corresponding x-coordinate
+	tst	4(r5)			; checks sign of previous x-coordinate
+	bne	50$
+	tst	4(r4)
+50$:
+	bgt	55$			; sign was plus
+	neg	r3			; ... minus
+55$:
+	mov	r3, 4(r5)		; new x-coordinate
+	.push	r2			; saves radius
+	mov	r3, r1			; new x
+	mov	2(r5), r3		; new y
+	br	30$
+60$:
+	mov	@#w.ymax, r3
+	br	45$
+65$:
+	.pop	r5
+	return
+;-------------------------------	defines octant of arc's point ;	entry:
+oct$df:					; a.inco	moving direction
+	tst	r1			;		(-2 - ccw,2 - cw)
+	bgt	30$			; r1,r2		point coordinates
+	blt	85$			;--------------------------------
+	tst	r2			; r5		octant number * 2
+	blt	15$
+	tst	@#a.inco
+	bgt	10$
+5$:
+	mov	#7*2, r5
+	return
+10$:
+	mov	#4*2, r5
+	return
+15$:
+	tst	@#a.inco
+	bgt	25$
+20$:
+	mov	#3*2, r5
+	return
+25$:
+	clr	r5
+	return
+30$:
+	tst	r2
+	bgt	45$
+	blt	65$
+	tst	@#a.inco
+	bgt	40$
+35$:
+	mov	#5*2, r5
+	return
+40$:
+	mov	#2*2, r5
+	return
+45$:
+	cmp	r1, r2
+	bgt	55$
+	blt	60$
+	tst	@#a.inco
+	bgt	20$
+50$:
+	mov	#6*2, r5
+	return
+55$:
+	tst	@#a.inco
+	bgt	40$
+	br	50$
+60$:
+	tst	@#a.inco
+	bgt	20$
+	br	5$
+65$:
+	.push	r2
+	neg	@sp
+	cmp	r1, (sp)+
+	bgt	75$
+	blt	80$
+	tst	@#a.inco
+	blt	10$
+70$:
+	mov	#1*2, r5
+	return
+75$:
+	tst	@#a.inco
+	bgt	70$
+	br	35$
+80$:
+	tst	@#a.inco
+	bgt	25$
+	br	10$
+85$:
+	tst	r2
+	bgt	90$
+	blt	105$
+	tst	@#a.inco
+	bgt	50$
+	br	70$
+90$:
+	.push	r1
+	neg	@sp
+	cmp	(sp)+, r2
+	bgt	95$
+	blt	100$
+	tst	@#a.inco
+	bgt	35$
+	br	25$
+95$:
+	tst	@#a.inco
+	bgt	35$
+	br	70$
+100$:
+	tst	@#a.inco
+	bgt	10$
+	br	25$
+105$:
+	cmp	r2, r1
+	bgt	110$
+	blt	115$
+	tst	@#a.inco
+	bgt	5$
+	br	40$
+110$:
+	tst	@#a.inco
+	bgt	50$
+	br	40$
+115$:
+	tst	@#a.inco
+	bgt	5$
+	br	20$
+;-------------------------------	convert to the arc's center system
+con$cc:					; in regard with aspect ratio
+	sub	@#a.xc, r1		; r1,r2	absolute coordinates,
+	sub	@#a.yc, r2		;--------------------------------
+	cmp	@#r.x, @#r.y		; r1,r2	coordinates in new system
+	bgt	10$
+	blt	40$
+	return
+10$:
+	.push	r0
+	mov	r1, r0
+	mul	@#r.x, r0
+	div	@#r.y, r0
+	asl	r1
+	blt	30$
+	cmp	r1, @#r.y
+	blt	20$
+	inc	r0
+20$:
+	mov	r0, r1
+	.pop	r0
+	return
+30$:
+	neg	r1
+	cmp	r1, @#r.y
+	blt	20$
+	dec	r0
+	br	20$
+40$:
+	.push	r3
+	mul	@#r.y, r2
+	div	@#r.x, r2
+	asl	r3
+	blt	60$
+	cmp	r3, @#r.x
+	blt	50$
+	inc	r2
+50$:
+	.pop	r3
+	return
+60$:
+	neg	r3
+	cmp	r3, @#r.x
+	blt	50$
+	dec	r2
+	br	50$
+;-------------------------------	convert to the original system
+con$os:					; r1,r3	coordinates in arc's system,
+	cmp	@#r.x, @#r.y		;-----------------------------------
+	bgt	20$			; r1,r3	coordinates in old system
+	blt	50$
+10$:
+	add	@#a.xc, r1
+	add	@#a.yc, r3
+	return
+20$:
+	.push	r0
+	mov	r1, r0
+	mul	@#r.y, r0
+	div	@#r.x, r0
+	asl	r1
+	blt	40$
+	cmp	r1, @#r.x
+	blt	30$
+	inc	r0
+30$:
+	mov	r0, r1
+	.pop	r0
+	br	10$
+40$:
+	neg	r1
+	cmp	r1, @#r.x
+	blt	30$
+	dec	r0
+	br	30$
+50$:
+	.push	r2
+	mov	r3, r2
+	mul	@#r.x, r2
+	div	@#r.y, r2
+	asl	r3
+	blt	70$
+	cmp	r3, @#r.y
+	blt	60$
+	inc	r2
+60$:
+	mov	r2, r3
+	.pop	r2
+	br	10$
+70$:
+	neg	r3
+	cmp	r3, @#r.y
+	blt	60$
+	dec	r2
+	br	60$
+;-------------------------------	compare two arc point
+c$arc:					; r1	pointer to first point,
+	cmp	(r2), (r1)		; r2	... second
+	beq	20$			;------------------------------
+	blt	10$			; r5	relation between points:
+	tst	@#a.inco		; < 0 -	first point before second,
+	bgt	80$			; = 0 -	equal,
+	br	60$			; > 0 -	after
+10$:
+	tst	@#a.inco
+	blt	80$			; before
+	br	60$			; after
+20$:
+	mov	(r1), r5		; octant
+	bit	#4, dm.arc(r5)		; what coordinate is dominant ?
+	bne	40$			; y
+	cmp	4(r2), 4(r1)
+	beq	70$
+	blt	30$
+	tst	in.arc+4(r5)		; sign of x-increment
+	bgt	80$			; before
+	br	60$			; after
+30$:
+	tst	in.arc+4(r5)		; sign of x-increment
+	blt	80$			; before
+	br	60$			; after
+40$:
+	cmp	2(r2), 2(r1)
+	beq	70$
+	blt	50$
+	tst	in.arc(r5)		; sign of y-increment
+	bgt	80$			; before
+	br	60$			; after
+50$:
+	tst	in.arc(r5)		; sign of y-increment
+	blt	80$			; before
+60$:
+	mov	#1, r5
+	return
+70$:
+	clr	r5
+	return
+80$:
+	mov	#-1, r5
+	return
+;-------------------------------	generates arc between two points
+a$arc:					; r1	pointer to initial point,
+	.push	<r0, r1, r2>		; r2	pointer to final point
+	call	c$arc
+	mov	(r2)+, r4
+	mov	(r2)+, @#a.yf
+	mov	(r2)+, @#a.xf
+	mov	(r1)+, r3
+	sub	r3, r4
+	tst	@#a.inco
+	bgt	2$
+	neg	r4
+2$:
+	asr	r4
+	tst	r4			; !!!
+	bgt	6$
+	blt	4$
+	tst	r5
+	blt	6$
+4$:
+	add	#8., r4
+6$:
+	mov	r4, @#a.octf
+	.push	r3			; save octant number of initial point
+	mov	(r1)+, r3
+	mov	(r1)+, r1
+	mov	r1, @#p.x
+	mov	r3, @#p.y
+	call	con$os			; converts to original (world) system
+	call	p$ad
+	bic	@#r.tr, @#ur2
+	mov	r2, @#a.wadr
+	mov	#2, @#a.winc
+	mov	#c.8kb, @#a.wnxt
+	sub	@#r.mod, @#a.wnxt
+	mov	@#r.len, @#a.lnxt
+	call	p$msk
+	mov	@#r.typ, r1
+	call	p$set
+	.pop	r2			; restore initial octant number
+	mov	in.arc(r2), @#a.incy	; y-increment in circle system
+	bgt	20$
+	neg	@#a.winc
+	neg	@#a.wnxt
+	neg	@#a.lnxt
+	br	30$
+20$:
+	inc	r3
+	neg	r3
+	add	@#r.div, r3
+30$:
+	mov	r3, @#a.step
+	mov	@#r.bp, @#a.pnxt
+	mov	in.arc+4(r2), @#a.incx	; x-increment in circle system 
+	bgt	40$
+	neg	@#a.pnxt
+40$:
+	mov	dm.arc(r2), r3		; dominant increment index
+;-------------------------------	mdcm algorithm for arc generation
+	clr	-(sp)			; (ieee trans. on comp., vol. c-28,
+	clr	@#a.asp			; no. 10, october 1979, pp. 729-736)
+50$:
+	inc	(sp)			; f := f + 1
+60$:
+	tst	a.incx-2(r3)
+	blt	70$
+	add	p.x-2(r3), (sp)		; f := f + d or f := f + r
+	br	80$
+70$:
+	sub	p.x-2(r3), (sp)
+80$:
+	add	a.incx-2(r3), p.x-2(r3)	; d := d + incd or r := r + incr
+	bit	r3, dm.arc(r2)		; are both coordinates processed ?
+	beq	100$			; yes
+	.push	(sp)
+	bgt	90$
+	neg	(sp)			; abs(f)
+90$:
+	cmp	(sp)+, @#a.crit
+	blt	110$
+	mov	dm.arc+4(r2), r3	; pointer to recessive coordinate
+	br	60$
+100$:
+	bis	dm.arc(r2), r3		; remember dominant coordinate
+110$:
+	call	a$eval
+	call	a$incr
+	mov	dm.arc(r2), r3
+	.push	p.x-2(r3)		; dominant coordinate
+	bne	120$
+	tst	(sp)+
+	call	a$cor
+	br	150$
+120$:
+	bgt	130$
+	neg	(sp)
+130$:
+	mov	dm.arc+4(r2), r3
+	.push	p.x-2(r3)		; recessive coordinate
+	bgt	140$
+	neg	(sp)
+140$:
+	cmp	(sp)+, (sp)+		; does the dominant coordinate
+					; catch up the recessive ?
+	bgt	160$			; no
+150$:
+	clr	(sp)
+	add	@#a.inco, r2
+	bic	#177760, r2		; new octant number
+	dec	@#a.octf
+	cmp	in.arc+4(r2), @#a.incx	; new x increment
+	beq	155$
+	neg	@#a.pnxt
+	neg	@#a.incx
+155$:
+	cmp	in.arc(r2), @#a.incy	; new y increment
+	beq	160$
+	neg	@#a.winc
+	neg	@#a.wnxt
+	neg	@#a.lnxt
+	inc	@#a.step
+	neg	@#a.step
+	add	@#r.div, @#a.step
+	neg	@#a.incy
+160$:
+	mov	dm.arc(r2), r3
+	tst	@#a.octf		; is it a final octant ?
+	bgt	50$			; no
+	tst	a.incx-2(r3)
+	blt	170$
+	cmp	p.x-2(r3), a.xf-2(r3)
+	blt	50$
+	br	180$
+170$:
+	cmp	p.x-2(r3), a.xf-2(r3)
+	bgt	50$
+;------	end of mdcm
+180$:
+	tst	(sp)+			; pop mdcm parameters from stack
+	.pop	<r2, r1, r0>		; restore pointers
+	return
+in.arc:
+	.word	1,  1,  1,  1, -1, -1, -1, -1,  1,  1
+dm.arc:
+	.word	2,  4,  4,  2,  2,  4,  4,  2,  2,  4
+;-------------------------------	evaluate arcs increment in
+a$eval:					; respect with aspect ratio
+	cmp	@#r.x, @#r.y		; r3	moving index
+	bgt	20$			;	2	x,
+	blt	40$			;	4	y,
+10$:					;	6	x and y
+	return
+20$:					; compression for x
+	bit	#2, r3			; does the x increment exist ?
+	beq	10$			; no
+	add	@#r.y, @#a.asp
+	cmp	@#a.asp, @#r.x
+	bge	30$
+	bic	#2, r3
+	return
+30$:
+	sub	@#r.x, @#a.asp
+	return
+40$:					; compression for y
+	bit	#4, r3			; does the y increment exist ?
+	beq	10$			; no
+	add	@#r.x, @#a.asp
+	cmp	@#a.asp, @#r.y
+	bge	50$
+	bic	#4, r3
+	return
+50$:
+	sub	@#r.y, @#a.asp
+	return
+;-------------------------------	real arc increment correction
+a$cor:					; for sign changing
+	cmp	@#r.x, @#r.y		; r3	dominant increment index
+	bgt	20$
+	blt	40$
+10$:
+	return
+20$:					; compression for x
+	bit	#2, r3			; does the x increment dominant ?
+	bne	10$			; yes
+	sub	@#r.x, @#a.asp
+30$:
+	neg	@#a.asp
+	return
+40$:					; compression for y
+	bit	#4, r3			; does the y increment dominant ?
+	bne	10$			; yes
+	sub	@#r.y, @#a.asp
+	br	30$
+;-------------------------------	moving along arc
+a$incr:					; r3	moving index
+	tst	r3			;	2	x,
+	bne	5$			;	4	y,
+	return				;	6	x and y
+5$:
+	bit	#4, r3
+	beq	20$
+	add	@#a.lnxt, r0
+	tst	@#a.step
+	bne	10$
+	add	@#a.winc, @#a.wadr
+	mov	@a.wadr, @#ur2
+	bic	@#r.tr, @#ur2
+	sub	@#a.wnxt, r0
+	mov	@#r.div, @#a.step
+10$:
+	dec	@#a.step
+20$:
+	bit	#2, r3
+	beq	50$
+	ashc	@#a.pnxt, r4
+	tst	@#a.pnxt
+	blt	30$
+	tst	r5
+	bne	50$
+	tst	(r0)+
+	mov	r4, r5
+	mov	@#r.bg, r4
+	br	50$
+30$:
+	bit	@#a.cm, r5
+	bne	40$
+	tst	-(r0)
+	mov	r5, r4
+	mov	@#a.fg, r5
+	jmp	p$set
+40$:
+	bic	@#a.cms, r4
+50$:
+	jmp	p$set

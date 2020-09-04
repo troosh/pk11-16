@@ -1,0 +1,883 @@
+					;******	File g3.mac ******
+
+;===============================	move block from  RAM to VRAM
+g$rvr:					; block size <= 8kb
+	mov	(r2)+, r1		; x
+	mov	(r2)+, r3		; y
+	call	u$ad			; get RAM address
+;-------------------------------	clip
+	call	p$st
+	mov	r1, @#t.x
+	mov	r3, @#t.y
+	asr	r2
+	bcc	10$
+	mov	@#w.xmin, r1
+10$:
+	asr	r2
+	bcc	30$
+20$:
+	return
+30$:
+	asr	r2
+	bne	20$
+	bcc	40$
+	mov	@#w.ymin, r3
+40$:
+	mov	r1, @#t.step		; real initial point
+	mov	r3, @#t.comp
+	mov	(r5)+, r1		; block line length in pixels
+	mov	(r5)+, r3		; block height in lines
+	.push	r5			; block initial address
+	clr	r4
+	mov	r1, r5
+	div	@#r.pw, r4
+	cmp	#0, r5
+	adc	r4
+	asl	r4			; source line length in bytes
+	mov	r4, @#s.lnxt
+	mov	@#t.comp, r5
+	sub	@#t.y, r5
+	mul	r4, r5
+	add	r5, (sp)
+	add	@#t.x, r1		; final point
+	add	@#t.y, r3
+	dec	r1
+	dec	r3
+	call	p$st
+	asr	r2
+	bcs	70$
+	asr	r2
+	bcc	50$
+	mov	@#w.xmax, r1
+50$:
+	asr	r2
+	bcs	70$
+	asr	r2
+	bcc	60$
+	mov	@#w.ymax, r3
+;-------------------------------	set transfer parameters
+60$:
+	mov	@#r.len, @#d.lnxt
+	sub	@#t.comp, r3
+	inc	r3
+	mov	r3, @#t.hgt		; height of transfer
+	mov	r3, @#s.step
+	clr	r4
+	mov	r1, r5
+	sub	@#t.x, r5		; x of source final point
+	div	@#r.pw, r4		; word number of source final point
+	mov	r4, r5
+	inc	r5
+	asl	r5
+	sub	r5, @#s.lnxt
+	dec	r4
+	mov	r4, @#s.len
+	clr	r0
+	div	@#r.pw, r0		; word number of final destination
+	mov	r0, r3			; point
+	inc	r3
+	asl	r3
+	sub	r3, @#d.lnxt
+	dec	r0
+	mov	r0, @#d.len
+	inc	r1
+	mul	@#r.bp, r1
+	mov	#-1,r0
+	ash	r1, r0
+	mov	r0, @#d.mskf		; final word mask
+	mov	@#t.step, r1		; initial destination point
+	mov	@#t.comp, r3
+	call	p$ad
+	mov	r2, @#d.wadr		; window address
+	mov	#2, @#d.winc		; window increment
+	mov	@#r.div, @#d.div	; window size in lines
+	mov	@#r.div, @#d.step
+	sub	r3, @#d.step		; number of lines in first window 
+	sub	r4, @#d.len		; line length in full words
+	asl	r4
+	add	r4, @#d.lnxt		; jump to next destination line
+	mov	r1, r5
+	mul	@#r.bp, r5
+	mov	#-1, r4
+	ash	r5, r4
+	com	r4
+	mov	r4, @#d.mski		; initial word mask
+	mov	#c.8kb, @#d.wnxt
+	sub	@#r.mod, @#d.wnxt
+	clr	r4
+	mov	@#t.step, r5		; real initial x in destination
+	sub	@#t.x, r5		; ... in source
+	div	@#r.pw, r4
+	sub	r5, r1
+	mul	@#r.bp, r1	
+	mov	r1, @#t.shft
+	mov	r4, r2
+	asl	r2
+	add	r2, @#s.lnxt		; jump to next source line
+	sub	r4, @#s.len
+	add	(sp)+, r2		; source address
+	mov	#ur2, @#d.ur
+	mov	#2, @#t.step
+	br	t$blk
+70$:
+	tst	(sp)+
+	return
+;-------------------------------	transfer block (xinc)
+	.enabl	lsb			; r2	source address
+t$blk:					; r0	destination address
+	mov	@#d.len, @#t.comp
+	bge	10$
+	bis	@#d.mskf, @#d.mski
+10$:
+	sub	@#s.len, @#t.comp
+	tst	@#t.step
+	bpl	20$
+	add	#2, r0
+	add	#2, r2
+	jmp	340$
+20$:
+	tst	@#t.shft
+	blt	130$
+	beq	30$
+	jmp	240$
+;...............................	transfer without shift
+30$:
+	mov	@#d.step, r3
+40$:
+	bic	@#r.tr, @#ur2
+	mov	@#s.step, r1
+	cmp	r3, r1
+	bge	50$
+	mov	r3, r1
+50$:
+	sub	r1, @#t.hgt
+	bge	60$
+	add	@#t.hgt, r1
+60$:
+	sub	r1, @#s.step
+	sub	r1, r3
+70$:
+	mov	(r2)+, r5
+	bic	@#d.mski, r5
+b$000:
+	bis	r5, (r0)+
+	mov	@#d.len, r4
+	beq	90$
+	blt	100$
+80$:
+	mov	(r2)+, r5
+b$010:
+	bis	r5, (r0)+
+	sob	r4, 80$
+90$:
+	mov	(r2)+, r5
+	bic	@#d.mskf, r5
+b$020:
+	bis	r5, (r0)+
+100$:
+	add	@#d.lnxt, r0
+	add	@#s.lnxt, r2
+	sob	r1, 70$
+	tst	@#t.hgt
+	ble	120$
+	tst	@#s.step
+	bne	110$
+	add	@#s.winc, @#s.wadr
+	mov	@s.wadr, @s.ur
+	sub	@#s.wnxt, r2
+	mov	@#s.div, @#s.step
+110$:
+	tst	r3
+	bne	40$
+	add	@#d.winc, @#d.wadr
+	mov	@d.wadr, @d.ur
+	sub	@#d.wnxt, r0
+	mov	@#d.div, r3
+	br	40$
+120$:
+	return
+;...............................	transfer with left shift
+130$:					; (right in memory)
+	bic	@#r.tr, @#ur2
+	mov	@#s.step, @#t.step
+	cmp	@#d.step, @#t.step
+	bge	140$
+	mov	@#d.step, @#t.step
+140$:
+	sub	@#t.step, @#t.hgt
+	bge	150$
+	add	@#t.hgt, @#t.step
+150$:
+	sub	@#t.step, @#s.step
+	sub	@#t.step, @#d.step
+160$:
+	mov	(r2)+, r5
+	mov	@#d.len, r1
+	bge	170$
+	tst	@#t.comp
+	beq	180$
+170$:
+	mov	(r2)+, r4
+	mov	r4, r3
+180$:
+	ashc	@#t.shft, r4
+	bic	@#d.mski, r5
+b$030:
+	bis	r5, (r0)+
+	tst	r1
+	blt	220$
+	beq	200$
+190$:
+	mov	r3, r5
+	mov	(r2)+, r4
+	mov	r4, r3
+	ashc	@#t.shft, r4
+b$040:
+	bis	r5, (r0)+
+	sob	r1, 190$
+200$:
+	tst	@#t.comp
+	beq	210$
+	mov	r3, r5
+	mov	(r2)+, r4
+	ashc	@#t.shft, r4
+	mov	r5, r4
+210$:
+	bic	@#d.mskf, r4
+b$050:
+	bis	r4, (r0)+
+220$:
+	add	@#d.lnxt, r0
+	add	@#s.lnxt, r2
+	dec	@#t.step
+	bne	160$
+	tst	@#t.hgt
+	ble	120$
+	tst	@#s.step
+	bne	230$
+	add	@#s.winc, @#s.wadr
+	mov	@s.wadr, @s.ur
+	sub	@#s.wnxt, r2
+	mov	@#s.div, @#s.step
+230$:
+	tst	@#d.step
+	bne	130$
+	add	@#d.winc, @#d.wadr
+	mov	@d.wadr, @d.ur
+	sub	@#d.wnxt, r0
+	mov	@#d.div, @#d.step
+	br	130$
+;...............................	transfer with right shift
+240$:					; (left in memory)
+	bic	@#r.tr, @#ur2
+	mov	@#s.step, @#t.step
+	cmp	@#d.step, @#t.step
+	bge	250$
+	mov	@#d.step, @#t.step
+250$:
+	sub	@#t.step, @#t.hgt
+	bge	260$
+	add	@#t.hgt, @#t.step
+260$:
+	sub	@#t.step, @#s.step
+	sub	@#t.step, @#d.step
+270$:
+	mov	(r2)+, r5
+	mov	@#s.len, r1
+	blt	280$
+	mov	(r2)+, r4
+	mov	r4, r3
+280$:
+	ashc	@#t.shft, r4
+	bic	@#d.mski, r5
+b$060:
+	bis	r5, (r0)+
+	tst	r1
+	bgt	b$070
+	beq	290$
+	tst	@#t.comp
+	bne	300$
+	br	310$
+b$070:
+	bis	r4, (r0)+
+	mov	r3, r5
+	mov	(r2)+, r4
+	mov	r4, r3
+	ashc	@#t.shft, r4
+	sob	r1, b$070
+290$:
+	tst	@#t.comp
+	beq	300$
+b$080:
+	bis	r4, (r0)+
+	mov	r3, r5
+	ashc	@#t.shft, r4
+300$:
+	bic	@#d.mskf, r4
+b$090:
+	bis	r4, (r0)+
+310$:
+	add	@#d.lnxt, r0
+	add	@#s.lnxt, r2
+	dec	@#t.step
+	bne	270$
+	tst	@#t.hgt
+	ble	330$
+	tst	@#s.step
+	bne	320$
+	add	@#s.winc, @#s.wadr
+	mov	@s.wadr, @s.ur
+	sub	@#s.wnxt, r2
+	mov	@#s.div, @#s.step
+320$:
+	tst	@#d.step
+	bne	240$
+	add	@#d.winc, @#d.wadr
+	mov	@d.wadr, @d.ur
+	sub	@#d.wnxt, r0
+	mov	@#d.div, @#d.step
+	br	240$
+330$:
+	return
+;-------------------------------	transfer block (xdec)
+340$:
+	tst	@#t.shft
+	bgt	450$
+	beq	350$
+	jmp	560$
+;...............................	transfer without shift
+350$:
+	mov	@#d.step, r3
+360$:
+	bic	@#r.tr, @#ur2
+	mov	@#s.step, r1
+	cmp	r3, r1
+	bge	370$
+	mov	r3, r1
+370$:
+	sub	r1, @#t.hgt
+	bge	380$
+	add	@#t.hgt, r1
+380$:
+	sub	r1, @#s.step
+	sub	r1, r3
+390$:
+	mov	-(r2), r5
+	bic	@#d.mski, r5
+b$100:
+	bis	r5, -(r0)
+	mov	@#d.len, r4
+	beq	410$
+	blt	420$
+400$:
+	mov	-(r2), r5
+b$110:
+	bis	r5, -(r0)
+	sob	r4, 400$
+410$:
+	mov	-(r2), r5
+	bic	@#d.mskf, r5
+b$120:
+	bis	r5, -(r0)
+420$:
+	add	@#d.lnxt, r0
+	add	@#s.lnxt, r2
+	sob	r1, 390$
+	tst	@#t.hgt
+	ble	440$
+	tst	@#s.step
+	bne	430$
+	add	@#s.winc, @#s.wadr
+	mov	@s.wadr, @s.ur
+	sub	@#s.wnxt, r2
+	mov	@#s.div, @#s.step
+430$:
+	tst	r3
+	bne	360$
+	add	@#d.winc, @#d.wadr
+	mov	@d.wadr, @d.ur
+	sub	@#d.wnxt, r0
+	mov	@#d.div, r3
+	br	360$
+440$:
+	return
+;...............................	transfer with right shift
+450$:					; (left in memory)
+	bic	@#r.tr, @#ur2
+	mov	@#s.step, @#t.step
+	cmp	@#d.step, @#t.step
+	bge	460$
+	mov	@#d.step, @#t.step
+460$:
+	sub	@#t.step, @#t.hgt
+	bge	470$
+	add	@#t.hgt, @#t.step
+470$:
+	sub	@#t.step, @#s.step
+	sub	@#t.step, @#d.step
+480$:
+	mov	-(r2), r4
+	mov	@#d.len, r1
+	bge	490$
+	tst	@#t.comp
+	beq	500$
+490$:
+	mov	-(r2), r5
+	mov	r5, r3
+500$:
+	ashc	@#t.shft, r4
+	bic	@#d.mski, r4
+b$130:
+	bis	r4, -(r0)
+	tst	r1
+	blt	540$
+	beq	520$
+510$:
+	mov	r3, r4
+	mov	-(r2), r5
+	mov	r5, r3
+	ashc	@#t.shft, r4
+b$140:
+	bis	r4, -(r0)
+	sob	r1, 510$
+520$:
+	tst	@#t.comp
+	beq	530$
+	mov	r3, r4
+	mov	-(r2), r5
+	ashc	@#t.shft, r4
+	mov	r4, r5
+530$:
+	bic	@#d.mskf, r5
+b$150:
+	bis	r5, -(r0)
+540$:
+	add	@#d.lnxt, r0
+	add	@#s.lnxt, r2
+	dec	@#t.step
+	bne	480$
+	tst	@#t.hgt
+	ble	440$
+	tst	@#s.step
+	bne	550$
+	add	@#s.winc, @#s.wadr
+	mov	@s.wadr, @s.ur
+	sub	@#s.wnxt, r2
+	mov	@#s.div, @#s.step
+550$:
+	tst	@#d.step
+	bne	450$
+	add	@#d.winc, @#d.wadr
+	mov	@d.wadr, @d.ur
+	sub	@#d.wnxt, r0
+	mov	@#d.div, @#d.step
+	br	450$
+;...............................	transfer with left shift
+560$:					; (right in memory)
+	bic	@#r.tr, @#ur2
+	mov	@#s.step, @#t.step
+	cmp	@#d.step, @#t.step
+	bge	570$
+	mov	@#d.step, @#t.step
+570$:
+	sub	@#t.step, @#t.hgt
+	bge	580$
+	add	@#t.hgt, @#t.step
+580$:
+	sub	@#t.step, @#s.step
+	sub	@#t.step, @#d.step
+590$:
+	mov	-(r2), r4
+	mov	@#s.len, r1
+	blt	600$
+	mov	-(r2), r5
+	mov	r5, r3
+600$:
+	ashc	@#t.shft, r4
+	bic	@#d.mski, r4
+b$160:
+	bis	r4, -(r0)
+	tst	r1
+	bgt	b$170
+	beq	610$
+	tst	@#t.comp
+	bne	620$
+	br	630$
+b$170:
+	bis	r5, -(r0)
+	mov	r3, r4
+	mov	-(r2), r5
+	mov	r5, r3
+	ashc	@#t.shft, r4
+	sob	r1, b$170
+610$:
+	tst	@#t.comp
+	beq	620$
+b$180:
+	bis	r5, -(r0)
+	mov	r3, r4
+	ashc	@#t.shft, r4
+620$:
+	bic	@#d.mskf, r5
+b$190:
+	bis	r5, -(r0)
+630$:
+	add	@#d.lnxt, r0
+	add	@#s.lnxt, r2
+	dec	@#t.step
+	bne	590$
+	tst	@#t.hgt
+	ble	650$
+	tst	@#s.step
+	bne	640$
+	add	@#s.winc, @#s.wadr
+	mov	@s.wadr, @s.ur
+	sub	@#s.wnxt, r2
+	mov	@#s.div, @#s.step
+640$:
+	tst	@#d.step
+	bne	560$
+	add	@#d.winc, @#d.wadr
+	mov	@d.wadr, @d.ur
+	sub	@#d.wnxt, r0
+	mov	@#d.div, @#d.step
+	br	560$
+650$:
+	return
+	.dsabl	lsb
+;===============================	move block from  VRAM to RAM
+g$vrr:					; block size <= 8kb
+	mov	(r2)+, @#t.x		; x1
+	mov	(r2)+, @#t.y		; y1
+	mov	(r2)+, r1		; x2
+	mov	(r2)+, r3		; y2
+	call	u$ad			; get RAM address
+	mov	@#t.x, r0
+	mov	@#t.y, r4
+	cmp	r1, r0
+	ble	10$
+	mov	r0, r2			; xi:=min(x1,x2)
+	mov	r1, r0
+	mov	r2, r1
+10$:
+	cmp	r3, r4
+	ble	20$
+	mov	r4, r2			; yi:=min(y1,y2)
+	mov	r3, r4
+	mov	r2, r3
+;-------------------------------	clip
+20$:
+	call	p$st
+	asr	r2
+	bcc	30$
+	mov	@#w.xmin, r1
+30$:
+	asr	r2
+	bcc	50$
+40$:
+	clr	(r5)			; nil block
+	return
+50$:
+	asr	r2
+	bne	40$
+	bcc	60$
+	mov	@#w.ymin, r3
+60$:
+	mov	r1, @#t.step		; real initial point
+	mov	r3, @#t.comp
+	mov	r0, r1
+	mov	r4, r3
+	call	p$st
+	asr	r2
+	bcs	40$
+	asr	r2
+	bcc	70$
+	mov	@#w.xmax, r1
+70$:
+	asr	r2
+	bcs	40$
+	asr	r2
+	bcc	80$
+	mov	@#w.ymax, r3
+;-------------------------------	set transfer parameters
+80$:
+	mov	r1, r0
+	inc	r0
+	sub	@#t.step, r0
+	.push	r0
+	mov	r0, (r5)+
+	inc	r3
+	sub	@#t.comp, r3
+	mov	r3, (r5)+
+	mov	r3, @#t.hgt
+	mov	r3, @#d.step
+	clr	r0
+	div	@#r.pw, r0
+	mov	r0, r2
+	dec	r0
+	mov	r0, @#s.len
+	inc	r2
+	asl	r2
+	mov	@#r.len, @#s.lnxt
+	sub	r2, @#s.lnxt
+	clr	r0
+	.pop	r1
+	dec	r1
+	div	@#r.pw, r0
+	dec	r0
+	mov	r0, @#d.len
+	inc	r1
+	mul	@#r.bp, r1
+	mov	#-1, r0
+	ash	r1, r0
+	mov	r0, @#d.mskf
+	clr	@#d.mski
+	clr	@#d.lnxt
+	.push	r5			; block initial address
+	mov	@#t.step, r1
+	mov	@#t.comp, r3
+	call	p$ad
+	mov	r2, @#s.wadr		; window address
+	mov	#2, @#s.winc		; window increment
+	mov	@#r.div, @#s.div	; window size in lines
+	mov	@#r.div, @#s.step
+	sub	r3, @#s.step		; number of lines in first window 
+	sub	r4, @#s.len		; line length in full words
+	asl	r4
+	add	r4, @#s.lnxt		; jump to next source line
+	mov	#c.8kb, @#s.wnxt
+	sub	@#r.mod, @#s.wnxt
+	mul	@#r.bp, r1
+	neg	r1
+	mov	r1, @#t.shft
+	mov	r0, r2
+	.pop	r0
+	mov	#ur2, @#s.ur
+	mov	#2, @#t.step
+	jmp	t$blk
+;===============================	move block from  VRAM to VRAM
+g$vrvr:					; block size <= 8kb
+	mov	(r2)+, r1		; x1s
+	mov	(r2)+, r3		; y1s
+	mov	(r2)+, r4		; x2s
+	mov	(r2)+, r5		; y2s
+	mov	(r2)+, @#t.x
+	mov	(r2), @#t.y
+	.push	@#t.x
+	sub	r1, (sp)
+	add	r4, (sp)		; x2d
+	.push	@#t.y
+	sub	r3, (sp)
+	add	r5, (sp)		; y2d
+	.push	<@#t.x,@#t.y>		; x1d,y1d
+	mov	#2, @#t.step		; x-transfer direction
+	mov	#2, @#s.winc		; y-transfer direction
+	cmp	r4, r1
+	bge	10$
+	neg	@#t.step
+	mov	r1, r0
+	mov	r4, r1
+	mov	r0, r4
+	mov	6(sp), r0
+	mov	2(sp), 6(sp)
+	mov	r0, 2(sp)
+10$:
+	cmp	r5, r3
+	bge	20$
+	neg	@#s.winc
+	mov	r3, r0
+	mov	r5, r3
+	mov	r0, r5
+	mov	4(sp), r0
+	mov	(sp), 4(sp)
+	mov	r0, (sp)
+;-------------------------------	clip
+20$:
+	call	p$st
+	asr	r2
+	bcc	30$
+	sub	r1, 2(sp)
+	mov	@#w.xmin, r1
+	add	r1, 2(sp)
+30$:
+	asr	r2
+	bcc	70$
+40$:
+	add	#4, sp
+50$:
+	add	#4, sp
+60$:
+	return
+70$:
+	asr	r2
+	bne	40$
+	bcc	80$
+	sub	r3, (sp)
+	mov	@#w.ymin, r3
+	add	r3, (sp)
+80$:
+	mov	r1, @#s.wadr		; xis
+	mov	r3, @#s.step		; yis
+	.pop	<r3, r1>
+	call	p$st
+	asr	r2
+	bcc	90$
+	sub	r1, @#s.wadr
+	mov	@#w.xmin, r1
+	add	r1, @#s.wadr
+90$:
+	asr	r2
+	bcs	50$
+	asr	r2
+	bne	50$
+	bcc	100$
+	sub	r3, @#s.step
+	mov	@#w.ymin, r3
+	add	r3, @#s.step
+100$:
+	mov	r1, @#d.wadr		; xid
+	mov	r3, @#d.step		; yid
+	mov	r4, r1			; x2s
+	mov	r5, r3			; y2s
+	call	p$st
+	asr	r2
+	bcs	50$
+	asr	r2
+	bcc	110$
+	sub	r1, 2(sp)
+	mov	@#w.xmax, r1
+	add	r1, 2(sp)
+110$:
+	asr	r2
+	bcs	50$
+	asr	r2
+	bcc	120$
+	sub	r3, (sp)
+	mov	@#w.ymax, r3
+	add	r3, (sp)
+120$:
+	mov	r1, r4			; xfs
+	mov	r3, r5			; yfs
+	.pop	<r3, r1>
+	call	p$st
+	asr	r2
+	bcs	60$
+	asr	r2
+	bcc	130$
+	sub	r1, r4
+	mov	@#w.xmax, r1
+	add	r1, r4
+130$:
+	asr	r2
+	bcs	60$
+	asr	r2
+	bcc	140$
+	sub	r3, r5
+	mov	@#w.ymax, r3
+	add	r3, r5
+;-------------------------------	set transfer parameters
+140$:
+	mov	r3, r2
+	inc	r2
+	sub	@#d.step, r2
+	mov	r2, @#t.hgt		; yfd-yid+1
+	mov	@#r.div, @#s.div	; window size in lines
+	mov	@#r.div, @#d.div
+	mov	#c.8kb, @#s.wnxt
+	sub	@#r.mod, @#s.wnxt
+	mov	@#r.len, @#s.lnxt
+	mov	@#s.winc, @#d.winc
+	bpl	150$
+	neg	@#s.wnxt
+	neg	@#s.lnxt
+	mov	r5, @#s.step		; ybs
+	mov	r3, @#d.step		; ybd
+150$:
+	sub	@#t.step, @#s.lnxt
+	mov	@#s.lnxt, @#d.lnxt
+	tst	@#t.step
+	bpl	160$
+	mov	r1, r0
+	mov	@#d.wadr, r1
+	mov	r0, @#d.wadr
+	mov	r4, r0
+	mov	@#s.wadr, r4
+	mov	r0, @#s.wadr
+160$:
+	clr	r0
+	div	@#r.pw, r0
+	mov	r0, @#d.len
+	asl	r0
+	sub	r0, @#d.lnxt
+	tst	@#t.step
+	bmi	170$
+	inc	r1
+170$:
+	mul	@#r.bp, r1
+	mov	#-1,r0
+	ash	r1, r0
+	tst	@#t.step
+	bpl	180$
+	com	r0
+180$:
+	mov	r0, @#d.mskf		; final word mask
+	mov	r4, r1			; xes
+	clr	r0
+	div	@#r.pw, r0
+	mov	r0, @#s.len
+	asl	r0
+	sub	r0, @#s.lnxt
+	mov	@#s.wadr, r1
+	mov	@#s.step, r3
+	call	p$ad
+	mov	(r2), @#ur4
+	mov	r2, @#s.wadr		; window address
+	mov	r3, @#s.step		; line number
+	sub	r4, @#s.len		; line length in full words
+	asl	r4
+	add	r4, @#s.lnxt		; jump to next source line
+	mul	@#r.bp, r1
+	neg	r1
+	mov	r1, @#t.shft
+	.push	r0			; source address
+	mov	@#d.wadr, r1
+	mov	@#d.step, r3
+	call	p$ad
+	mov	r2, @#d.wadr		; window address
+	mov	r3, @#d.step		; number of lines in first window 
+	sub	r4, @#d.len		; line length in full words
+	asl	r4
+	add	r4, @#d.lnxt		; jump to next destination line
+	mul	@#r.bp, r1
+	add	r1, @#t.shft
+	mov	#-1, r4
+	tst	@#t.step
+	bpl	190$
+	add	@#r.bp, r1
+	neg	@#s.len
+	neg	@#d.len
+190$:
+	ash	r1, r4
+	tst	@#t.step
+	bmi	200$
+	com	r4
+200$:
+	mov	r4, @#d.mski		; initial word mask
+	mov	@#s.wnxt, @#d.wnxt
+	bpl	210$
+	inc	@#s.step
+	inc	@#d.step
+	br	220$
+210$:
+	neg	@#s.step
+	neg	@#d.step
+	add	@#r.div, @#s.step
+	add	@#r.div, @#d.step
+220$:
+	.pop	r2			; source address
+	add	#c.8kb*2, r2		; ur2 -> ur4
+	mov	#ur4, @#s.ur
+	mov	#ur2, @#d.ur
+	dec	@#s.len
+	dec	@#d.len
+	jmp	t$blk

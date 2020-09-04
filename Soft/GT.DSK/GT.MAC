@@ -1,0 +1,22 @@
+	.title	Graph
+	.ident	/V1.00/
+;*****************************************************************************
+;	Graphic Display Emulator
+;	Version		1.1
+;*****************************************************************************
+	.asect
+.	= 0
+	.word	"PC, 0, 2, -1
+.nlist
+	.include "sy:p16mac"
+	.include "sy:wdc"
+.list
+	.include "gm"
+	.include "gc"
+	.include "g0"
+	.include "g1"
+	.include "g2"
+	.include "g3"
+	.include "g4"
+	.include "g5"
+	.end start
