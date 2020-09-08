@@ -1,0 +1,38 @@
+	.title	KILL	- Kill Process
+
+.nlist
+	.include	"sy:p16mac"
+.list
+
+.mcall	.gtlin
+
+start:
+	mov	#line,	r5	;
+	.gtlin	r5,	#prompt	;
+	tstb	@r5		;empty line
+	beq	start		;
+11$:
+	clr	r1		;
+1$:
+	movb	(r5)+,	r0	;
+	beq	3$		;end of line
+	sub	#'0,	r0	;
+	blt	3$		;
+	cmp	r0,	#9.	;
+	bgt	3$		;
+	mul	#10.,	r1	;
+	add	r0,	r1	;
+	br	1$		;
+3$:
+	tst	r1		;
+	beq	start		;
+	KILPROC	r1		;
+	tstb	-1(r5)		;
+	bne	11$		;
+	br	start		;
+
+line:	.blkb	80.
+prompt:	.ascii	"Process number : "<200>
+	.even
+
+.end	start

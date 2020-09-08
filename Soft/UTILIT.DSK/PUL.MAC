@@ -1,0 +1,1507 @@
+.Title	Console Debuger	- Pult
+	.enabl	ama,	lc
+	.nlist
+	.include	"sy:p16mac"
+	.include	"sy:wdc"
+	.list
+
+promax	= 6	;max num of PId to skip
+
+vmoda	= vm2		;video-mode
+xtlins	= 12.		;num of t-lines
+xlhig	= 10.		;num of v-lines in t-line
+xclen	= 42.		;num of chars in t-line
+xslena	= xclen*2+4	;length of v-line in bytes
+
+c.xv	= 2		;cmd to change X (in bytes)
+c.x	= 12		;cmd to change X (in chars)
+c.y	= 13		;cmd to change Y (in t-lines)
+c.clr	= 7		;set colors
+ clr.n	= 20	;normal colors
+ clr.a	= 62	;active colors
+c.rev	= 11		;cmd to reverse font
+c.nor	= 10		;cmd to normal font
+
+.macro	OUT	mes
+	mov	mes,	wpstr	;
+	WPRINT	#wpar
+.endm
+.macro	oct16	str
+.iif nb <str>,	mov	str,	r5	;
+	call	oct16			;
+.endm
+	OP	= 1
+	NUM	= 2
+	RG	= 4
+	HLTm	=10
+	DI	=300
+	LD	=100000
+
+	csr	= 174052
+	xcsr	= <csr & 7777>+l.reg
+	kpcsr	= 174054		;kill-him reg
+	xkpcsr	= <kpcsr & 7777>+l.reg
+
+kk4kk	= xtlins*xlhig*xslena+aadr+7777/10000
+.asect
+.=0
+.word	"PC,0,-kk4kk,0
+.asciz	"Пульт-консоль"
+.=1000
+
+mdbuf	= 177146
+fdbuf	= 177130
+hdbuf	= 177130
+
+k1k	= 31
+k2k	= 33
+k3k	= 32
+
+b.t.m:
+	reset
+	mov	#mque,	@#mdbuf
+	sob	r0,	.
+	clr	pc
+mque:	0,0,0,400
+
+b.t.f:
+10$:	reset
+	mov	#fque,	@#fdbuf
+	sob	r0,	.
+1$:	tstb	@#fdbuf
+	bpl	1$
+	mov	@#fdbuf,r1	
+	swab	r1
+	tstb	r1
+	beq	2$
+	movb	fque+3,	r1
+	bic	#177770,r1
+	inc	r1
+	bis	#10,	r1
+	movb	r1,	fque+3
+	br	10$
+2$:	clr	pc
+fque:	0,10*400,0,400
+
+b.t.h:
+	reset
+	mov	@#hdbuf,r1		;
+	ash	#-3,	r1		;
+	bic	#177770,r1		;
+	movb	r1,	hque+3		;
+	mov	#hque,	@#hdbuf
+	sob	r0,	.
+1$:	tstb	@#hdbuf
+	bpl	1$
+	clr	pc
+hque:	0,001000,0,400
+b.s	= <start-b.t.m>/2 + 1
+
+delcsr	= 174000
+tdcsr:	.word	delcsr,	^c177777,	0,	2400,	0,	0, -1
+tdblk:	.byte	277,0	;alt+ctrl+bs
+	.word	delcsr
+
+tcsr:	.word	csr,	0,	0,	0,	0,	-1
+tkpcsr:	.word	kpcsr,	0,	0,	2000,	0,	-1
+dbgadr:	.word	0
+him.pri:.word	0
+kstr:	.word	376,csr
+kstr1:	.word	376,csr & 77777
+rtproc:	.word	0		;addr of OS proc
+;************************************************************
+T.4:
+T.10:
+	BIS	#1,2(SP)
+	RTT
+start:
+	CLR	PC
+	mov	#1000,	sp		;
+	MOV	#T.4,@#4
+	clr	@#6
+	MOV	#T.10,@#10
+	clr	@#12
+	UNPVEC	#v.cpuh
+	UNPVEC	#v.but
+	PROVEC	#v.cpuh
+	PROVEC	#v.but
+	mov	hr4,	ur4
+	mov	hr5,	ur5
+	clr		ur6
+
+	proreg	#tdcsr
+	kstrin	#tdblk
+
+	UNPREG	#csr
+	PROREG	#tcsr
+	mov	r.proc-r.copy(r0), r0
+	mov	r0,	dbgadr
+	mov	#OP,	r4		;set "open" flag
+	SETPRI	#1			;
+;==============================
+;init KIL-HIM process
+	NEWROMP	#KILHIM
+;===============================
+;init-phase of booter
+	mov	RDSUCC,	r0	;
+10$:
+	mov	(r0),	r0	;take next proc
+	beq	20$		;
+	bit	#M.VRQ,	P.MASK(r0) ;
+	beq	10$		;
+20$:
+	mov	r0,	rtproc	;
+;======
+	ARCRE	#a.ar
+	mov	a.ar+2,	wpar+2		;set area's num for WPRINTs
+	mov	a.ar+2,	v.ar+4		;set area's num for VIEW
+	call	clrall			;clear bit-map
+	OUT	#m.tit			;out title message
+	call	CLDIAL			;init DIAL-area
+	out	#umem1		;
+	out	#upnt		;
+	kstrin	#kstr
+	SETPRI	#37777
+	jmp	step1
+rembpt:
+	mov	r1,	-(sp)	;
+	mov	r2,	-(sp)	;
+	mov	r3,	-(sp)	;
+	jsr	r0,	bpt1	;
+brpd::	.word	0
+brpa:	.word	0
+brpv:	.word	0
+bpt1:
+	mov	(r0),	r2	;descr-addr
+	beq	1$		;no BPT
+	clr	(r0)+		;
+	mov	(r0)+,	r3	;addr
+	mov	(r0),	r1	;value
+	mov	stat,	-(sp)	;
+	mov	#4,	stat	;
+	call	poke		;reset BPT
+	mov	(sp)+,	stat	;
+1$:	mov	(sp)+,	r0	;
+	mov	(sp)+,	r3	;
+	mov	(sp)+,	r2	;
+	mov	(sp)+,	r1	;
+	return
+setbpt:			;r1-prog's addr
+	mov	r0,	-(sp)	;
+	mov	r1,	-(sp)	;
+	mov	r2,	-(sp)	;
+	mov	r3,	-(sp)	;
+	call	rembpt		;
+	mov	#brpd,	r0	;
+	mov	curpr,	r2	;
+	mov	r2,	(r0)+	;
+	mov	r1,	(r0)	;
+	mov	r1,	r3	;
+	mov	stat,	-(sp)	;
+	mov	#4,	stat	;
+	call	peek		;
+	mov	r0,	brpv	;store value
+	clr	r1		;put halt
+	call	poke		;
+	mov	(sp)+,	stat	;
+	mov	(sp)+,	r3	;
+	mov	(sp)+,	r2	;
+	mov	(sp)+,	r1	;
+	mov	(sp)+,	r0	;
+	return
+;---------------------------------
+$GO:
+	mtps	r4		;
+	bvc	stgo		;no value specified
+	mov	r1,	p.pc(r2)	;
+	br	stgo		;
+$STEP:
+	mtps	r4		;
+	bvc	stgo		;no val
+	call	setbpt		;set BPT
+stgo:
+	VWTAKE	#v.ar			;
+	VWKILL	#v.ar			;
+	clr	v.n			;
+	KSTRIN	#kstr		;free keyboard
+	SETPRI	#37777
+	out	#m.bp0
+step1:
+	WAITINT	#0	
+	mov	@dbgadr,	r2	;
+;	CLR	R0		;PID
+;	MOV	PDPTR,	R1	;
+;1$:
+;	INC	R0		;
+;	CMP	R1,	R2	;
+;	BEQ	2$		;
+;	MOV	P.DSUC(R1), R1	;
+;	BNE	1$		;
+;2$:
+;	CMP	R0,	#PROMAX	;
+;	BLOS	STEP1		;
+	mov	p.pri(r2),	him.pri
+	mov	r2,	r0
+	inc	him.pri
+	setpri	him.pri
+	dec	him.pri
+	cmp	r2,	brpd	;is there BPT ?
+	bne	20$		;no
+	mov	p.pc(r2), r0	;
+	sub	#2,	r0	;
+	cmp	r0,	brpa	;
+	bne	10$		;
+	mov	r0,	p.pc(r2);
+	out	#m.bpt		;
+10$:
+	call	rembpt		;yes, remove it
+20$:
+	KSTRIN	#kstr1		;take keyboard
+	cmp	r2,	curpr	; ?
+	beq	30$		;come to the same proc
+	mov	r2,	curpr	;
+	mov	r2,	main	;
+	clr	cur		;current addr
+	clr	r3		;
+30$:
+	clr	fflag		;set 1st-time-flag
+	call	umemout		;
+	mov	cur,	r3	;
+	tst	v.n		;view opened ?
+	bne	40$		;yes
+	VWCRE	#v.ar		;
+	call	uparout		;
+	call	utitout		;
+	call	uregout		;
+40$:
+DBGHLT: 
+DC1:	CALL	dshow		;
+inoct:	CALL	OCTINP
+trychr:
+	mov	cur,	r3	;current addr
+	CLR	R5
+10$:	CMPB	R0,     TABCHR(R5)
+	BNE	20$
+	ASL	R5
+	JMP	@TABJMP(R5)
+20$:	INC	R5
+	BCC	10$		;
+err:
+	call	$help		;
+;	mov	#'?,	177566	;
+	BR	DC1
+
+$OPEN:	MTPS	R4
+	bvc	5$		;
+	MOV	R1,     R3	; for use later ...
+5$:
+	mov	#-20,	optyp	;
+	mov	r0,	-(sp)
+	CALL    PEEK
+	BCs	dc1		; +
+10$:	CMPB	(SP),	#'@
+	BNE	20$
+    	MOV	R0,	R3
+	BR	30$
+20$:	CMPB	(SP),   #'_
+	BNE	30$
+	ADD	R0,	R3
+	ADD	#2,	R3
+30$:
+	mov	(sp)+,	r0	;
+	BR	dc1
+dshow:
+	mov	r0,	-(sp)	;
+	CALL	PRIWET
+	MOV	R3,     R0
+	CALL	OCTOUT
+	MOV	#'/,	R0
+	CALL	PUTCHR
+	MOV	#' ,	R0
+	CALL	PUTCHR
+	CALL	PEEK
+	bcs	50$		; +
+40$:
+	CALL	OCTOUT
+50$:
+	BIS	#DI+OP, R4 	; flag 'cell opened'
+	cmp	r3,	cur	;
+	beq	60$		;
+	call	umemout		;;;
+60$:
+	mov	(sp)+,	r0	;
+	return			;
+
+;-------------------------------
+$HELP:
+	call	clrall		;
+	out	#htext1		;
+	call	getchr		;
+	cmp	r0,	#20	;ПОМ ?
+	bne	10$		;
+	call	clrall		;
+	out	#htext2		;
+	call	getchr		;
+10$:
+	call	clrall		;
+	out	#m.tit		;
+	out	#umem1		;
+	out	#upnt		;
+	call	uparout		;
+	call	utitout		;
+	call	uregout		;
+	clr	fflag		;set 1st-time-flag
+	call	umemout		;
+	return			;
+clrall:
+	mov	#xtlins*xlhig*xslena/4,	r0
+	mov	#aadr,	r1	;
+10$:
+	clr	(r1)+		;
+	clr	(r1)+		;
+	sob	r0,	10$	;
+	return
+;-------------------------------
+.enabl	lsb
+$b.md:
+	mov	#b.t.m,	r1
+	br	10$
+$b.fd:
+	mov	#b.t.f,	r1
+	br	10$
+$b.hd:
+	mov	#b.t.h,	r1
+10$:
+	mov	rtproc,	r0	;was OS found ?
+	beq	99$		;no, ignore
+	mov	@#ur2,	-(sp)	;
+	mov	p.ur0(r0), @#ur2;
+	mov	r1, p.pc(r0)	;
+	mov	#b.s,	r2
+	mov	#1000,	r1
+	mov	#<41000>,r3
+44$:	mov	(r1)+,	(r3)+
+	sob	r2,	44$
+	mov	(sp)+,	@#ur2	;
+	jmp	$step		;
+99$:
+	jmp	dc1		;
+.dsabl	lsb
+;===============================
+$regs:
+	movb	#c.rev,	markw.-1 ;
+	out	#markw		;
+10$:
+	call	setr3		;
+	mov	(r3),	r0	;
+	mov	#markr., r5	;
+	oct16			;
+	call	setrr		;
+11$:
+	movb	#c.rev,	markr.-1 ;
+	out	#markr		;
+	call	octinp		;take cmd (format: <oct_num><cmd_sym>)
+	mov	r0,	-(sp)	;;
+	mtps	r4		;
+	bvc	20$		;
+	mov	r1,	(r3)	;
+	mov	r1,	r0	;
+	mov	#markr., r5	;
+	oct16			;
+20$:
+	movb	#c.nor,	markr.-1 ;
+	out	#markr		;
+	mov	(sp)+,	r0	;;
+	cmp	#'D,	r0	;
+	beq	99$		;exit reg_mode
+	call	rcmd		;
+	bcs	11$		;strange cmd !!!
+	br	10$		;
+99$:
+	movb	#c.nor,	markw.-1 ;
+	out	#markw		;
+	mov	cur,	r3	;
+	jmp	dc1
+setr3:
+	mov	rnum,	r3	;
+	asl	r3		;
+	mov	r3,	r0	;
+	add	#mtr,	r0	;
+	movb	(r0)+,	markr+1	;
+	movb	(r0)+,	markr+3	;
+	add	r2,	r3	;
+	add	#p.r0,	r3	;pointer to regs val
+	return
+setrr:
+	call	cldial		;
+	mov	#'R,	r0	;
+	call	putchr		;
+	mov	rnum,	r0	;
+	add	#'0,	r0	;
+	call	putchr		;
+	mov	#'/,	r0	;
+	call	putchr		;
+	mov	(r3),	r0	;
+	call	octout		;
+	return
+rcmd:
+	cmp	#24,	r0	;up
+	beq	10$		;
+	cmp	#26,	r0	;down
+	bne	20$		;
+10$:
+	add	#4,	rnum	;
+	br	33$		;
+20$:
+	cmp	#25,	r0	;right
+	bne	30$		;
+	inc	rnum		;
+	br	33$		;
+30$:
+	cmp	#27,	r0	;left
+	bne	40$		;
+	dec	rnum		;
+33$:
+	bic	#177770, rnum	;
+	br	99$		;
+40$:
+	cmp	#17,	r0	;cr
+	beq	99$		;
+	sec
+	return
+99$:
+	clc			;
+	return			;
+
+rnum:	.word	0		;current reg-number 0..7
+mtr:
+	.word	<0.*10.+3.>*400+4.
+	.word	<1.*10.+3.>*400+4.
+	.word	<2.*10.+3.>*400+4.
+	.word	<3.*10.+3.>*400+4.
+	.word	<0.*10.+3.>*400+5.
+	.word	<1.*10.+3.>*400+5.
+	.word	<2.*10.+3.>*400+5.
+	.word	<3.*10.+3.>*400+5.
+
+markr:	.byte	c.y,	0,	c.x,	0,	c.clr,	clr.n,	c.nor
+markr.:	.asciz	"000000"
+	.even
+;-------------------------------
+$CLOSE:	MTPS	R4
+	bvc	10$		;
+	call	POKE		;
+	neg	fflag		;
+	call	umemout		;
+10$:
+	jmp	dc1		;
+
+$SUCC8:
+	mov	#8.,	-(sp)	;
+	br	succ0		;
+$SUCC:
+	mov	#2,	-(sp)	;
+	cmp	#4,	stat	;words ?
+	beq	succ0		;yes
+	dec	(sp)		;
+succ0:
+	mov	#-30,	optyp	;
+	MTPS	R4
+	BVC	SUCC.2
+	CALL    POKE
+	neg	fflag		;
+SUCC.2: ADD	(sp)+,	R3
+	call	umemout		;;;
+	JMP	dc1
+
+$PRED8:
+	mov	#8.,	-(sp)	;
+	br	pred0		;
+$PRED:
+	mov	#2,	-(sp)	;	
+	cmp	#4,	stat	;words ?
+	beq	pred0		;yes
+	dec	(sp)		;
+pred0:
+	clr	optyp		;
+	MTPS	R4
+	BVC	PRED.2
+	CALL	POKE
+	neg	fflag		;
+PRED.2: SUB	(sp)+,     R3
+	call	umemout		;;;
+	JMP	dc1
+
+$WRIT:
+	mtps	r4		;
+	bvs	10$		;
+	mov	wrpd,	r1	;
+10$:
+	mov	#upnt.+13., r5	;
+	mov	r1,	r0	;
+	oct16			;
+	movb	#clr.a,	upnt+5	;
+	movb	#c.nor,	upnt+6	;
+	out	#upnt		;
+	mov	r1,	wrpd	;
+	mov	r1,	@wrp	;
+	clr	r0		;
+	sob	r0,	.	;
+	movb	#c.rev,	upnt+6	;
+	movb	#clr.n,	upnt+5	;
+	out	#upnt		;
+	jmp	dc1		;;;
+
+$POIN:
+	mtps	r4		;
+	bvc	10$		;no value
+	mov	r1,	wrp	;
+	mov	#upnt.+3, r5	;
+	mov	r1,	r0	;
+	oct16			;
+	movb	#c.nor,	upnt+6	;
+	out	#upnt		;
+	clr	r0		;
+	sob	r0,	.	;
+	movb	#c.rev,	upnt+6	;
+	out	#upnt		;
+10$:
+	jmp	dc1		;;;
+
+$HMODE:
+	mtps	r4		;
+	bmi	$HUe		;mode already set
+	BIS     #HLTM,	R4
+	mov	r3,	curr	;
+	mov	r2,	r3	;
+	br	$HU		;
+
+$UMODE:
+	mtps	r4		;
+	bpl	$HUe		;mode already set
+	BIC	#HLTM,	R4
+	mov	curr,	r3
+$HU:
+	call	utitout		;
+	call	uparout		;
+	clr	fflag		;
+	call	umemout		;
+$HUe:
+	JMP	DC1
+
+PEEK:   MTPS    R4 
+	clc
+	BPL	10$
+5$:
+	cmp	#4,	stat	;
+	beq	7$		;
+	MOVb	(R3),   R0
+	RETURN
+7$:
+	MOV	(R3),   R0
+	RETURN
+10$:
+	MOV	R3,     R0
+	CMP	R0,     #160000
+	BCC	5$
+	ASH	#-12.,	R0
+	BIC	#^C16,	R0
+	ADD	R2,	R0
+	MOV	P.UR0(R0),UR3
+	MOV	R3,	R0
+	BIC	#160000,R0
+	cmp	#4,	stat	;
+	beq	12$		;
+	MOVb	60000(R0),R0
+	RETURN
+12$:
+	MOV	60000(R0),R0
+	RETURN
+
+POKE:   MTPS    R4 
+	BPL	30$
+10$:
+	cmp	#4,	stat	;
+	beq	20$		;
+	movb	r1,	(r3)	;
+	return
+20$:
+	MOV	R1,	(R3)
+	RETURN
+30$:	MOV	R3,     R0
+	CMP	R0,	#160000
+	BCC	10$
+	ASH	#-12.,	R0
+	BIC	#^C16,	R0
+	ADD	R2,	R0
+	MOV	P.UR0(R0),UR3
+	MOV	R3,	R0
+	BIC	#160000,R0
+	cmp	#4,	stat	;
+	beq	40$		;
+	MOVb	R1,     60000(R0)
+	RETURN
+40$:
+	MOV	R1,     60000(R0)
+	RETURN
+
+;--------------------------
+; r0	- returns char
+GETCHR:
+10$:
+	mov	csr,	r0	;
+	beq	10$		;
+	clr	csr		;
+     	BIC	#^C377, R0
+	BEQ	10$
+	CMP	R0,     #140
+	blo	15$
+	BIC	#40,    R0
+15$:
+	return
+PUTCP:
+	call	putchr		;
+	mov	r0,	-(sp)	;
+	out	#dial		;
+	mov	(sp)+,	r0	;
+	return			;
+PUTCHR:
+	cmp	point,	#epoint	;
+	bhis	ret		;
+	cmp	r0,	#40	;?
+	blo	ret		;?
+	movb	r0,	@point	;
+	inc	point		;
+RET:	RETURN
+
+OCTINP:
+	clr	-(sp)		;
+	CLR	R1		; num to R1
+	BIC	#NUM,   R4	; flag wwoda ~isla: 2 w R4
+10$: 	CALL	GETCHR		; simwol w R0
+	CMPB	R0,     #'0
+	BCS	20$
+	CMPB	R0,     #'8
+	BCC	20$
+	cmp	#6,	(sp)	;
+	beq	10$		;
+	inc	(sp)		;
+	call	putcp		;
+	ASHC	#3,     R1
+	BIC	#^C7,   R0
+	BIS	R0,     R1
+	BR	10$
+20$:
+	cmp	#37,	r0	;is it DEL ?
+	bne	30$		;no
+	tst	(sp)		;something to DEL ?
+	beq	10$		;nothing
+	dec	(sp)		;
+	dec	point		;
+	movb	#' ,	@point	;
+	out	#dial		;
+	bic	#7,	r1	;
+	ashc	#-3,	r1	;
+	br	10$		;
+30$:
+	tst	(sp)+		;
+	beq	40$		;
+	BIS	#DI+NUM,R4
+40$:
+	return
+
+OCTOUT:: mov	r1,	-(sp)
+	MOV	R0,     R1	;print oct num + blank
+	MOV	#30,    R0
+	ASHC	#1,     R0
+	INC	R1
+10$:	CALL	PUTCHR
+	MOV	#6,     R0
+	ASHC	#3,     R0
+	TST	R1
+	BNE	10$
+	MOV	#40,    R0
+	call	putcp		;
+	mov	(sp)+,	r1
+	return
+
+;------------------------------
+$SHOW:
+	cmp	#4,	stat	;words ?
+	bne	30$		;no
+	call	ospec		;
+	out	#ubra		;
+30$:
+	jmp	inoct		;
+
+$SWPRb:
+	mtps	r4		;
+	bmi	$swee		;
+1$:
+	mov	pdptr,	r0	;
+	cmp	r0,	r2	;
+	bne	10$		;
+5$:
+	mov	p.dsucc(r0), r2	;
+	beq	20$		;
+	mov	r2,	r0	;
+	br	5$		;
+10$:
+	cmp	p.dsucc(r0), r2	;
+	beq	20$		;
+	mov	p.dsucc(r0), r0	;
+	br	10$		;
+20$:
+	mov	r0,	r2	;
+	mov	freepr,	r0	;
+	beq	$swe		;
+30$:
+	cmp	r0,	r2	;
+	beq	1$		;
+	mov	(r0),	r0	;
+	bne	30$		;
+	br	$swe		;
+$SWPR:
+	mtps	r4		;
+	bmi	$swee		;
+1$:
+	mov	p.dsucc(r2), r2	;
+	bne	20$		;
+	mov	pdptr,	r2	;
+20$:
+	mov	freepr,	r0	;
+	beq	40$		;
+30$:
+	cmp	r0,	r2	;
+	beq	1$		;
+	mov	(r0),	r0	;
+	bne	30$		;
+40$:
+$swe:
+	mov	r2,	curpr	;
+	clr	cur		;
+	call	utitout		;
+	call	uparout		;
+	call	uregout		;
+	clr	fflag		;
+	call	umemout		;
+$swee:	jmp	DC1
+;------------------------
+$asci:
+	clr	r0		;
+	br	$abw		;
+$byte:
+	mov	#2,	r0	;
+	br	$abw		;
+$word:
+	mov	#4,	r0	;
+$abw:
+	cmp	stat,	r0	;
+	beq	$abwe		;
+	bic	#1,	r3	;
+	mov	r0,	stat	;
+	neg	fflag		;
+	call	umemout		;
+$abwe:
+	jmp	dc1		;
+;------------------------
+; ro	- num;	r5	- str addr
+; call	- 	call oct16
+;
+OCT16::
+	mov	r1,	-(sp)
+;	mov	r5,	-(sp)	;
+	MOV	R0,     R1	;print oct num + blank
+	MOV	#30,    R0
+	ASHC	#1,     R0
+	INC	R1
+10$:	movb	r0,	(r5)+	;
+	MOV	#6,     R0
+	ASHC	#3,     R0
+	TST	R1
+	BNE	10$
+;	mov	(sp)+,	r5	;
+	mov	(sp)+,	r1
+	return
+;------------------------
+utitout:
+	mtps	r4		;
+	bpl	1$		;user-mode
+	out	#htit		;halt-mode
+	return
+1$:
+	mov	r4,	-(sp)	;
+	mov	r2,	r0	;proc's d-addr
+	oct16	#utit+6.	;
+			;store proc's NAME
+	mov	#16.,	r0	;
+	mov	#utit+13., r1	;
+	mov	r2,	r4	;
+	add	#p.name,r4	;
+10$:
+	movb	(r4)+,	(r1)+	;
+	bne	20$		;
+	movb	#40,	-1(r1)	;
+20$:	sob	r0,	10$	;
+			;store proc's PID
+	call	setpid		;
+	movb	r1,	utit+32.	;
+	swab	r1			;
+	movb	r1,	utit+31.	;
+	out	#utit		;
+	mov	(sp)+,	r4	;
+	return
+setpid:
+			;r2 - proc's d-adr
+	mov	r3,	-(sp)		;save r3
+	mov	#PDPTR,	r3		;
+	mov	#60*400+60, r1		;num-counter DECIMAL !!!
+10$:
+;	MFHLT	r3
+	mov	(r3),	r0		;
+	cmpb	#'9,	r1		;
+	bne	20$			;
+	bic	#17,	r1		;
+	add	#1*400,r1		;
+	br	30$
+20$:
+	inc	r1			;
+30$:
+	mov	r0,	r3		;
+	beq	44$			;;;
+	add	#P.DSUCC,r3		;
+	cmp	r2,	r0		;
+	bne	10$			;
+	clc				;
+	br	45$			;
+44$:
+	sec
+45$:
+	mov	(sp)+,	r3		;restore r3
+	return
+;------------------------
+; r0	- 12-bit num	; r1 - string pointer
+OCT12::
+	mov	#5,	-(sp)	;
+	add	(sp),	r1	;
+10$:
+	movb	r0,	-(r1)	;
+	bicb	#177770,(r1)	;
+	bisb	#60,	(r1)	;
+	ash	#-3,	r0	;
+	dec	(sp)		;
+	bne	10$		;
+	tst	(sp)+		;
+	return			;
+;------------------------
+; r0	- 12-bit num	; r5 - string pointer
+OCT8::
+	mov	#3,	-(sp)	;
+	add	(sp),	r5	;
+	bic	#177400, r0	;
+10$:
+	movb	r0,	-(r5)	;
+	bicb	#177770,(r5)	;
+	bisb	#60,	(r5)	;
+	ash	#-3,	r0	;
+	dec	(sp)		;
+	bne	10$		;
+	tst	(sp)+		;
+	add	#3,	r5	;
+	return			;
+;-----------------------
+uparout:
+	mov	r4,	-(sp)	;
+	mtps	r4		;
+	bmi	10$		;halt-mode
+	mov	r2,	r5	;
+	add	#p.ur0,	r5	;
+	mov	#upar1+10.,r1	;ptr
+	call	20$		;
+	mov	#upar2+10.,r1	;
+	call	20$		;
+	out	#upar1		;
+	out	#upar2		;
+	br	15$		;
+10$:
+	mov	#hr0,	r5	;
+	mov	#hpar1+10.,r1	;ptr
+	call	20$		;
+	mov	#hpar2+10.,r1	;
+	call	20$		;
+	out	#hpar1		;
+	out	#hpar2		;
+15$:
+	mov	(sp)+,	r4	;
+	return
+20$:
+	mov	#4,	r4	;cnt
+30$:
+	mov	(r5)+,	r0	;
+	call	oct12		;
+	add	#10.,	r1	;
+	sob	r4,	30$	;
+	return
+;------------------------
+uregout::
+	mov	r4,	-(sp)	;
+	mov	r2,	r1	;
+	add	#p.r0,	r1	;
+
+	mov	#ureg1+9.,r5	;ptr
+	call	5$		;
+	mov	#ureg2+9.,r5	;
+	call	5$		;
+	mov	(r1)+,	r0	;
+	mov	#lpsw+10., r1	;
+	call	oct12		;
+	out	#ureg1		;
+	out	#ureg2		;
+	out	#lpsw		;
+	mov	(sp)+,	r4	;
+	return			;
+5$:
+	mov	#4,	r4	;cnt
+10$:
+	mov	(r1)+,	r0	;
+	oct16			;
+	add	#10.-6,	r5	;
+	sob	r4,	10$	;
+	return
+;------------------------------
+PRIWET:
+cldial:
+	mov	r0,	-(sp)	;
+	mov	r1,	-(sp)	;
+	mov	#ipoint,r1	;
+	mov	r1,	point	;
+	mov	#epoint-ipoint,r0 ;cnt
+10$:
+	movb	#40,	(r1)+	;
+	sob	r0,	10$	;
+	out	#dial		;
+	mov	(sp)+,	r1	;
+	mov	(sp)+,	r0	;
+	return
+;------------------------------
+umemout:
+	mov	r3,	cur	;
+	tst	fflag		;need redraw ?
+	bmi	10$		;
+	bne	20$		;no
+	mov	sp,	fflag	;reset flag
+10$:
+	call	showme		;
+	br	30$		;
+20$:
+	cmp	me1,	me2	;
+	bhi	22$		;
+	cmp	r3,	me1	;
+	blo	10$		;
+	cmp	r3,	me2	;
+	bhis	10$		;
+	br	28$		;
+22$:
+	cmp	r3,	me1	;
+	blt	10$		;
+	cmp	r3,	me2	;
+	bge	10$		;
+28$:
+;	cmp	r3,	curme	;need restore ?
+;	beq	40$		;no
+			;restore
+	movb	#c.rev,	markw.-1 ;
+	out	#markw		;
+30$:			;set
+	movb	#c.nor,	markw.-1 ;
+	mov	r3,	curme	;store proper addr
+	mov	r3,	r0	;
+	sub	me1,	r0	;offset in MTW
+	add	stat,	PC	;
+	 br 1$
+	 br 1$
+	bic	#1,	r0	;
+	asl	r0		;
+	add	#mtw,	r0	;
+	br	2$		;
+1$:
+	asl	r0		;
+	asl	r0		;
+	add	#mtb,	r0	
+2$:
+	movb	(r0)+,	markw+1	;Y
+	movb	(r0)+,	markw+3	;X
+	mov	(r0),	r0	;addr
+	mov	#markw., r5	;
+	add	stat,	PC	;
+	 br 4$
+	 br 4$
+	movb	(r0)+,	(r5)+	;
+	movb	(r0)+,	(r5)+	;
+	movb	(r0)+,	(r5)+	;
+4$:
+	movb	(r0)+,	(r5)+	;
+	movb	(r0)+,	(r5)+	;
+	movb	(r0)+,	(r5)+	;
+	clrb	(r5)		;
+	out	#markw		;
+40$:
+	return
+	nn = 4	; num of cells in line
+showme:
+	tst	fflag		;
+	bmi	2$		;redraw with the same limits
+	bic	#7,	r3	;
+	add	optyp,	r3	;
+	mov	r3,	me1	;lower addr limit
+	br	8$		;
+2$:
+	neg	fflag		;
+	mov	me1,	r3	;
+8$:
+	mov	#umem1., r5	;
+	mov	#4,	20$	;cnt of lines
+10$:
+			;out addr
+	mov	r3,	r0	;
+	call	oct16		;
+	add	#3,	r5	;
+			;out contents
+	call	omem		;
+	add	#8.,	r5	;
+	dec	(pc)+		;
+20$:	.blkw	1		;this is conter
+	bne	10$		;
+	mov	r3,	me2	;upper addr limit
+	out	#umem1		;
+	mov	cur,	r3	;
+	return
+omem:
+	mov	#nn,	r1	;counter
+10$:
+	call	peek		;
+	bcc	20$		;
+	call	clrcel		;
+	br	30$		;
+20$:
+	add	stat,	pc	;
+	 br 2$
+	 br 3$
+1$:
+	movb	#' ,	(r5)+	;
+	oct16			;
+	br	30$		;
+2$:
+	movb	#' ,	(r5)+	;
+	movb	#' ,	(r5)+	;
+	cmpb	r0,	#40	;
+	bhis	21$		;
+	bic	#377,	r0	;
+	bis	#376,	r0	;
+21$:
+	movb	r0,	(r5)+	;
+	movb	#' ,	(r5)+	;
+	movb	#' ,	(r5)+	;
+	movb	#' ,	(r5)+	;
+	inc	r3		;
+	call	peek		;
+	dec	r3		;
+	cmpb	r0,	#40	;
+	bhis	22$		;
+	bic	#377,	r0	;
+	bis	#376,	r0	;
+22$:
+	movb	r0,	(r5)+	;
+	br	30$		;
+3$:
+	call	oct8		;
+	movb	#' ,	(r5)+	;
+	inc	r3		;
+	call	peek		;
+	dec	r3		;
+	call	oct8		;
+30$:	add	#2,	r3	;correct addr
+	inc	r5		;
+	sob	r1,	10$	;
+	return
+clrcel:
+	mov	#'-,	r0	;
+	mov	#' ,	r2	;
+	add	stat,	pc	;
+	 br 20$
+	 br 30$
+10$:
+	movb	r2,	(r5)+	;words
+	movb	r0,	(r5)+	;
+	movb	r0,	(r5)+	;
+	movb	r0,	(r5)+	;
+	movb	r0,	(r5)+	;
+	movb	r0,	(r5)+	;
+	movb	r0,	(r5)+	;
+	br	99$		;
+20$:
+	movb	r2,	(r5)+	;
+	movb	r2,	(r5)+	;
+	movb	r0,	(r5)+	;
+	movb	r2,	(r5)+	;
+	movb	r2,	(r5)+	;
+	movb	r2,	(r5)+	;
+	movb	r0,	(r5)+	;
+	br	99$		;
+30$:
+	movb	r0,	(r5)+	;
+	movb	r0,	(r5)+	;
+	movb	r0,	(r5)+	;
+	movb	r2,	(r5)+	;
+	movb	r0,	(r5)+	;
+	movb	r0,	(r5)+	;
+	movb	r0,	(r5)+	;
+99$:
+	mov	curpr,	r2	;restore r2
+	return
+ospec:
+	mov	cur,	r3	;BR-----
+	mov	#ubra.+2, r5	;
+	call	peek		;
+	bcc	3$		;
+1$:
+	call	clrw		;
+	inc	r5		;
+	inc	r5		;
+2$:
+	call	clrw		;
+	br	5$		;
+3$:
+	bic	#177400,r0	;
+	movb	r0,	r0	;
+	asl	r0		;
+	add	r0,	r3	;
+	add	#2,	r3	;
+	mov	r3,	r0	;
+	oct16			;
+	inc	r5		;
+	inc	r5		;
+	call	peek		;
+	bcs	2$		;
+	oct16			;
+5$:
+	mov	cur,	r3	;_-----
+	inc	r5		;
+	inc	r5		;
+	call	peek		;
+	bcc	8$		;
+6$:
+	call	clrw		;
+7$:
+	inc	r5		;
+	inc	r5		;
+	call	clrw		;
+	br	9$		;
+8$:
+	ADD	R0,	R3	;
+	ADD	#2,	R3	;
+	mov	r3,	r0	;
+	oct16			;
+	call	peek		;
+	bcs	7$		;
+	inc	r5		;
+	inc	r5		;
+	oct16			;
+9$:
+	mov	cur,	r3	;@-----
+	mov	#udef.+1, r5	;
+	call	peek		;
+	bcs	10$		;
+	mov	r0,	r3	;
+	call	peek		;
+	bcc	30$		;
+10$:
+	call	clrw		;
+20$:
+	inc	r5		;
+	inc	r5		;
+	call	clrw		;
+	br	40$		;
+30$:
+	mov	r0,	r3	;
+	oct16			;
+	call	peek		;
+	bcs	20$		;
+	inc	r5		;
+	inc	r5		;
+	oct16			;
+40$:
+	mov	cur,	r3	;restore ...
+	return
+
+clrw:
+	mov	#'-,	r0	;
+	movb	r0,	(r5)+	;
+	movb	r0,	(r5)+	;
+	movb	r0,	(r5)+	;
+	movb	r0,	(r5)+	;
+	movb	r0,	(r5)+	;
+	movb	r0,	(r5)+	;
+	return
+;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< KIL-HIM
+KILHIM:
+	mov	hr4,	ur4
+	mov	hr5,	ur5
+	clr		ur6
+	PROREG	#tkpcsr
+	mov	r.proc-r.copy(r0),r0	;
+	add	#P.NAME, r0	;
+	mov	#knam,	r1	;
+1$:
+	movb	(r1)+,	(r0)+	;copy proc's name
+	bne	1$		;
+kloop:
+	WAITINT	#0
+	mov	xkpcsr,	r2	;take arg
+	bmi	20$		;it is not ident
+10$:
+	KILPROC	r2		;try to KILL
+	br	kloop		;
+20$:
+	clr	r1		;ident
+	mov	#PDPTR,	r3	;
+30$:
+	mov	(r3),	r0	;take next
+	inc	r1		;
+	mov	r0,	r3	;
+	beq	kloop		;bad p-addr
+	add	#P.DSUCC, r3	;
+	cmp	r2,	r0	;is it him ?
+	bne	30$		;no
+	mov	r1,	r2	;
+	br	10$		;go to kill !!!
+
+kilh:	.word	0		;p-adr of kil-him
+knam:	.asciz	"Proc-Killer"
+
+;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+.macro	LABEL	nam,y,x,col,str,revers
+nam:	.byte	c.y,	y,	c.x,	x,	c.clr,	col
+.iif nb <revers>,	.byte	11
+.if  nb <str>
+nam'.:	.asciz	%'str'%
+.endc
+.endm
+
+LABEL	M.BPT,0,13.,clr.a,	<Break>
+LABEL	M.BP0,0,13.,clr.n,	<ЋЋЋЋЋЋ>,	revers
+
+LABEL	m.tit,0,0,clr.a,	<Пульт  V1.a>,	REVERS
+LABEL	upar1,1,0,clr.n,	<ur0=0000  ur1=0000  ur2=0000  ur3=0000 >
+LABEL	upar2,2,0,clr.n,	<ur4=0000  ur5=0000  ur6=0000  ur7=0000 >
+LABEL	hpar1,1,0,clr.n,	<hr0=0000  hr1=0000  hr2=0000  hr3=0000 >
+LABEL	hpar2,2,0,clr.n,	<hr4=0000  hr5=0000  hr6=0000  hr7=0000 >
+LABEL	utit, 3,0,clr.a,	<000000 1234567890123456 #pp>
+LABEL	htit, 3,0,clr.a,	<H A L T    m o d e         >
+LABEL	ureg1,4,0,clr.n,	<r0=000000 r1=000000 r2=000000 r3=000000>
+LABEL	ureg2,5,0,clr.n,	<r4=000000 r5=000000 sp=000000 pc=000000>
+LABEL	lpsw, 3,30.,clr.n,	<PSW=0000 >
+umem1:	.byte	c.y,	6.,	c.x,	0,	c.clr,	clr.n,	c.nor
+umem1.:	.ascii	"000000:"<c.rev>
+	.ascii	"  000000  000000  000000  000000  "
+umem2:	.byte	c.y,	1.,	c.x,	0,	c.clr,	clr.n,	c.nor
+umem2.:	.ascii	"000000:"<c.rev>
+	.ascii	"  000000  000000  000000  000000  "
+umem3:	.byte	c.y,	1.,	c.x,	0,	c.clr,	clr.n,	c.nor
+umem3.:	.ascii	"000000:"<c.rev>
+	.ascii	"  000000  000000  000000  000000  "
+umem4:	.byte	c.y,	1.,	c.x,	0,	c.clr,	clr.n,	c.nor
+umem4.:	.ascii	"000000:"<c.rev>
+	.asciz	"  000000  000000  000000  000000  "
+
+	.even
+mtb:
+	.word	<0.*4.+8.>*400+6.,	4.*0+umem1.+9.		;str1
+	.word	<1.*4.+8.>*400+6.,	4.*1+umem1.+9.		;str1
+	.word	<2.*4.+8.>*400+6.,	4.*2+umem1.+9.		;str1
+	.word	<3.*4.+8.>*400+6.,	4.*3+umem1.+9.		;str1
+	.word	<4.*4.+8.>*400+6.,	4.*4+umem1.+9.		;str1
+	.word	<5.*4.+8.>*400+6.,	4.*5+umem1.+9.		;str1
+	.word	<6.*4.+8.>*400+6.,	4.*6+umem1.+9.		;str1
+	.word	<7.*4.+8.>*400+6.,	4.*7+umem1.+9.		;str1
+	.word	<0.*4.+8.>*400+7.,	4.*0+umem2.+9.		;str2
+	.word	<1.*4.+8.>*400+7.,	4.*1+umem2.+9.		;str2
+	.word	<2.*4.+8.>*400+7.,	4.*2+umem2.+9.		;str2
+	.word	<3.*4.+8.>*400+7.,	4.*3+umem2.+9.		;str2
+	.word	<4.*4.+8.>*400+7.,	4.*4+umem2.+9.		;str2
+	.word	<5.*4.+8.>*400+7.,	4.*5+umem2.+9.		;str2
+	.word	<6.*4.+8.>*400+7.,	4.*6+umem2.+9.		;str2
+	.word	<7.*4.+8.>*400+7.,	4.*7+umem2.+9.		;str2
+	.word	<0.*4.+8.>*400+8.,	4.*0+umem3.+9.		;str3
+	.word	<1.*4.+8.>*400+8.,	4.*1+umem3.+9.		;str3
+	.word	<2.*4.+8.>*400+8.,	4.*2+umem3.+9.		;str3
+	.word	<3.*4.+8.>*400+8.,	4.*3+umem3.+9.		;str3
+	.word	<4.*4.+8.>*400+8.,	4.*4+umem3.+9.		;str3
+	.word	<5.*4.+8.>*400+8.,	4.*5+umem3.+9.		;str3
+	.word	<6.*4.+8.>*400+8.,	4.*6+umem3.+9.		;str3
+	.word	<7.*4.+8.>*400+8.,	4.*7+umem3.+9.		;str3
+	.word	<0.*4.+8.>*400+9.,	4.*0+umem4.+9.		;str4
+	.word	<1.*4.+8.>*400+9.,	4.*1+umem4.+9.		;str4
+	.word	<2.*4.+8.>*400+9.,	4.*2+umem4.+9.		;str4
+	.word	<3.*4.+8.>*400+9.,	4.*3+umem4.+9.		;str4
+	.word	<4.*4.+8.>*400+9.,	4.*4+umem4.+9.		;str4
+	.word	<5.*4.+8.>*400+9.,	4.*5+umem4.+9.		;str4
+	.word	<6.*4.+8.>*400+9.,	4.*6+umem4.+9.		;str4
+	.word	<7.*4.+8.>*400+9.,	4.*7+umem4.+9.		;str4
+mtw:
+	.word	<0.*8.+9.>*400+6.,	8.*0+umem1.+10.		;str1
+	.word	<1.*8.+9.>*400+6.,	8.*1+umem1.+10.
+	.word	<2.*8.+9.>*400+6.,	8.*2+umem1.+10.
+	.word	<3.*8.+9.>*400+6.,	8.*3+umem1.+10.
+	.word	<0.*8.+9.>*400+7.,	8.*0+umem2.+10.		;str2
+	.word	<1.*8.+9.>*400+7.,	8.*1+umem2.+10.
+	.word	<2.*8.+9.>*400+7.,	8.*2+umem2.+10.
+	.word	<3.*8.+9.>*400+7.,	8.*3+umem2.+10.
+	.word	<0.*8.+9.>*400+8.,	8.*0+umem3.+10.		;str3
+	.word	<1.*8.+9.>*400+8.,	8.*1+umem3.+10.
+	.word	<2.*8.+9.>*400+8.,	8.*2+umem3.+10.
+	.word	<3.*8.+9.>*400+8.,	8.*3+umem3.+10.
+	.word	<0.*8.+9.>*400+9.,	8.*0+umem4.+10.		;str4
+	.word	<1.*8.+9.>*400+9.,	8.*1+umem4.+10.
+	.word	<2.*8.+9.>*400+9.,	8.*2+umem4.+10.
+	.word	<3.*8.+9.>*400+9.,	8.*3+umem4.+10.
+
+markw:	.byte	c.y,	0,	c.x,	0,	c.clr,	clr.n,	c.nor
+markw.:	.asciz	"000000"
+
+ubra:	.byte	c.y,	10.,	c.x,	0,	c.clr,	clr.n,	c.nor
+	.ascii	"Branch:"<c.nor>
+ubra.:	.ascii	"  000000/ 000000 _000000/ 000000  "
+	.byte	c.y,	1.,	c.x,	-17.,	c.clr,	clr.n,	c.nor
+udef.:	.ascii	"@000000  000000  "
+	.byte	0	;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+upnt:	.byte	c.y,	0.,	c.x,	20.,	c.clr,	clr.n,	c.rev
+upnt.:	.asciz	" . 000000 <- 000000 "
+
+LABEL	dial,11.,0,clr.a,	<012345678901234567890123>
+ipoint	= dial+6
+epoint	= .-1
+htext1:
+	.byte	c.y,	0,	c.x,	0.,	c.clr,	clr.a,	c.nor
+.ascii	"Форматы команд (* - введенное число) :    "
+	.byte	c.y,	1,	c.x,	0.,	c.clr,	clr.n,	c.nor
+.ascii	"Режим "<c.clr><clr.a>"R"<c.clr><clr.n>"egs"
+.ascii	" (регистров) или "<c.clr><clr.a>"D"<c.clr><clr.n>"ump (памяти)  "
+	.byte	c.y,	1,	c.x,	0.
+.ascii	"Вывод "<c.clr><clr.a>"W"<c.clr><clr.n>"ords, "
+.ascii	<c.clr><clr.a>"B"<c.clr><clr.n>"ytes или "
+.ascii	<c.clr><clr.a>"A"<c.clr><clr.n>"scii              "
+	.byte	c.y,	1,	c.x,	0.
+.ascii	"Пространство "<c.clr><clr.a>"U"<c.clr><clr.n>"ser или "
+.ascii	<c.clr><clr.a>"H"<c.clr><clr.n>"alt                "
+	.byte	c.y,	1,	c.x,	0.
+.ascii	<c.clr><clr.a>"ФИКС"<c.clr><clr.n>"+"
+.ascii	<c.clr><clr.a>"јљ"<c.clr><clr.n>
+.ascii	"- переключить процесс              "
+	.byte	c.y,	1,	c.x,	0.
+.ascii	<c.clr><clr.a>"*<вк>"<c.clr><clr.n>
+.ascii	"  - занести значение (и перейти "
+.ascii	<c.clr><clr.a>"јљїі"<c.clr><clr.n>")"
+	.byte	c.y,	1,	c.x,	0.
+.ascii	<c.clr><clr.a>"*/"<c.clr><clr.n>
+.ascii	"     - перейти по адресу *              "
+	.byte	c.y,	1,	c.x,	0.
+.ascii	<c.clr><clr.a>"*@_"<c.clr><clr.n>
+.ascii	"    - перейти с учетом адресации       "
+	.byte	c.y,	1,	c.x,	0.
+.ascii	<c.clr><clr.a>"S"<c.clr><clr.n>
+.ascii	"      - вывод адресации BR, @, и _       "
+	.byte	c.y,	1,	c.x,	0.
+.ascii	<c.clr><clr.a>"*."<c.clr><clr.n>
+.ascii	"     - задать указатель для записи      "
+	.byte	c.y,	1,	c.x,	0.
+.ascii	<c.clr><clr.a>"*ЃЂ"<c.clr><clr.n>
+.ascii	"    - записать * по указателю          "
+	.byte	c.y,	1,	c.x,	0.,	c.clr,	clr.a,	c.rev
+.ascii	"ПОМ : "<c.nor>"продолжить список команд"
+	.byte	0
+htext2:
+	.byte	c.y,	0,	c.x,	0.,	c.clr,	clr.a,	c.nor
+.ascii	"Форматы команд (* - введенное число) :    "
+	.byte	c.y,	2,	c.x,	0.
+.ascii	<c.clr><clr.a>" АР2"<c.clr><clr.n>
+.ascii	"   - продолжить процесс"
+	.byte	c.y,	1,	c.x,	0.
+.ascii	<c.clr><clr.a>"*АР2"<c.clr><clr.n>
+.ascii	"   - поставить останов по адресу *"
+	.byte	c.y,	1,	c.x,	0.
+.ascii	"         и продолжить процесс"
+	.byte	c.y,	1,	c.x,	0.
+.ascii	<c.clr><clr.a>"*G"<c.clr><clr.n>
+.ascii	"     - продолжить процесс по адресу *"
+	.byte	c.y,	2,	c.x,	0.
+.ascii	"ПЕРЕЗАГРУЗИТЬ  ОС  с устройства :"
+	.byte	c.y,	1,	c.x,	0.
+.ascii	<c.clr><clr.a>"K1"<c.clr><clr.n>
+.ascii	"     - MD:  - RAM-диск"
+	.byte	c.y,	1,	c.x,	0.
+.ascii	<c.clr><clr.a>"K2"<c.clr><clr.n>
+.ascii	"     - FD:  - накопитель на ГМД"
+	.byte	c.y,	1,	c.x,	0.
+.ascii	<c.clr><clr.a>"K3"<c.clr><clr.n>
+.ascii	"     - HD:  - накопитель на ЖМД"
+	.byte	0
+	.even
+wrp:	.word	0		;pointer address for WRITES
+wrpd:	.word	0		;data to write
+point:	.blkw	1		;dial-buffer pointer
+cur:	.word	0		;current mem addr opened
+curr:	.word	0		;saved cur mem adr for User-mode
+curpr:	.word	0		;previous proc's desc-addr
+main:	.word	0		;main proc (on enter)
+stat:	.word	4	;=0 -ascii	;=2 -bytes	;=4 -words
+me1:	.word	0		;start addr   of zone
+me2:	.word	0		;end addr of zone
+curme:	.word	0		;indicated CELL
+fflag:	.word	0		;=0 - need redraw flag
+optyp:	.word	0		;for proper move of display
+
+TABCHR:	.byte	17
+	.BYTE	24,	25,	26,	27
+	.byte	k1k,	k3k,	k2k
+	.byte	36,	' ,	'.
+	.byte	'/,	'@,	'A,	'B,	'G
+	.BYTE	'H,	'R,	'S,	'U,	'W,	'_
+	.byte	224,	226
+	.byte	377
+.EVEN
+TABJMP:
+	.word	$CLOSE
+	.WORD	$pred8,	$succ,	$succ8,	$pred
+	.word	$b.md,	$b.hd,	$b.fd
+	.word	$step,	$writ,	$poin
+	.word	$open,	$open,	$asci,	$byte,	 $go
+	.word	$HMODE,	$REGS,	$SHOW,	$UMODE,	$word,	$open
+	.word	$SWPRb,	$SWPR
+;-------
+a.ar:	.word	ARCRE		;area for ARCRE
+	.word	AADR,	xtlins*xlhig,	xslena,	vmoda
+
+v.ar:	.word	0
+v.n:	.word	0
+v.an:	.word	0
+v.ary:	.word	0
+v.arx:	.word	0
+v.sy1:	.word	40.
+v.sy2:	.word	300.
+v.sx1:	.word	15.
+v.sx2:	.word	30.
+vden:	.word	2*400+2
+
+wpar:	.word	wprint,	0
+wpy:	.word	0
+wpx:	.word	0
+wpstr:	.word	0
+
+	.=.+<4-<.&3>>
+aadr:
+;	.blkb	xtlins*xlhig*xslena
+
+.END START

@@ -1,0 +1,222 @@
+	.Title	Font Designer for 11/12
+
+	.mcall	.SetTop,.CsiGen,.Exit,.Readw,.Writw,.GtLin,.Ttyin
+	.mcall	.Close,.Ttinr
+
+;.mcall	.print
+.macro	.Print	a
+	mov	a,@#177566
+	nop
+	.endm	.Print
+
+start:	mov	#buff+10000,r0
+	.SetTop	r0
+1$:	.CsiGen	@#50,#ext,#0,#fnm
+	bcs	1$
+	tstb	fnm
+	bne	2$
+	.Print	#version
+	br	1$
+2$:	.Readw	#Area,#3,#buff,#7000,#0
+	cmp	buff+1004,#"PC
+	beq	3$
+	.Print	#invfon
+	.Exit
+3$:	.Print	#fntnam
+	.Print	#buff+1006
+	.print	#help
+
+char:	.ttinr
+	bcc	.-2
+	clr	cx
+	clr	cy
+	bic	#10100,@#44
+	.Print	#mnum
+	mov	#fnm,r2
+100$:	.Ttyin
+	cmpb	r0,#15
+	beq	101$
+	movb	r0,(r2)+
+	br	100$
+101$:	clrb	(r2)+
+	clr	r2
+	mov	#fnm,r1
+1$:	movb	(r1)+,r0
+	beq	2$
+	ash	#3,r2
+	bic	#^c7,r0
+	add	r0,r2
+	br	1$
+2$:	mov	r2,r0
+	call	sadr
+	call	displa
+	mov	r0,r3
+in:	call	setcur
+	bis	#10100,@#44
+	.ttyin
+	cmpb	r0,#15	; cr
+	beq	char
+	cmpb	r0,#40
+	beq	set
+	blt	in
+	cmpb	r0,#106
+	bgt	in
+	bic	#^c7,r0
+	asl	r0
+	add	r0,pc
+	br	in	; @
+	br	up	; a
+	br	down	; b
+	br	right	; c
+	br	left	; d
+	br	file	; e
+	br	quit	; f
+up:	tst	cy
+	beq	in
+	dec	cy
+	br	in
+down:	cmp	#9.,cy
+	beq	in
+	inc	cy
+	br	in
+left:	tst	cx
+	beq	in
+	dec	cx
+	br	in
+right:	cmp	#7,cx
+	beq	in
+	inc	cx
+	br	in
+file:	.Writw	#Area,#3,#buff,#7000,#0
+quit:	.Close	#3
+	.print	#end
+	.Exit
+set:	mov	#1,r0
+	ash	cx,r0
+	mov	cy,r1
+	add	r3,r1		; r3 - shape adr
+	movb	(r1),r2
+	xor	r0,r2
+	movb	r2,(r1)
+	mov	r3,r0
+	call	displa
+	br	in
+	.Exit
+;************************************************************
+;	setcur
+;		set cursor to cx,cy position
+setcur:	mov	r0,-(sp)
+	mov	r1,-(sp)
+	mov	cx,r1
+	asl	r1
+	add	#20.,r1
+	clr	r0
+	div	#10.,r0
+	bisb	#60,r0
+	bisb	#60,r1
+	movb	r0,x
+	movb	r1,x+1	
+
+	mov	cy,r1
+	add	#10.,r1
+	clr	r0
+	div	#10.,r0
+	bisb	#60,r0
+	bisb	#60,r1
+	movb	r0,y
+	movb	r1,y+1	
+	.print	#mxy
+	mov	(sp)+,r1
+	mov	(sp)+,r0
+	return
+;************************************************************
+;	sadr
+;		calculate char shape addr(r0) from char code(r0)
+sadr:	bic	#^c377,r0
+	asl	r0
+	add	#buff,r0
+	mov	(r0),r0
+	add	#buff,r0
+	return
+;************************************************************
+;	displa
+;		display char shape (r0)
+displa:
+
+b0	= <234*400 ! 234>
+b1	= <253*400 ! 253>
+
+	mov	r0,-(sp)
+	mov	r1,-(sp)
+	mov	r2,-(sp)
+	mov	r3,-(sp)
+	mov	r4,-(sp)
+	mov	#10.,r2
+	movb	#'2,x
+	movb	#'0,x+1
+	mov	#"10,y
+1$:	mov	#8.,r1
+	movb	(r0)+,r3
+	mov	#byte,r4
+2$:	asr	r3
+	bcc	3$
+	mov	#b1,(r4)+
+	br	4$
+3$:	mov	#b0,(r4)+
+4$:	sob	r1,2$
+	mov	r0,-(sp)
+	.print	#mxy
+	.print	#byte
+	mov	(sp)+,r0
+	incb	y+1
+	sob	r2,1$
+	mov	(sp)+,r4
+	mov	(sp)+,r3
+	mov	(sp)+,r2
+	mov	(sp)+,r1
+	mov	(sp)+,r0
+	return
+;************************************************************
+.Macro	.Mess	x,y,m
+	.Byte	33,'[
+	.ascii	/y/
+	.ascii	/;/
+	.ascii	/x/
+	.ascii	/H/
+	.ascii	/m/
+	.byte	200
+	.endm
+
+cx:	0
+cy:	0
+ext:	.Rad50	/FONFON/
+	.BlkW	5
+Area:	.BlkW	10
+fnm:	.BlkB	40.
+version: .asciz	/FD V01.00/
+end:	.mess	1,24,<>
+invfon:	.asciz	/FD-F-Invalid font format/
+mnum:	.mess	10,23,</<33>/[2KEnter octal char code >
+fntnam:	.ascii	<33>/[2J/
+	.mess	10,1,<Font name : >
+cup:	.byte	33,'[,'A,<200>
+cud:	.byte	33,'[,'B,<200>
+cul:	.byte	33,'[,'2,'D,<200>
+cur:	.byte	33,'[,'2,'C,<200>
+help:	.Ascii	<33>"[3;10H'Space bar' - Set/Reset pixel"
+	.Ascii	<33>"[4;10H'Arrows'    - Move cursor"
+	.Ascii	<33>"[5;10H'CR'        - Change char"
+	.Ascii	<33>"[6;10H'E'         - Exit with save"
+	.Ascii	<33>"[7;10H'F'         - Exit with no save"
+	.byte	200
+.even
+mxy:	.byte	33,'[
+y:	.ascii	/00;/
+x:	.ascii	/00H/<200>
+.even
+;		 0 1 2 3 4 5 6 7
+BYTE:	.ascii	/                /
+	.byte	<200>
+.even
+buff:
+	.end	start

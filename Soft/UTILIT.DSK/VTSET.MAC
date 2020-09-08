@@ -1,0 +1,399 @@
+	.MCALL	.EXIT,.GTLIN
+	.MCALL	.TTYIN,.TTYOU,.TTINR
+
+;***************************************************************
+.MACRO	.PRINT	A
+	MOV	A,@#177566
+	NOP
+	.ENDM
+.nlist
+.include	"sy:p16mac"
+.include	"sy:wdc"
+.list
+;***************************************************************
+start:	call	init		; Nice thing
+	call	getcnf		; Get from our VT100 configuration
+	call	mendis		; Display menu
+	call	mening		; Proceed menu
+;------------------------------
+; init
+;	Intits some var and screen
+init:	mov	r0,-(sp)
+	mov	r1,-(sp)
+	clr	cx
+	clr	cy
+	mov	#m.i,r0
+	mov	#ni$,r1
+	mov	#m.i.o,r2
+1$:	clr	(r0)+
+	clr	(r2)+
+	sob	r1,1$
+	mov	(sp)+,r1
+	mov	(sp)+,r0
+	return
+;------------------------------
+; getcnf
+;	Get conf. from vt100
+getcnf:	bis	#10100,@#44
+	clr	r1
+	.print	#get.msg
+	.ttyin			; esc
+	.ttyin			; [
+	.ttyin
+	bit	#1,r0		; underscore
+	beq	1$
+	com	m.i.o(r1)
+	com	m.i(r1)
+1$:	tst	(r1)+
+	.ttyin
+	bit	#1,r0		; rev. chars
+	beq	2$
+	com	m.i(r1)
+	com	m.i.o(r1)
+2$:	cmp	(r1)+,(r1)+
+	.ttyin
+	bit	#1,r0		; lf/nl
+	beq	3$
+	com	m.i(r1)
+	com	m.i.o(r1)
+3$:	tst	(r1)+
+	.ttyin
+	bit	#1,r0		; wrap/nowrap
+	bne	4$
+	com	m.i(r1)
+	com	m.i.o(r1)
+4$:	tst	(r1)+
+	.ttyin
+	bit	#1,r0		; cursor on/off
+	beq	5$
+	com	m.i(r1)
+	com	m.i.o(r1)
+5$:	.ttinr
+	bcc	5$
+	return
+;------------------------------
+; mendis
+;	Display menu
+mendis:	.Print	#hello
+	.Print	#s.d
+	mov	cx,-(sp)
+	mov	cy,-(sp)
+	clr	cx
+	clr	cy
+1$:	call	itmdis
+	inc	cy
+	cmp	cy,#ni$			; Thats all ?
+	bne	1$
+	mov	(sp)+,cy
+	mov	(sp)+,cx
+	return
+;------------------------------
+; itmdis
+;	Display selected by (cx cy) item
+itmdis:	mov	r0,-(sp)
+	call	setcur
+	mov	cy,r0
+	asl	r0
+	tst	m.i(r0)
+	bne	1$
+	.Print	dm.tb(r0)
+	br	2$
+1$:	.Print	sm.tb(r0)
+2$:	mov	(sp)+,r0
+	return
+;------------------------------
+; mening
+;	Proceed menu
+mening:	mov	r0,-(sp)
+	mov	r1,-(sp)
+	clr	cx
+	clr	cy
+	bis	#10100,@#44
+in:	call	hlight			; high light first item
+	.ttyin
+	bic	#^c177,r0
+	cmp	r0,#'A
+	bne	1$
+	call	up.i
+	br	in
+1$:	cmp	r0,#'B
+	bne	2$
+	call	dw.i
+	br	in
+2$:	cmp	r0,#15
+	bne	in
+	call	ac.i
+	br	in
+	mov	(sp)+,r1
+	mov	(sp)+,r0
+	return
+;------------------------------
+; up.i
+;	Move one item up
+up.i:	call	itmdis
+	tst	cy
+	beq	1$
+	dec	cy
+	return
+1$:	mov	#ni$-1,cy
+	return
+;------------------------------
+; dw.i
+;	Move one item down
+dw.i:	call	itmdis
+	cmp	cy,#ni$-1
+	beq	1$
+	inc	cy
+	return
+1$:	clr	cy
+	return
+;------------------------------
+; ac.i
+;	Activate selected by (cx cy) item
+ac.i:	mov	r0,-(sp)
+	.TTYIN		;;;;;;;;;;;;;;;;;;;;;;;;
+	mov	cy,r0
+	asl	r0
+	call	@m.ac(r0)
+	mov	(sp)+,r0
+	return
+;------------------------------
+; if.a
+;	Invert selected by (cx cy) flag  action
+if.a:	mov	r0,-(sp)
+	mov	cy,r0
+	asl	r0
+	com	m.i(r0)			; compl menu item flag
+	mov	(sp)+,r0
+	return
+;------------------------------
+; rst.a
+;	Reset Vt100 action
+rst.a:	bic	#10100,@#44
+	.print	#rst.msg
+	.ttinr
+	bcc	.-2
+	.ttyin
+	bic	#^c137,r0
+	cmp	r0,#'Y
+	bne	1$
+	.ttinr
+	bcc	.-2
+	.print	#s.rst
+	.exit
+1$:	.ttinr
+	bcc	1$
+	call	mendis		; refresh screen
+	bis	#10100,@#44
+	return
+;------------------------------
+; rev.a
+;	revers screen action
+rev.a:	.print	#s.rev
+	return
+;------------------------------
+; fnt.a
+;	change font action
+fnt.a:	movb	#'0,numb	;list the fonts
+	.print	#m10		;
+	mov	#partb,r2	; PAR's table
+	FNLOOK	#ar,#0		;
+1$:
+	tst	ar+2		;is there anybody ?
+	beq	2$		;t h e   e n d  !!!
+	mov	ar+2,-(sp)	;save descr.
+	FNFIND	#ar		;find this font
+	mov	ar+2,(r2)+	; save PAR
+	mov	(sp)+,ar+2	; restore descr
+	incb	numb		; inc number
+	.print	#m20		;print it
+	.print	#ar+4		;tell everybody
+	FNLOOK	#ar		;get the next one
+	br	1$		;
+2$:	bic	#10100,@#44
+	.gtlin	#line,#enum	; get font #
+	tstb	line
+	beq	3$
+	cmpb	line,numb
+	bgt	2$		; # can't be > max
+	cmpb	line,#'0
+	ble	2$		; # can't be < 0
+	movb	line,r0
+	bic	#^c7,r0
+	dec	r0
+	asl	r0
+	mov	partb(r0),r0	;r0:=PAR
+	mov	r0,r2
+	mov	#mpar,r0
+	call	itoa
+	.print	#cf.msg
+3$:	bis	#10100,@#44
+	call	mendis
+	return
+;******************************
+;	R0 - adres stroki
+;	R1 - portitsq
+;	R2 - ~islo
+ITOA::	MOV	R0,-(SP)
+	MOV	R1,-(SP)
+	MOV	R3,-(SP)
+;	CLR	5$
+	MOV	#TENTBL,R1
+1$:	CLR	R3
+2$:	CMP	R2,@R1
+	BLT	3$
+	SUB	@R1,R2
+	INC	R3
+	INC	5$
+	BR	2$
+3$:	MOVB	#40,@R0
+	TST	(PC)+
+5$:	1		;priznak propuska wedu}ih nulej
+	BNE	6$
+	TST	2(R1)
+	BNE	4$
+6$:	BIS	#60,R3
+	MOVB	R3,(R0)
+4$:	TSTB	(R0)+
+	TST	(R1)+
+	TST	(R1)
+	BNE	1$
+	MOVB	#'Z,(R0)+
+	movb	#200,(r0)
+	MOV	(SP)+,R3
+	MOV	(SP)+,R1
+	MOV	(SP)+,R0
+	RETURN
+;------------------------------
+; ext.a
+;	Exit from setup action
+ext.a:	.print	#s.d		; clear all char attr
+	clr	r0
+1$:	cmp	r0,#5*2
+	bne	4$
+	cmp	m.i.o(r0),m.i(r0)
+	beq	3$
+	.print	s.stb(r0)
+	br	3$
+4$:	tst	m.i(r0)
+	bne	2$
+	.print	s.dtb(r0)
+	br	3$
+2$:	.print	s.stb(r0)
+3$:	tst	(r0)+
+	cmp	r0,#nfi$*2
+	bne	1$
+	.exit
+;------------------------------
+; hlight
+;	High lights selected by (cx cy) item
+hlight:	call	setcur
+	.print	#h.msg
+	call	itmdis
+	.print	#n.msg
+	return
+;------------------------------
+; setcur
+;	Set cursor to cx,cy position
+setcur:	mov	r0,-(sp)
+	mov	r1,-(sp)
+	mov	cx,r1
+	asl	r1
+	add	#x$pos,r1
+	clr	r0
+	div	#10.,r0
+	bisb	#60,r0
+	bisb	#60,r1
+	movb	r0,x
+	movb	r1,x+1	
+
+	mov	cy,r1
+	add	#y$pos,r1
+	clr	r0
+	div	#10.,r0
+	bisb	#60,r0
+	bisb	#60,r1
+	movb	r0,y
+	movb	r1,y+1	
+	.print	#mxy
+	mov	(sp)+,r1
+	mov	(sp)+,r0
+	return
+;==============================
+ni$	= 9.				; # of items
+nfi$	= 6.				; # of flag items
+x$pos	= 32.				; menu x coor
+y$pos	= 8.				; menu y coor
+;==============================
+m.i:	.Blkw	ni$			; menu items flag (working)
+m.i.o:	.Blkw	ni$			; menu items flag (original)
+;------------------------------
+;	Default menu items
+dm.m1:	.Ascii	/NoUnderscore /<200>
+dm.m2:	.Ascii	/Normal Chars /<200>
+dm.m3:	.Ascii	/Revers Screen/<200>
+dm.m4:	.Ascii	/Line Feed    /<200>
+dm.m5:	.Ascii	/Wrap   ON    /<200>
+dm.m6:	.Ascii	/Cursor ON    /<200>
+dm.m7:	.Ascii	/Reset VT100  /<200>
+dm.m71:	.Ascii	/Change font  /<200>
+dm.m8:	.Ascii	/   E X I T   /<200>
+;------------------------------
+;	Selected menu items
+sm.m1:	.Ascii	/Underscore   /<200>
+sm.m2:	.Ascii	/Revers Chars /<200>
+sm.m3:	.Ascii	/Revers Screen/<200>
+sm.m4:	.Ascii	/New Line     /<200>
+sm.m5:	.Ascii	/Wrap   OFF   /<200>
+sm.m6:	.Ascii	/Cursor OFF   /<200>
+;------------------------------
+;	Seqences
+s.d:	.Byte	33,'[,'0,'m,200
+s.no:	.Byte	200
+s.d1	= s.no
+s.s1:	.Byte	33,'[,'4,'m,200
+s.d2	= s.no
+s.s2:	.Byte	33,'[,'7,'m,200
+
+s.d3	= s.no
+s.s3	= s.no
+s.d4:	.Byte	33,'[,'2,'0,'l,200
+s.s4:	.Byte	33,'[,'2,'0,'h,200
+s.d5:	.Byte	33,'[,'?,'7,'h,200
+s.s5:	.Byte	33,'[,'?,'7,'l,200
+s.d6	= s.no
+s.s6:	.Byte	33,'W,200
+s.rst:	.Byte	33,'c,200
+s.rev:	.Byte	33,'[,'?,'5,'l,200
+;------------------------------
+.even
+mxy:	.byte	33,'[
+y:	.ascii	/00;/
+x:	.ascii	/00H/<200>
+hello:	.Byte	33,'<,33,'[,'2,'J,200
+h.msg:	.Byte	33,'[,'7,'m,200
+n.msg:	.Byte	33,'[,'0,'m,200
+rst.msg: .Ascii	<33>/[23;25H/
+	.Ascii	/Reset VT100; Are you sure? /<200>
+get.msg: .Byte	33,'[,'9,'n,200
+cf.msg:	.byte	33,'[
+mpar:	.ascii	/00000Z/<200>
+m20:	.Ascii	<33>/[25C/
+numb:	.ascii	/0 - /<200>
+m10:	.asciz	<33>"[17;25HCurrently available  F O N T s :"
+enum:	.ascii	<33>/[23;25HEnter font # > /<200>
+;------------------------------
+.even
+cx:	0
+cy:	0
+m.ac:	if.a,  if.a,  rev.a,  if.a,  if.a,  if.a, rst.a, fnt.a, ext.a
+sm.tb:	sm.m1, sm.m2, sm.m3, sm.m4, sm.m5, sm.m6
+dm.tb:	dm.m1, dm.m2, dm.m3, dm.m4, dm.m5, dm.m6, dm.m7, dm.m71,dm.m8
+s.dtb:	s.d1, s.d2, s.d3, s.d4, s.d5, s.d6
+s.stb:	s.s1, s.s2, s.s3, s.s4, s.s5, s.s6
+TENTBL:	10000.	,1000.,	100.,	10.,	1.,	0
+partb:	.blkw	10
+line:	.blkb	80.
+ar:	.blkw	50.
+
+	.end	start

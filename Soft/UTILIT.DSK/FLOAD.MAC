@@ -1,0 +1,135 @@
+	.title	FLOAD	- Font LOADer
+
+.nlist
+.include	"sy:p16mac"
+.include	"sy:wdc"
+.list
+
+IDENT	= "PC		;identification code
+sym$id	= 4		;offset to ident
+sym$lb	= 6		;offset to start of FONT-name
+;maplen	= 32.		;length of MAP in bytes
+
+.mcall	.csispc,.lookup,.print, .wait,	.readw, .srese,	.close,	.fetch
+
+.macro	.mes	mes
+	.print	#m0
+	.print	#mes
+	br	start
+.endm	.mes
+
+START:
+	mov	#start,	sp	;
+	.sreset
+	.csispc #outs,#dext,#0,#line
+	clr	(pc)+		;
+sflag:	.blkw	1	;switch flag : only to list fonts
+	tst	(sp)+		;any switches ?
+	beq	10$		;no
+	mov	sp,	sflag	;
+10$:
+	mov	#inps,	pinps	;init pointer
+	tstb	line		; empty line ?
+	bne	20$		;no
+	.print	#ver
+	br	start
+20$:
+	.fetch	#free,pinps	;load handler !!!
+	.lookup #ar,#3,pinps	;
+	bcc	30$		;
+	.mes	m20		;file not found
+30$:
+	tst	r0		;file length ?
+	beq	40$		;=0 !!!
+	cmp	r0, #8.		;is it too large ?
+	blos	50$		;no
+40$:	.mes	m22		;strange file's length
+50$:
+	mov	r0, r5		;save files length
+	mov	r0, r3		;...
+	.readw	#ar,#3,#buff,#256.,#1	;read block#1 of file
+	bcc	60$		;ok
+	.mes	m30
+60$:
+	cmp	buff+sym$id, #IDENT	;is it correct file ?
+	BEQ	70$		;yes
+	.mes	m32
+70$:
+			;calculate length of FONT-file
+	add	#7, r5		;
+	ash	#-3, r5 	;... in blocks-4K
+	GETBMAP #ourmap 	;get current MAP
+	GET4K	r5		;allocate RAM
+	mov	r0, r4		;save mapping information
+				;F I L L proc's MAP
+	PUTBMAP #ourmap 	;restore our MAP
+
+				;load new FONT into its memory
+	mov	@#ur4, -(sp)	;save mapping
+	mov	r4, @#ur4	;map font-memory ...
+	swab	r3		;length of file in words
+	.readw	#ar,#3,#100000,r3,#0
+	bcs	80$		;error
+	FNINST	#ar,r4		;install the FONT
+	tst	ar		;is it OK ?
+	bpl	100$		;yes
+	.print	#m0
+	.print	#m101		;cant install font
+	br	90$		;
+80$:
+	.print	#m0		;
+	.print	#m100		; read-file error
+90$:
+	mov	r4, r0		;free allocated memory
+	FRE4k	#1		;
+100$:
+	mov	(sp)+, @#ur4	;restore mapping
+	.close	#3
+	add	#10,	pinps	;
+	cmp	pinps,	#inps+<6*10>
+	beq	110$		;
+	tst	@pinps		;
+	beq	110$		;
+	jmp	20$		;
+110$:
+	call	120$		;try to list fonts
+	jmp	start
+
+
+120$:
+	tst	sflag		;
+	beq	150$		;no list of fonts
+130$:
+			;list the fonts
+	.print	#m102		;
+	FNLOOK	#ar,#0		;
+140$:
+	tst	ar+2		;is there anybody ?
+	beq	150$		;t h e   e n d  !!!
+	.print	#ar+4		;tell everybody
+	FNLOOK	#ar		;get the next one
+	br	140$		;
+150$:
+	return
+	; D A T A
+pinps:	.blkw	1
+dext:	.rad50	"FONTMPTMPTMP"
+ver:	.asciz	"FLOAD V1.4"
+m0:	.ascii	"?FLOAD-F-"<200>
+;m10:	.asciz	"No switches allowed"
+m20:	.asciz	"File not found"
+m22:	.asciz	"File's length =0 or >16."
+m30:	.asciz	"Cant read block#1"
+m32:	.asciz	"Illegal type of file (no identification)"
+m100:	.asciz	"Read file error"
+m101:	.asciz	"Cant install font"
+m102:	.asciz	<15><12>"Currently available  F O N T s :"
+	.even
+ar:	.blkw	10.
+outs:	.blkw	3*5		;for CSI
+inps:	.blkw	6*4		; ...
+line:
+buff:
+ourmap	=buff+512.		;area for original MAP
+free	= ourmap+1024.
+	.end	START

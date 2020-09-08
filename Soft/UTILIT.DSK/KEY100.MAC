@@ -1,0 +1,119 @@
+        .title  VTKEY   - setup of keyboard for VT100, VT52
+        .enabl  lc
+        .mcall  .exit
+        .include        "p12mac.mac"
+
+minus	= '-
+comma	= ',
+dot	= '.
+cr	= 15
+lf	= 12
+;********************
+;	Macro 'k' add ESC char
+.macro  k       kod, str
+        .psect  v$str
+        .EVEN
+$$$     = .
+        .byte   kod, 33
+        .asciz  "'str'"
+        .psect  v$adr
+        . = .-2
+        .word   $$$,0
+.endm   k
+;********************
+;	Macro 'ke' NOT add ESC
+.macro  ke      kod, str
+        .psect  v$str
+        .EVEN
+$$$     = .
+        .byte   kod,str,0
+        .psect  v$adr
+        . = .-2
+        .word   $$$,0
+.endm   ke
+;********************
+.Macro	.Print	a
+	mov	a,@#177566
+	nop
+.endm	.Print
+;********************
+        .psect  v$adr
+
+tbl::   .word   0
+
+;********************
+        .psect
+start:
+        mov     #tbl, r5        ;take pointer to addr-table
+10$:
+        mov     (r5)+, r1       ;get next addr
+        beq     20$             ;all done !
+        KSTRIN  r1      ;set it ...
+        br      10$             ;and continue
+20$:
+	.PRINT	#MSG		; vt100 mode
+        .exit
+msg:	.byte	33,'<,200
+
+;-----------------------------------
+;   key-code    ESC<string>     KEY
+;-----------------------------------
+;       for  VT100
+
+k	0.	<Op>		; 0
+k	1.	<Oq>		; 1
+k	2.	<Or>		; 2
+k	3.	<Os>		; 3
+k	4.	<Ot>		; 4
+k	5.	<Ou>		; 5
+k	6.	<Ov>		; 6
+k	7.	<Ow>		; 7
+k	8.	<Ox>		; 8
+k	9.	<Oy>		; 9
+
+k	14	<Om>		; -
+k	15	<Ol>		; ,
+k	12	<On>		; .
+k	16	<OM>		; ENTER
+
+k	24	<[A>		; CUP
+k	26	<[B>		; CUD
+k	25	<[C>		; CUR
+k	27	<[D>		; CUL
+
+k	13	<OP>		; +     (PF1)
+k	20	<OQ>		; POM   (PF2)
+k	22	<OR>		; UST   (PF3)
+k	23	<OS>		; ISP   (PF4)
+
+;--------------------------------
+;       for  VT52
+sh	= 100	; +shift
+ctrl	= 040	; +ctrl
+k	0.+ctrl	<?p>		; 0
+k	1.+ctrl	<?q>		; 1
+k	2.+ctrl	<?r>		; 2
+k	3.+ctrl	<?s>		; 3
+k	4.+ctrl	<?t>		; 4
+k	5.+ctrl	<?u>		; 5
+k	6.+ctrl	<?v>		; 6
+k	7.+ctrl	<?w>		; 7
+k	8.+ctrl	<?x>		; 8
+k	9.+ctrl	<?y>		; 9
+
+k	24+ctrl	<A>		; CUP
+k	26+ctrl	<B>		; CUD
+k	25+ctrl	<C>		;CUR
+k	27+ctrl	<D>		; CUL
+
+k	13+ctrl	<P>		; +     (PF1)
+ke	20+ctrl	<16>		; POM (RUS)
+ke	22+ctrl	<33,10>		; UST (HOME)
+ke	23+ctrl	<17>		; ISP (LAT)
+k	12+ctrl	<?n>		; .
+k	16+ctrl	<?M>		; CR
+
+k	14+ctrl	<Q>		; -  (PF2)
+k	15+ctrl	<R>		; ,  (PF3)
+
+.end    start

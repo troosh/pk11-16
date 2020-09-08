@@ -1,0 +1,293 @@
+.title	processes listing
+
+	.include "sy:p16mac"
+
+	sbuf = 177566
+start:
+	mov	pc,	sp
+	mov	#str0,	@#sbuf
+nop
+	mov	#str1,	@#sbuf
+nop
+	mfhlt	#running
+	sub	#p.sp,	r0
+	mov	r0,	runn
+	mfhlt	#pdptr
+	mov	r0,	next
+10$:
+	inc	num
+	mov	#freepr,r0
+11$:
+	mfhlt	r0
+	cmp	next,	r0
+	beq	14$
+	tst	r0	
+	bne	11$
+
+	mov	next,	r0
+	call	ttt
+	mov	#s.num,	@#sbuf		;.print	#s.num
+14$:
+	add	#p.dsucc,next
+	mfhlt	next
+	mov	r0,	next
+	bne	10$
+	clr	pc
+
+ttt:
+;------------------------------------------------------------
+	mov	r0,	r3	;desc. address
+	mov	#s.da+6,r4
+	mov	#6,	r5
+	call	oct
+;------------------------------------------------------------
+	mov	num,	r3	;process number
+	mov	#s.num+2,r4
+	mov	#2,	r5
+	call	dec0
+;------------------------------------------------------------
+	mov	next,	r0	;CPU time
+	add	#p.tim1,r0
+	mfhlt	r0
+	mov	r0,	r1
+	cmp	runn,	next
+	bne	10$
+	mfhlt	#c.tim1
+	add	r0,	r1
+10$:
+	clr	r0
+	div	#60.,	r0
+	mov	r1,	r3
+	mov	#s.time+9.,r4
+	mov	#2,	r5
+	call	dec
+	movb	#':,	-(r4)
+	mov	r0,	r1
+	beq	16$
+	clr	r0
+	div	#60.,	r0
+	mov	r1,	r3
+
+	mov	#2,	r5
+	call	dec
+	mov	r0,	r3
+	beq	20$
+	movb	#'.,	-(r4)
+	mov	#2,	r5
+	call	dec
+	br	24$
+16$:
+	movb	#'0,	-(r4)
+	movb	#40,	-(r4)
+20$:
+	movb	#40,	-(r4)
+	movb	#40,	-(r4)
+	movb	#40,	-(r4)
+24$:
+;------------------------------------------------------------
+	mov	#16.,	r5	; process name
+	mov	#s.name,r4
+	mov	next,	r1
+	add	#p.name,r1
+26$:
+	mfhlt	r1
+	cmpb	r0,	#40
+	blo	30$		;
+;	cmpb	#176,	r0
+;	bcs	30$
+	movb	r0,	(r4)+
+	dec	r5
+	swab	r0
+	cmpb	r0,	#40
+	blo	30$		;
+;	cmpb	#176,	r0
+;	bcs	30$
+	movb	r0,	(r4)+
+	tst	(r1)+
+	sob	r5,	26$
+	br	40$
+30$:
+	movb	#40,	(r4)+
+	sob	r5,	30$
+;------------------------------------------------------------
+40$:
+	mov	next,	r0	;priority
+	add	#p.pri,	r0
+	mfhlt	r0
+	mov	#40,	r1
+	mov	r0,	r3
+	bpl	45$
+	neg	r3
+	mov	#'-,	r1
+45$:
+	mov	#s.pri+6,r4
+	mov	#5,	r5
+	call	oct0
+	movb	r1,	-(r4)
+;------------------------------------------------------------
+	mov	next,	r0	;process state
+	cmp	r0,	runn
+	bne	50$
+	mov	#st.run,r0
+	br	60$
+50$:
+	add	#p.mask,r0
+	mfhlt	r0
+	bit	#m.run,	r0
+	beq	51$
+	mov	#st.wai,r0
+	br	60$
+51$:	
+	bit	#m.tio,	r0
+	beq	52$
+	mov	#st.tim,r0
+	br	60$
+52$:
+	tstb	r0
+	beq	53$
+	mov	#st.int,r0
+	br	60$
+53$:
+	mov	#st.io,	r0
+60$:	
+	mov	#s.stat,r1
+	movb	(r0)+,	(r1)+
+	movb	(r0)+,	(r1)+
+	movb	(r0)+,	(r1)+
+	movb	(r0)+,	(r1)+
+;---------------------------------------------------------------------	
+	mov	next,	r0	;process memory size
+	add	#p.mem,	r0
+	mfhlt	r0		; map addr
+	clr	low
+	clr	high
+	mov	r0,	r1
+	beq	70$		;no ram-map	
+	mov	#4,	r5	;low mem
+62$:
+	mfhlt	r1
+	com	r0
+63$:
+	rol	r0
+	beq	64$
+	adc	low
+	clc
+	br	63$
+64$:
+	tst	(r1)+
+	sob	r5,	62$
+	MFHLT	#MAPLEN		;
+	sub	#4*2,	r0	;
+	asr	r0		;
+	mov	r0,	r5	;low mem
+65$:
+	mfhlt	r1
+	com	r0
+66$:
+	rol	r0
+	beq	67$
+	adc	high
+	clc
+	br	66$
+67$:
+	tst	(r1)+
+	sob	r5,	65$
+	asl	low
+	asl	low
+	asl	high
+	asl	high
+
+	mov	#s.time-1,r4
+	movb	#'k,	-(r4)
+	mov	high,	r3
+	mov	#3,	r5
+	call	dec0
+	movb	#40,	-(r4)
+	movb	#40,	-(r4)
+	movb	#'k,	-(r4)
+	mov	low,	r3
+	mov	#3,	r5
+	call	dec0
+	movb	#40,	-(r4)
+	movb	#40,	-(r4)
+	movb	#'k,	-(r4)
+	mov	low,	r3
+	add	high,	r3
+	mov	#3,	r5
+	call	dec0
+	br	80$
+70$:
+	mov	#s.nomem,r0
+	mov	#s.mem,	r1
+72$:	tstb	(r0)
+	beq	80$
+	movb	(r0)+,	(r1)+
+	br	72$
+;------------------------------------------------------------
+80$:
+
+	return
+
+.enabl lsb
+oct:	mov	#8.,	exp
+	br	10$
+dec:	mov	#10.,	exp
+10$:
+	clr	r2
+	div	(pc)+,	r2
+exp:	.blkw	1
+	bis	#'0,	r3
+	movb	r3,	-(r4)
+	mov	r2,	r3
+	sob	r5,	10$
+	return
+.dsabl	lsb
+
+.enabl lsb
+oct0:	mov	#8.,	exp0
+	br	10$
+dec0:	mov	#10.,	exp0
+10$:
+	clr	r2
+	div	(pc)+,	r2
+exp0:	.blkw	1
+	bis	#'0,	r3
+	movb	r3,	-(r4)
+	mov	r2,	r3
+	beq	20$
+	sob	r5,	10$
+15$:
+	return
+20$:
+	dec	r5
+	beq	15$
+	movb	#40,	-(r4)
+	br	20$
+
+.dsabl	lsb
+runn:	.word	0
+num:	.word	0
+low:	.word	0
+high:	.word	0	
+next:	.word	pdptr
+st.run:	.ascii	/Run /
+st.wai:	.ascii	/Wait/
+st.io:	.ascii	"I/O "
+st.int:	.ascii	/Int /
+st.tim:	.ascii	/Tim /
+str0:
+.ascii	<33>/[2J/<33>/[H/
+.asciz /Num    Name       Descriptor Priority State Mem:  Low   High  CPU Time/
+.asciz /Num    Name        Desc.addr Priority State Mem   Low   High  CPU Time/
+str1:
+.asciz /--- ----------------  ------  ------  ----  ----  ----  ----  --------/
+s.num:	.ascii	/ 1  /
+s.name:	.ascii	/Operating system  /
+s.da:	.ascii	/102062  /
+s.pri:	.ascii	/-00001  /
+s.stat:	.ascii	/Run   /
+s.mem:	.ascii	/768k   12k  160k /
+s.time:	.asciz  / 2.58.03 /
+s.nomem:.asciz	/  No memory map  /
+.even
+.end start

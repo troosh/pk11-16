@@ -1,0 +1,88 @@
+.ENABL LC
+;hd EDIT LEVEL 1 14-APR-89
+.TITLE	hd  X04.02
+.IDENT	/X04.01/
+
+; hard disk PK11/12 (hd) HANDLER
+;
+
+
+ .MCALL  .DRDEF
+ .DRDEF  hd,202,FILST$!spfun$!varsz$,18.*4*615.,177130,230
+
+hdBUF	= hd$CSR
+
+INTE	= 1
+PKDONE	= 200
+ERRFLG	= 177400
+
+	.DRBEG	hd
+
+	clr	REPCNT
+REPT:
+	MOV	hdCQE,  R5
+	inc	r5		;inte
+	MOV     R5,     @#hdBUF
+	.DRAST	hd,5
+ 	tst	@#hdbuf
+	bpl 	DONE
+	com	(PC)+
+REPCNT: .BLKW	1
+	BNE	REPT
+HERROR: MOV	hdCQE,R5
+	BIS	#1,@-(R5)
+DONE:	    
+	.DRFIN	hd
+.SBTTL	BOOTSTRAP DRIVER
+
+	.DRBOT	hd,BOOT1,READ
+
+.	= hdBOOT+40
+BOOT1:	JMP	@#BOOT-hdBOOT
+
+.	= hdBOOT+210
+
+READ:	NOP 
+	MOV	R0,	BLK
+	movb	@#hdbuf,dev+1
+	bic	#^C1400, dev
+2$:
+	MOV	R2,	BUF
+	MOV	R1,	CNTW
+	MOV	PC,	R0
+TTT:	ADD	#BLK-TTT,R0
+	MOV	R0,   	@#hdBUF
+	NOP
+5$:	TSTB	@#hdbuf
+	BPL	5$
+	NOP
+	MTPS	#0
+10$:	BIT     #177400,@#hdbuf
+	BEQ	20$
+	JMP	BIOERR
+
+20$:	RETURN               
+BLK:	.BLKW	1
+DEV:	.BLKW	1
+BUF:	.BLKW	1
+CNTW:	.BLKW	1
+
+.	= hdBOOT+574
+BOOT:	MOV	#10000,SP
+	mov	@#hdbuf,-(sp)	;dev.num
+	bic	#^c3,	(sp)
+	mov	(sp),	dev
+	swab	dev
+	MOV	#2,R0
+	MOV	#<4*400>,R1
+	MOV	#1000,R2
+	JSR	PC,READ
+	MOV	#READ-hdBOOT,@#B$READ
+	MOV	#B$DNAM,@#B$DEVN
+	MOV	(SP)+,@#B$DEVU
+	JMP	@#B$BOOT
+
+	.DREND	hd
+.END
+
+ 

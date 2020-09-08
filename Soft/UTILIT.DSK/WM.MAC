@@ -1,0 +1,2137 @@
+	.title	window	-  manager (COLOR version)
+;changes:
+;	11-apr-89	- SHIFT+arrows was changed to CTRL+arrows
+;	04-jun-90	- bug in LOOKUP
+
+.enabl	ama
+
+.asect
+	. = 0
+	.word	"PC, 0, -6, 0
+	.asciz	"Window_manager"
+
+acreg	= 177524	;
+wmpri	= 30000		;WM priority
+take	= 100000	;bit to take keyboard
+delx	= 8.
+dely	= 4.
+
+xdel	= 1		;sizing consts
+ydel	= 4		;
+
+lh	= 10.		;high of line
+ll	= 6.		;num of strings
+lw	= 8.		;width of zone in chars
+lws	= lw+2		;width of zone in submenu
+cc	= 7*lw+12.+12.+4	;chars in string
+vl	= lh*ll+2+2	;num of v-lines
+cclen	= 20.		;len of color line in bytes
+plin	= 5		;
+
+ccvl	= 64.+12.+4	;
+cccc	= 4*2+4		;
+
+c.xv	= 2		;cmd to change X (in bytes)
+c.x	= 12		;cmd to change X (in chars)
+c.y	= 3		;cmd to change Y
+c.clr	= 7		;set colors
+ clr.n	= 20	;normal colors
+ clr.a	= 62	;active colors
+c.rev	= 11		;cmd to reverse font
+c.nor	= 10		;cmd to normal font
+
+.nlist
+	.include	"sy:p16mac"
+	.include	"sy:wdc"
+.list
+;------------------------------------
+.macro	casekey	act,isp,up,ri,do,le,sup,sri,sdo,sle
+	jsr	r5,	getcom
+	.word	act,isp,up,ri,do,le,sup,sri,sdo,sle
+.endm
+;................................
+.macro	caselet	chars
+	.word
+	.irpc	z,<chars>
+	.word	''z
+	.endr
+	.word
+.endm
+;................................
+.macro	casebeg	w,p
+	mov	#.,	-(sp)
+	mov	#w,	r4
+.iif nb <p>,	mov	#p,	r2
+.endm
+;................................
+.macro	casestate	state,st0,st2,st4,st6,st8,st10,st12,st14,?lab
+	mov	state,	r5
+	jsr	r5,	lab
+	.word	st0,st2,st4,st6,st8,st10,st12,st14
+lab:
+	add	(sp)+,	r5
+	jmp	@(r5)+
+.endm
+;************************************
+.mcall	.exit
+
+	. = 1000
+
+.IF NE 0
+.macro	bug	x
+mov	x, val
+DVAL	#val
+.endm
+val:	.word	0
+	.byte	2*16.+7, 10.
+.ENDC
+;--------------------------------
+.macro	savreg			;
+	jsr	r4,	savreg	;
+.endm				;
+;................................
+savreg::.push	<r5,r3,r2,r1,r0>;
+	call	(r4)		;
+	.pop	<r0,r1,r2,r3,r5,r4>
+	return			;
+;--------------------------------
+start:
+	.exit			;
+	mov	#savreg,sp	;
+	SETPRI	#wmpri		;
+	UNPREG	#acreg		;;;
+	PROREG	#treg		;;;
+	add	#r.stat-r.copy, r0 ;
+	mov	r0,	treg+2	;
+	mov	@#hr4,	@#ur4	;
+	mov	@#hr5,	@#ur5	;
+	KSTRIN	#a.key		;
+
+			;init tas
+	ARCRE	#tarea,#marea,#vl,#cc*2,#vm2
+	mov	arnum,	r5	;save area's ident
+;................................
+	PLCRE	#ccpal,#vm2	;
+	mov	@#ur0,	r3
+	add	#<ccarea /400 &360>, r3
+	bis	ccpal+2, r3
+	mov	#ccarea, r2
+	mov	#mtas,	r1
+	mov	#64.+2,	r0
+4$:
+	mov	r2,	(r1)+
+	mov	r3,	(r1)+
+	add	#cccc*2,r2
+	bit	#10000,	r2
+	beq	3$
+	add	#20,	r3
+	bic	#10000,	r2
+3$:
+	sob	r0,	4$
+	bic	#pl3+plb,r3
+
+	mov	#12.+2,	r0
+5$:
+	mov	r2,	(r1)+
+	mov	r3,	(r1)+
+	add	#cccc*2,r2
+	bit	#10000,	r2
+	beq	6$
+	add	#20,	r3
+	bic	#10000,	r2
+6$:
+	sob	r0,	5$
+
+	ARINST	#tarea,#0,#ccvl,#cccc*2	;
+	mov	arnum,	cc.man	;
+	mov	arnum,	cc.num	;
+;................................
+			;init color area
+	mov	@#ur0,	r3	;
+	add	#<carea / 400 & 360>, r3 ;
+	mov	#carea,	r2	;
+	mov	#mtas,	r1	;
+	mov	#16.,	r4
+10$:
+	mov	#plin,	r0	;counter of v-lines
+20$:
+	mov	r2,	(r1)+	;
+	mov	r3,	(r1)+	;
+	sob	r0,	20$	;
+	add	#cclen,	r2
+	sob	r4,	10$
+
+	ARINST	#tarea,#0,#plin*16.,#cclen	;
+	mov	arnum,	cl.man	;set proper ar-num to the view
+;................................
+			;init menu
+	mov	#itabl,	r0	;
+	br	40$		;
+30$:
+	mov	r5,	(r1)	;
+40$:
+	mov	(r0)+,	r1	;
+	bne	30$		;
+
+.macro	inime	t,p
+	jsr	r4,	inimes
+	.word	t,p
+.endm
+	inime	ment,	par	;
+	inime	v.ment,	v.par	;
+	inime	a.ment,	a.par	;
+	inime	x.ment,	x.par	;
+	inime	y.ment,	y.par	;
+	inime	p.ment,	p.par	;
+	inime	cc.men,	cc.par	;
+
+	br	mainloop	;-------------
+inimes:
+	mov	(r4)+,	r5	;
+	mov	(r4)+,	r0	;
+1$:
+	mov	(r5)+,	8.(r0)	;next item
+	beq	10$		;all
+	WPRINT			;
+	br	1$		;
+10$:
+	rts	r4		;
+;-------------------------------- end of init
+;	casekey	act,isp,up,ri,do,le,sup,sri,sdo,sle
+mainloop:
+	movb	#4,	@treg+2	;;;;;
+	WAITINT	#0		;
+	bic	#take,	treg	;take
+	KSTRIN	#a.key		; keyboard
+newview:
+	VWLOOK	#uwind,#0	;take the user's view
+	VWCRE	#wind,#0	;
+loop:
+	casebeg	wind,stptr
+	casekey	act0,isp0,$pre,$suc,$suc,$pre,$sup,$sri,$sdo,$sle
+	caselet	NBXYVACP
+act0:
+	tst	(sp)+		;
+	bis	#take,	treg	;
+	KSTRIN	#a.key		;
+        VWKILL	r4		;
+	br	mainloop	;
+;-------------
+isp0:
+	tst	(sp)+		;
+	casestate state,.next,.back,.zoomx,.zoomy,.view,.area,.pall,.colo
+.next:
+	VWKILL  #wind		;kill menu
+	VWBACK	#uwind		;make it background
+	jmp	newview		;
+;================================
+.back:
+	VWKILL  #wind		;kill menu
+	mov	#uwind+2, r1	;
+	tst	(r1)		;
+	beq	99$		;
+10$:
+	mov	(r1), r2	;
+	VWLOOK	#uwind		;
+	tst	(r1)		;
+	bne	10$		;
+
+	VWFORE	#uwind,r2	;
+99$:
+	jmp	newview		;
+;................................
+.zoomx:
+	VWCRE	#x.wind,#0	;
+	mov	#x.st,	r2	;
+	movb	uwind+vw.den, (r2) ;
+	asl	(r2)		;
+	call	x.x1		;
+x.loop:
+	casebeg	x.wind,x.stpt
+	casekey	x.act,x.isp,x.up,x.ri,x.do,x.le,$sup,$sri,$sdo,$sle
+x.act:
+x.isp:
+	tst	(sp)+		;
+	call	reskil		;
+	jmp	loop		;
+;-------
+x.le:
+	tst	(sp)+		;
+	call	reskil		;
+	mov	#stptr,	r2	;
+	mov	#loop,	-(sp)	;
+	jmp	$pre		;
+x.ri:
+	tst	(sp)+		;
+	call	reskil		;
+	mov	#stptr,	r2	;
+	call	$suc		;
+	jmp	.zoomy		;
+;-------
+x.up:
+	call	reslas		;
+	mov	sp,	r3	;set flag
+x.x00:
+	call	$$pre		;
+	br	x.x		;
+x.do:
+	call	reslas		;
+	clr	r3		;set flag
+x.x0:
+	call	$$suc		;
+x.x:
+	mov	(r2),	r1	;
+	asr	r1		;
+	movb	r1,	uwind+vw.den ;
+	VWCRE	#uwind		;
+x.x1:
+	VWTAKE	#uwind		;
+	movb	vw.den(r0), r1;
+	asl	r1		;
+	cmp	(r2),	r1	;
+	beq	10$		;
+	tst	r3		;
+	beq	x.x0		;
+	br	x.x00		;
+10$:
+	mov	#x.par,	r0	;
+	call	setlab		;
+	return			;
+
+;................................
+.zoomy:
+	VWCRE	#y.wind,#0	;
+	mov	#y.st,	r2	;
+	call	y.x1		;
+y.loop:
+	casebeg	y.wind,y.stpt
+	casekey	y.act,y.isp,y.up,y.ri,y.do,y.le,$sup,$sri,$sdo,$sle
+y.act:
+y.isp:
+	tst	(sp)+		;
+	call	reskil		;
+	jmp	loop		;
+;-------
+y.le:
+	tst	(sp)+		;
+	call	reskil		;
+	mov	#stptr,	r2	;
+	call	$pre		;
+	jmp	.zoomx		;
+y.ri:
+	tst	(sp)+		;
+	call	reskil		;
+	mov	#stptr,	r2	;
+	call	$suc		;
+	jmp	.view		;
+;-------
+y.up:
+	call	reslas		;
+	call	$$pre		;
+	br	y.x		;
+y.do:
+	call	reslas		;
+	call	$$suc		;
+y.x:
+	mov	(r2),	r1	;
+	asr	r1		;
+	movb	r1,	uwind+vw.den+1 ;
+	VWCRE	#uwind		;
+y.x1:
+	VWTAKE	#uwind		;
+	movb	vw.den+1(r0), r1;
+	asl	r1		;
+	mov	r1,	(r2)	;
+	mov	#y.par,	r0	;
+	call	setlab		;
+	return			;
+
+;--------------------------------VIEW
+.view:
+	VWCRE	#v.wind,#0	;
+v.loop:
+	casebeg	v.wind,v.stpt
+	casekey	v.act,v.isp,$pre,v.ri,$suc,v.le,$sup,$sri,$sdo,$sle
+	caselet	MSVK
+v.act:
+	tst	(sp)+		;
+	call	skill		;
+	jmp	loop		;
+;-------
+v.le:
+	tst	(sp)+		;
+	call	skill		;
+	mov	#stptr,	r2	;
+	call	$pre		;
+	jmp	.zoomy		;
+v.ri:
+	tst	(sp)+		;
+	call	skill		;
+	mov	#stptr,	r2	;
+	call	$suc		;
+	jmp	.area		;
+;-------
+v.isp:
+	tst	(sp)+		;
+	casestate	v.st,.move0,.size0,.vp1,.kill
+.size0:
+	movb	#clr.a,	v.m1+4	;
+	WPRINT	#v.par,,,,#v.m1	;
+.size:
+   casekey vs.act,vs.isp,vs.up,vs.ri,vs.do,vs.le,vs.sup,vs.sri,vs.sdo,vs.sle
+vs.act:
+vs.isp:
+	movb	#clr.n,	v.m1+4	;
+	WPRINT	#v.par		;
+	jmp	v.loop		;
+vs.up:
+	sub	#ydel,	uwind+vw.sy2
+	br	vs.com		;
+vs.do:
+	add	#ydel,	uwind+vw.sy2
+	br	vs.com		;
+vs.le:
+	sub	#xdel,	uwind+vw.sx2 ;
+	br	vs.com		;
+vs.ri:
+	add	#xdel,	uwind+vw.sx2 ;
+	br	vs.com		;
+vs.sup:
+	mov	#ydel,	r1	;
+	br	vs.v		;
+vs.sdo:
+	mov	#-ydel,	r1	;
+vs.v:
+	sub	r1,	uwind+vw.sy1
+	movb	uwind+vw.den+1, r0 ;
+	ash	r0,	r1	;
+	ash	#-2,	r1	;
+	sub	r1,	uwind+vw.ary
+	br	vs.com		;
+vs.sle:
+	mov	#xdel,	r1	;
+	br	vs.h		;
+vs.sri:
+	mov	#-xdel,	r1	;
+vs.h:
+	mov	r1,	r2	;
+	sub	r1,	uwind+vw.sx1
+	ash	uwind+vw.den, r1 ;
+	asl	r1		;
+	sub	r1,	uwind+vw.arx
+	br	vs.com		;
+	add	r2,	uwind+vw.sx2 ;
+vs.com:
+	VWCRE	#uwind		;
+	VWTAKE	#uwind		;
+	br	.size		;
+;------
+.vp1:
+	mov	uwind+2, r2	;store last view num
+	mov	#uwind+vw.sy1, r0;
+	add	#dely*2, (r0)+	;
+	add	#dely*2, (r0)+	;
+	inc	(r0)+		;
+	inc	(r0)+		;
+
+	VWCRE	#uwind,#0	;
+	tst	(r0)+		;created ?
+	bmi	10$		;no
+	mov	(r0),	r2	;
+10$:
+	VWTAKE	#uwind,r2	;
+	VWFORE	#wind		;
+	VWFORE	#v.wind		;
+	jmp	v.loop		;
+;-------
+.kill:
+	mov	uwind+2, r1	;
+	VWLOOK	#uwind		;
+	mov	uwind+2, r2	;
+	bne	10$		;not last view !
+	mov	r1,	r2	;
+	br	20$		;
+10$:
+	VWKILL	#uwind,r1	;
+20$:
+	VWTAKE	#uwind, r2	;
+	jmp	v.loop		;
+;-------
+.move0:
+	movb	#clr.a,	v.m0+4	;
+	WPRINT	#v.par,,,,#v.m0	;
+.move:
+	casebeg	uwind
+	casekey	vm.act,vm.isp,$sup,$sri,$sdo,$sle,$sup,$sri,$sdo,$sle
+vm.act:
+vm.isp:
+	tst	(sp)+		;
+	movb	#clr.n,	v.m0+4	;
+	WPRINT	#v.par		;
+	jmp	v.loop		;
+;--------------------------------AREA
+.area:
+	VWCRE	#a.wind,#0	;
+a.loop:
+	casebeg	a.wind,a.stpt
+	casekey	a.act,a.isp,$pre,a.ri,$suc,a.le,$sup,$sri,$sdo,$sle
+	caselet	MLK
+a.act:
+	tst	(sp)+		;
+	call	skill		;
+	jmp	loop		;
+;-------
+a.le:
+	tst	(sp)+		;
+	call	skill		;
+	mov	#stptr,	r2	;
+	call	$pre		;
+	jmp	.view		;
+a.ri:
+	tst	(sp)+		;
+	call	skill		;
+	mov	#stptr,	r2	;
+	call	$suc		;
+	jmp	.pall		;
+;-------
+a.isp:
+	casestate	a.st,a.mov0,a.lookup,a.kill
+a.kill:
+	mov	uwind+vw.area, r1	;
+	ARKILL	#uwind,r1	;
+
+	VWLOOK	#uwind,#0	;
+	VWLOOK			;
+	VWLOOK			;
+	return			;
+;------
+a.mov0:
+	movb	#clr.a,	a.m0+4	;
+	WPRINT	#a.par,,,,#a.m0	;
+a.move:
+	casebeg	uwind		;
+	casekey	am.act,am.isp,am.up,am.ri,am.do,am.le,am.up,am.ri,am.do,am.le
+am.act:
+am.isp:
+	tst	(sp)+		;
+	movb	#clr.n,	a.m0+4	;
+	WPRINT	#a.par,,,,#a.m0	;
+	return			;
+			;move user-area
+am.up:
+	add	#10.,	vw.ary(r4);
+	br	am.move		;
+am.do:
+	sub	#10.,	vw.ary(r4);
+	br	am.move		;
+am.le:
+	add	#16.,	vw.arx(r4);
+	br	am.move		;
+am.ri:
+	sub	#16.,	vw.arx(r4);
+am.move:
+	VWCRE	r4		;
+	VWTAKE	r4		;
+	return			;
+;--------
+	tba = 400	;use lower 1000 bytes for the table !!!!!!!!!!!!!!!!!
+a.lookup:
+	mov	#tba+128., r2	;init table of areas
+	mov	#64.-1,	r0	;
+1$:
+	clr	-(r2)		;
+	sob	r0,	1$	;
+			;fill the table
+	mov	#uwind,	r0	;
+	mov	2(r0),	r1	;store current view
+	br	13$		;
+10$:
+	VWLOOK	r0		;
+	tst	2(r0)		;
+	beq	20$		;no more views
+13$:
+	mov	vw.area(r0), r3	;
+	inc	tba(r3)	;
+	br	10$		;continue
+20$:
+	tst	(r2)+		;any views on this area ?
+	beq	40$		;no
+	tstb	r2		;all areas ?
+	bpl	20$		;not, continue
+	br	50$		;
+40$:
+	mov	r2,	r3	;
+	sub	#tba+2,	r3	;
+	CMP	R3,	MAN	;
+	BEQ	20$		;
+	CMP	R3,	CL.MAN	;
+	BEQ	20$		;
+	CMP	R3,	CC.MAN	;
+	BEQ	20$		;
+	VWCRE	r0,#0,r3,#0,#0,#40.,#240.,#3.,#24.,#1002
+	tst	(r0)		;created ?
+	bmi	20$		;no
+	VWFORE	#wind		;
+	VWFORE	#a.wind		;
+	mov	uwind+2, r1	;
+50$:
+	VWTAKE	#uwind,r1	;
+	return
+
+;-------
+pl.m:
+	.word	0,	1,	2,	3,	7
+;........................................................
+pl.p:
+.word	0,	40000,	100000,	140000,	4,	40004,	100004,	140004
+;........................................................
+;................................
+.colo:
+	mov	#1,	.cflag
+	br	.copal
+.pall:
+	clr	(pc)+
+.cflag:	.blkw	1		;
+
+.copal:
+	VWCRE	#p.wind,#0	;
+p.loop:
+	casebeg	p.wind,p.stpt	;
+;++
+	.push	<r2,r4>
+	call	inicar		;;;;;;;;
+	mov	pp.st,	r1	;
+	mov	pl.p(r1), r1	;
+	mov	p.st,	r0	;
+	bis	pl.m(r0), r1	;
+	mov	r1,	palar+2	;
+	mov	#mtas,	r2	;
+	mov	#plin*16.,r0	;
+40$:
+	tst	(r2)+		;
+	bic	#^c..par, (r2)	;
+	bis	r1,	(r2)+	;
+	sob	r0,	40$	;
+	ARINST	#tarea		;
+	VWCRE	#cl.win ;,#0	;
+	.pop	<r4,r2>
+;--
+	mov	p.st,	r1	;
+	mul	#lh/2,	r1	;
+	add	#lh+2,	r1	;this is Y
+	WPRINT	#pp.par,,,,#pp.m	;reset label
+	WPRINT	,,r1,,pp.stp	;set label
+	casekey	p.act,p.isp,p.up,p.ri,p.do,p.le,$sup,$sri,$sdo,$sle
+	caselet	124$8
+p.act:
+	tst	(sp)+		;
+	VWKILL	r4		;
+	VWKILL	#cl.win		;
+	clr	cl.win+2	;
+	jmp	loop		;
+;-------
+p.up:
+	call	reslas		;
+	sub	#2,	(r2)	;
+	bge	10$		;
+	mov	2(r2),	(r2)	;
+10$:
+	br	p.x		;
+p.do:
+	call	reslas		;
+	add	#2,	(r2)	;
+	cmp	(r2),	2(r2)	;
+	ble	10$		;
+	clr	(r2)		;
+10$:
+p.x:
+	call	newpal		;
+	mov	(r2),	r1	;
+	mov	p.ment(r1), r1	;
+	mov	r1,	-(r2)	;
+	movb	#c.rev,	(r1)	;
+	mov	r1,	p.mes	;
+	WPRINT	#p.par		;
+	return			;
+;-------
+p.le:
+	mov	#pp.st,	r2	;
+	sub	#2,	(r2)	;
+	bge	pp.x		;
+	mov	2(r2),	(r2)	;
+	br	pp.x		;
+p.ri:
+	mov	#pp.st,	r2	;
+	add	#2,	(r2)	;
+	cmp	(r2),	2(r2)	;
+	ble	pp.x		;
+	clr	(r2)		;
+pp.x:
+	mov	(r2),	r1	;
+	mov	pp.men(r1), r1	;
+	mov	r1,	-(r2)	;
+	return			;
+;:::::::
+newpal:
+	cmp	(r2),	#6	;vm41
+	bne	20$		;
+	mov	#6,	pp.stm	;
+	movb	#'2,	pp.m00
+	movb	#'2,	pp.m10
+	clrb	pp.m01
+	clrb	pp.m11
+	clrb	pp.m21
+	clrb	pp.m31
+	br	25$		;
+20$:
+	cmp	(r2),	#10	;vm8
+	bne	30$		;
+	mov	#2,	pp.stm	;
+	clrb	pp.m00
+	clrb	pp.m10
+25$:
+	cmp	pp.st,	pp.stm	;
+	ble	35$		;
+	mov	pp.stm,	pp.st	;
+	.push	pp.stm
+	add	#pp.men,(sp)
+	mov	@(sp)+,	pp.stp
+	br	35$		;
+30$:
+	mov	#14.,	pp.stm	;
+	movb	#'2,	pp.m00
+	movb	#'2,	pp.m10
+	movb	#'4,	pp.m01
+	movb	#'4,	pp.m11
+	movb	#'4,	pp.m21
+	movb	#'4,	pp.m31
+35$:
+	return
+;:::::::
+p.isp:
+	tst	(sp)+		;
+	mov	p.stpt,	r1	;
+	movb	#clr.a,	4(r1)	;
+	WPRINT	#p.par,,,,r1	;
+;-----
+	clr	cc.win+2	;
+	PLSAVx	#palar	; ,r1	;save pallete
+	call	in.pal		;
+	VWCRE	#cc.win 	;
+	tst	.cflag
+	beq	10$
+	jmp	n.isp
+10$:
+	mov	#m.tio,	wi.mask	;
+n.loop:
+	call	getcol		;
+	call	showit		;
+	mov	#cl.win, r4	;
+	casekey n.act,n.isp,n.up,n.ri,n.do,n.le,n.sup,n.sri,n.sdo,n.sle
+n.act:
+	clr	wi.mask		;
+	VWKILL	#cc.win		;
+;	VWKILL	#cl.win		;
+	mov	p.stpt, r1	;
+	movb	#clr.n, 4(r1)	;
+	WPRINT	#p.par		;
+	jmp	p.loop
+n.up:
+	tstb	clmax
+	bpl	n.le
+	sub	#16.,	clnum
+	bic	#^c377,	clnum
+	br	n.loop
+n.le:
+	dec	clnum		;
+	bge	n.loop		;
+	mov	clmax,	clnum	;
+	br	n.loop		;
+n.do:
+	tstb	clmax
+	bpl	n.ri
+	add	#16.,	clnum
+	bic	#^c377,	clnum
+	br	n.loop
+n.ri:
+	inc	clnum		;
+	cmp	clnum,	clmax	;
+	ble	n.loop		;
+	clr	clnum		;
+	br	n.loop		;
+;------
+n.sup:
+	call	$sup		;
+	br	n.s		;
+n.sdo:
+	call	$sdo		;
+	br	n.s		;
+n.sle:
+	call	$sle		;
+	br	n.s		;
+n.sri:
+	call	$sri		;
+n.s:
+	mov	cl.my0, r0	;
+	mov	#cc.my0,r1	;
+	sub	(r1),	2(r1)	;
+	mov	r0,	(r1)+	;cc.my0
+	add	r0,	(r1)+	;cc.my1
+	mov	cl.mx0, r0	;
+	sub	(r1),	2(r1)
+	sub	#3,	r0
+	mov	r0,	(r1)+	;cc.mx0
+	add	r0,	(r1)	;cc.mx1
+	VWCRE	#cc.win 	;
+	br	n.loop		;
+;------
+n.isp:
+	mov	#cc.stp, r2	;
+	call	reslas		;
+	call	setlab		;
+	call	getcol		;
+o.loop:				;
+	call	showit		;
+	mov	#cc.stp, r2	;
+	mov	#o.loop, -(sp)	;
+	casekey o.act,o.isp,more.x,$suc,less.x,$pre,o.act,o.act,o.act,o.act
+	caselet RGBY
+o.act:
+o.isp:
+	tst	.cflag
+	beq	10$
+	jmp	n.act
+10$:
+	tst	(sp)+		;
+	call	reslas		;
+	jmp	n.loop		;
+;-------
+less.x:
+	savreg
+	mov	#-256.,	r5
+	br	m.l0
+more.x:
+	savreg
+	mov	#256.,	r5
+m.l0:
+	mov	#77777,	x$min
+	mov	#100000,x$max
+	mov	#77777,	y$min
+	mov	#100000,y$max
+m.l:
+	call	morles
+	tst	.cflag
+	beq	10$
+	inc	clnum
+	cmp	clnum,	clmax
+	blos	m.l
+	clr	clnum
+	call	setmid
+	jmp	ou.pal
+10$:
+	mov	clnum,	r4	;
+	asl	r4		;
+	mov	r$buf(r4), r$
+	mov	g$buf(r4), g$
+	mov	b$buf(r4), b$
+	call	ou.pal
+	return
+
+morles:
+	mov	clnum,	r4	;
+	asl	r4		;
+	mov	r$buf(r4),r0
+	mov	g$buf(r4),r1
+	mov	b$buf(r4),r2
+	add	cc.st,	PC	;
+	 br 20$ ;r
+	 br 30$ ;g
+	 br 10$ ;b
+	 br 100$;x
+	 br 200$;y
+;	 br 5$	;y
+;5$:
+;.....				; inten
+	add	r5,	r2
+	bvs	999$
+
+	add	r5,	r0
+	bvs	999$
+
+	add	r5,	r1
+	bvc	99$
+	return
+;................................
+200$:				; color
+	.push	r4
+	mov	r0,	r3
+	ash	#-8.,	r3
+	mul	#306./4,	r3
+	mov	r3,	r4
+
+	mov	r1,	r3
+	ash	#-8.,	r3
+	mul	#601./4,	r3
+	add	r3,	r4			
+
+	mov	r2,	r3
+	ash	#-8.,	r3
+	mul	#117./4,	r3
+	add	r3,	r4
+	
+	mov	r0,	r3
+	sub	r4,	r3
+	ash	#-5,	r3
+	call	rr3
+	tst	r5
+	bpl	210$
+	neg	r3
+210$:
+	add	r3,	r0
+	mov	r1,	r3
+	sub	r4,	r3
+	ash	#-5,	r3
+	call	rr3
+	tst	r5
+	bpl	220$
+	neg	r3
+220$:
+	add	r3,	r1
+
+	mov	r2,	r3
+	sub	r4,	r3
+	ash	#-5,	r3
+	call	rr3
+	tst	r5
+	bpl	230$
+	neg	r3
+230$:
+	add	r3,	r2
+	.pop	r4	
+	mov	y$max,	y$
+	sub	y$min,	y$
+	br	99$
+;................................
+100$:				; contr
+	.push	r4
+	mov	r0,	r3
+	ash	#-8.,	r3
+	mul	#306./4,	r3
+	mov	r3,	r4
+
+	mov	r1,	r3
+	ash	#-8.,	r3
+	mul	#601./4,	r3
+	add	r3,	r4			
+
+	mov	r2,	r3
+	ash	#-8.,	r3
+	mul	#117./4,	r3
+	add	r3,	r4
+
+	ash	#-6.,	r4
+	cmp	r4,	x$min
+	bgt	101$
+	mov	r4,	x$min
+101$:
+	cmp	x$max,	r4
+	bgt	102$
+	mov	r4,	x$max
+102$:
+	tst	r5
+	bpl	110$
+	neg	r4
+110$:
+	add	r4,	r0
+	add	r4,	r1
+	add	r4,	r2
+	.pop	r4	
+	mov	x$max,	x$
+	sub	x$min,	x$
+	br	99$
+;.....	
+10$:
+	add	r5,	r2
+	add	r5,	r2
+	bvc	99$
+	return
+20$:
+	add	r5,	r0
+	add	r5,	r0
+	bvc	99$
+	return
+30$:
+	add	r5,	r1
+	bvs	999$
+99$:
+	mov	r0,	r$buf(r4)
+	mov	r1,	g$buf(r4)
+	mov	r2,	b$buf(r4)
+999$:
+	return			;
+;::::::
+clsav:	.word	0
+r$:	.blkw	2
+g$:	.blkw	2
+b$:	.blkw	2
+x$:	.word	32.*4
+y$:	.word	32.*16.
+x$min:	.word	77777
+x$max:	.word	100000
+y$min:	.word	77777
+y$max:	.word	100000
+
+rr3:
+	cmp	r3,	y$min
+	bgt	101$
+	mov	r3,	y$min
+101$:
+	cmp	y$max,	r3
+	bgt	102$
+	mov	r3,	y$max
+102$:
+	return
+
+setmid:
+	savreg
+	mov	clmax,	r5
+	inc	r5
+	clr	r$
+	clr	g$
+	clr	b$
+	clr	r$+2
+	clr	g$+2
+	clr	b$+2
+	mov	#r$buf,r4
+	cmp	clmax,	#10.
+	bgt	5$
+	dec	r5
+	tst	(r4)+
+5$:
+	mov	r5,	r3
+10$:
+	mov	b$buf-r$buf(r4), r0
+	sxt	r1
+	add	r0,	b$
+	adc	r1
+	add	r1,	b$+2
+
+	mov	g$buf-r$buf(r4), r0
+	sxt	r1
+	add	r0,	g$
+	adc	r1
+	add	r1,	g$+2
+
+	mov	(r4)+,	r0
+	sxt	r1
+	add	r0,	r$
+	adc	r1
+	add	r1,	r$+2
+
+	sob	r5,	10$
+
+	mov	r$,	r1
+	mov	r$+2,	r0
+	div	r3,	r0
+	mov	r0,	r$
+
+	mov	g$,	r1
+	mov	g$+2,	r0
+	div	r3,	r0
+	mov	r0,	g$
+
+	mov	b$,	r1
+	mov	b$+2,	r0
+	div	r3,	r0
+	mov	r0,	b$
+
+	return
+;--------------------------------
+getcol:
+	mov	clnum,	r0
+	asl	r0
+	mov	r$buf(r0), r$
+	mov	g$buf(r0), g$
+	mov	b$buf(r0), b$
+	call	stcurs		;
+	movb	@curadr,clsav	;
+	mov	#2,	blink	;
+	comb	@curadr		;
+	tst	.cflag
+	beq	10$
+	comb	@curadr		;
+	call	setmid
+10$:
+	return
+showit:
+	savreg
+	call	show.r		;
+	call	show.g		;
+	call	show.b		;
+	call	show.x		;
+	call	show.y		;
+	call	show.z		;
+	return			;
+;................................
+.macro	ashx	rn,n
+.rept	n
+	asr	r3
+	ror	rn
+.endr
+.endm	
+;................................
+.macro	ashy	rn,n
+.rept	n
+	asl	rn
+	rol	r3
+.endr
+.endm	
+;................................
+ou.pal:
+	mov	clmax,	r5
+	inc	r5
+	mov	#x$buf,	r4
+10$:
+	clr	r3
+	mov	b$buf-x$buf(r4), r2 ; b
+	mov	g$buf-x$buf(r4), r1 ; g
+	mov	r$buf-x$buf(r4), r0 ; r
+
+	asl	r0
+	bcc	11$
+	clr	r0
+11$:
+	asl	r1
+	bcc	12$
+	clr	r1
+12$:
+	asl	r2
+	bcc	13$
+	clr	r2
+13$:
+
+	asl	r0
+	bcc	14$
+	mov	#-1,	r0
+14$:
+	asl	r1
+	bcc	15$
+	mov	#-1,	r1
+15$:
+	asl	r2
+	bcc	16$
+	mov	#-1,	r2
+16$:
+
+	ashy	r1,	3
+	ashy	r0,	3
+	ashy	r2,	2
+	ashy	r1,	3
+	ashy	r0,	2
+	ashy	r2,	3
+
+	mov	r3,	(r4)+
+	sob	r5,	10$
+
+	mov	#cltbl,	r0
+	mov	#x$buf,	r1
+	mov	clmax,	r5
+	inc	r5
+	add	p.st,	pc
+	br	100$
+	br	200$
+	br	400$
+	br	400$
+;	br	800$
+;800$:
+810$:
+	movb	(r1)+,	256.(r0)
+	movb	(r1)+,	(r0)+
+	sob	r5,	810$	
+	br	999$
+400$:
+	movb	(r1)+,	16.(r0)
+	movb	(r1)+,	(r0)+
+	sob	r5,	400$
+	br	999$
+200$:
+	movb	(r1)+,	16.(r0)
+	movb	(r1)+,	(r0)
+	movb	(r1),	16.+3(r0)
+	movb	(r1)+,	16.+12.(r0)
+	movb	(r1),	3(r0)
+	movb	(r1)+,	12.(r0)
+	movb	(r1),	16.+7(r0)
+	movb	(r1)+,	16.+13.(r0)
+	movb	(r1),	7(r0)
+	movb	(r1)+,	13.(r0)
+	movb	(r1),	16.+11.(r0)
+	movb	(r1)+,	16.+14.(r0)
+	movb	(r1),	11.(r0)
+	movb	(r1)+,	14.(r0)
+	movb	(r1)+,	16.+15.(r0)
+	movb	(r1)+,	15.(r0)
+	br	999$
+100$:
+	movb	(r1)+,	16.(r0)
+	movb	(r1)+,	(r0)
+	movb	(r1),	16.+7(r0)
+	movb	(r1),	16.+11.(r0)
+	movb	(r1),	16.+13.(r0)
+	movb	(r1)+,	16.+14.(r0)
+	movb	(r1),	7(r0)
+	movb	(r1),	11.(r0)
+	movb	(r1),	13.(r0)
+	movb	(r1)+,	14.(r0)
+	movb	(r1)+,	16.+15.(r0)
+	movb	(r1)+,	15.(r0)
+999$:
+	PLMODx	#palar		;
+	return
+in.pal:
+	savreg
+	mov	#cltbl,	r0
+	mov	#r$buf,	r1
+	mov	r1,	r4
+	add	p.st,	pc
+	br	100$
+	br	200$
+	br	400$
+	br	400$
+;	br	800$
+;800$:
+	mov	#256.,	r5
+	mov	r5,	r3
+810$:
+	movb	256.(r0), (r1)+
+	movb	(r0)+,	(r1)+
+	sob	r3,	810$
+	br	900$
+400$:
+	mov	#16.,	r5
+	mov	r5,	r3
+410$:
+	movb	16.(r0), (r1)+
+	movb	(r0)+,	(r1)+
+	sob	r3,	410$
+	br	900$
+200$:
+	movb	16.(r0), (r1)+
+	movb	(r0),	(r1)+
+	add	#12.,	r0
+	mov	#4,	r3
+	mov	#5,	r5
+210$:
+	movb	16.(r0), (r1)+
+	movb	(r0)+,	(r1)+
+	sob	r3,	210$
+	br	900$
+100$:
+	movb	16.(r0), (r1)+
+	movb	(r0),	(r1)+
+	add	#14.,	r0
+	mov	#2,	r3
+	mov	#3,	r5
+110$:
+	movb	16.(r0), (r1)+
+	movb	(r0)+,	(r1)+
+	sob	r3,	110$
+;	br	900$
+900$:
+;	mov	r5,	clmax
+;	dec	clmax
+10$:
+	clr	r0		; r
+	clr	r1		; g
+	clr	r2		; b
+	mov	(r4),	r3	; rgb
+
+	ashx	r2,	3	; b210
+	ashx	r0,	2	; r10
+	ashx	r1,	3	; g210
+	ashx	r2,	2	; b43
+	ashx	r0,	3	; r432
+	ashx	r1,	3	; g543
+
+	ror	r0
+	ror	r1
+	ror	r2
+
+	asr	r0
+	asr	r1
+	asr	r2
+
+	mov	r2, b$buf-r$buf(r4)
+	mov	r1, g$buf-r$buf(r4)
+	mov	r0,	(r4)+
+	sob	r5,	10$
+	return
+;------SHOW x-component (contrast)
+show.x:
+	mov	x$,	r0
+	bmi	30$
+	ash	#-2,	r0
+	mov	#64.,	r1
+	sub	r0,	r1
+	ble	30$
+	mov	#2*<cccc+6>+ccarea+cccc+cccc,r2
+10$:
+	clr	(r2)+
+	add	#cccc-1*2, r2
+	sob	r1,	10$
+	tst	r0
+	beq	30$
+20$:
+	mov	#^b0101000000000000,(r2)+
+	add	#cccc-1*2, r2
+	sob	r0,	20$
+30$:
+	WPRINT	#cc.par,,,,#cc.m3
+	return			;
+;------SHOW y-component	(color)
+show.y:
+	mov	y$,	r0
+	bmi	30$
+	ash	#-4,	r0
+	mov	#64.,	r1
+	sub	r0,	r1
+	ble	30$
+	mov	#2*<cccc+7>+ccarea+cccc+cccc,r2
+10$:
+	clr	(r2)+
+	add	#cccc-1*2, r2
+	sob	r1,	10$
+	tst	r0
+	beq	30$
+20$:
+	mov	#^b1010000000000000,(r2)+
+	add	#cccc-1*2, r2
+	sob	r0,	20$
+30$:
+	WPRINT	#cc.par,,,,#cc.m4
+	return			;
+;------SHOW z-component (inten)
+show.z:
+	mov	r$,r5
+	ash	#-8.,	r5
+	mul	#306./4,	r5
+	mov	g$,r1
+	ash	#-8.,	r1
+	mul	#601./4,	r1
+	add	r1,	r5
+	mov	b$,r1
+	ash	#-8.,	r1
+	mul	#117./4,	r1
+	add	r1,	r5	; r5 = Y
+	ash	#-8.,	r5
+	mov	r5,	r0
+	bmi	30$
+	mov	#64.,	r1
+	sub	r0,	r1
+	ble	30$
+	mov	#2*<cccc+8.>+ccarea+cccc+cccc,r2
+10$:
+	clr	(r2)+
+	add	#cccc-1*2, r2
+	sob	r1,	10$
+	tst	r0
+	beq	30$
+20$:
+	mov	#^b1111000000000000,(r2)+
+	add	#cccc-1*2, r2
+	sob	r0,	20$
+30$:
+	WPRINT	#cc.par,,,,#cc.m5
+	return			;
+;------SHOW R-component
+show.r:
+	mov	r$,r0
+	ash	#-9.,	r0
+	asl	r0
+	bmi	30$
+	mov	#64.,	r1
+	sub	r0,	r1
+	ble	30$
+5$:
+	mov	#2*cccc+ccarea+cccc+cccc,r2
+10$:
+	clr	(r2)+
+	clr	(r2)+
+	add	#cccc-2*2, r2
+	sob	r1,	10$
+	tst	r0
+	beq	30$
+20$:
+	mov	#^b0101010101010100,(r2)+
+	mov	#^b0001010101010101,(r2)+
+	add	#cccc-2*2, r2
+	sob	r0,	20$
+30$:
+	WPRINT	#cc.par,,,,#cc.m0
+	return			;
+;------SHOW G-component
+show.g:
+	mov	g$,r0
+	ash	#-8.,	r0
+	bmi	30$
+	mov	#64.,	r1
+	sub	r0,	r1
+	ble	30$
+	mov	#2*<cccc+2>+ccarea+cccc+cccc,r2
+10$:
+	clr	(r2)+
+	clr	(r2)+
+	add	#cccc-2*2,	r2
+	sob	r1,	10$
+	tst	r0
+	beq	30$
+20$:
+	mov	#^b1010101010101000,(r2)+
+	mov	#^b0010101010101010,(r2)+
+	add	#cccc-2*2, r2
+	sob	r0,	20$
+30$:
+	WPRINT	#cc.par,,,,#cc.m1
+	return			;
+;------SHOW B-component
+show.b:
+	mov	b$,r0
+	ash	#-9.,	r0
+	asl	r0
+	bmi	30$
+	mov	#64.,	r1
+	sub	r0,	r1
+	ble	30$
+	mov	#2*<cccc+4>+ccarea+cccc+cccc,r2
+10$:
+	clr	(r2)+
+	clr	(r2)+
+	add	#cccc-2*2,	r2
+	sob	r1,	10$
+	tst	r0
+	beq	30$
+20$:
+	mov	#^b1111111111111100,(r2)+
+	mov	#^b0011111111111111,(r2)+
+	add	#cccc-2*2, r2
+	sob	r0,	20$
+30$:
+	WPRINT	#cc.par,,,,#cc.m2
+	return			;
+;::::::::::::::::::::::::
+stcurs:
+	.push	<r0,r1>
+	mov	clnum,	r1
+	add	p.st,	PC	;
+	 br 100$	;mode 1
+	 br 200$	;mode 2
+	 br 300$	;mode 4
+	 br 300$	;mode 41
+;	 nop		;mode 8
+	clr	r0
+	div	#16.,	r0
+	xor	r0,	r1
+	xor	r1,	r0
+	xor	r0,	r1
+	mul	#20.,	r1
+	add	r0,	r1
+	br	300$
+200$:
+	mul	#3,	r1
+	add	#3,	r1
+	br	300$
+100$:
+	mul	#6,	r1
+	add	#2,	r1
+;	br	300$
+300$:
+	add	#carea,	r1
+	mov	r1,	curadr
+	.pop	<r1,r0>
+	return
+;................................
+curs:
+	.push	r0
+	comb	@curadr
+	mov	#42,	r0
+	xor	r0,	blink
+	.pop	r0
+	return
+curadr:	.word	carea
+;::::::::::::::::::::::::
+inicar:			;init color line
+	mov	#carea,	r1	;
+	clr	r2		;
+	add	p.st,	PC	;
+	 br 100$	;mode 1
+	 br 200$	;mode 2
+	 br 1$		;mode 4
+	 br 1$		;mode 41
+;	 nop		;mode 8
+	mov	#16.,	r3
+776$:
+	mov	#16.,	r0
+777$:
+	movb	r2,	(r1)+
+	inc	r2
+	sob	r0,	777$
+	clr	(r1)+
+	clr	(r1)+
+;	add	#cclen-16., r1
+	sob	r3,	776$
+
+	mov	#256.-1,r5
+	br	999$
+1$:
+	mov	#16.,	r0	;
+10$:
+;	movb	r2,	(r1)+	;
+	movb	r2,	(r1)+	;
+	add	#1*20+1, r2	;
+	sob	r0,	10$	;
+	clr	(r1)+
+	mov	#15.,	r5	;
+	br	999$		;
+100$:
+	movb	#125,	(r1)+	;c-0
+	movb	#125,	(r1)+	;c-0
+	movb	#125,	(r1)+	;c-0
+	movb	#125,	(r1)+	;c-0
+	movb	#125,	(r1)+	;c-0
+	movb	r2,	(r1)+	;c-1
+	movb	r2,	(r1)+	;c-1
+	movb	r2,	(r1)+	;c-1
+	movb	r2,	(r1)+	;c-1
+	movb	r2,	(r1)+	;c-1
+	movb	r2,	(r1)+	;c-1
+	com	r2		;
+	movb	r2,	(r1)+	;c-2
+	movb	r2,	(r1)+	;c-2
+	movb	r2,	(r1)+	;c-2
+	movb	r2,	(r1)+	;c-2
+	movb	r2,	(r1)+	;c-2
+	movb	r2,	(r1)+	;c-2
+	mov	#2,	r5	;
+	br	999$		;
+200$:
+	movb	#175120,(r1)+	;c-0
+	movb	#175120,(r1)+	;c-0
+	movb	#175120,(r1)+	;c-0
+	movb	#175120,(r1)+	;c-0
+	movb	#175120,(r1)+	;c-0
+	movb	r2,	(r1)+	;c-1
+	movb	r2,	(r1)+	;c-1
+	movb	r2,	(r1)+	;c-1
+	add	#52525,	r2	;
+	movb	r2,	(r1)+	;c-2
+	movb	r2,	(r1)+	;c-2
+	movb	r2,	(r1)+	;c-2
+	add	#52525,	r2	;
+	movb	r2,	(r1)+	;c-3
+	movb	r2,	(r1)+	;c-3
+	movb	r2,	(r1)+	;c-3
+	add	#52525,	r2	;
+	movb	r2,	(r1)+	;c-4
+	movb	r2,	(r1)+	;c-4
+	movb	r2,	(r1)+	;c-4
+	mov	#4,	r5	;
+999$:
+	clrb	cl.den+1
+	mov	cl.my0,	cl.my1
+	add	#16.,	cl.my1
+	mov	r5,	clmax	;
+	tstb	r5
+	bpl	888$
+	add	#plin*15., cl.my1
+	movb	#2,	cl.den+1
+888$:
+	clr	clnum		;
+	return			;
+;................................
+.IF NE 0			;+++++++++++++++++++++++++++++++++++++
+k.up:
+	dec	yyy		;
+	bge	10$		;
+	clr	yyy		;
+10$:
+	br	xyset		;
+k.ri:
+	inc	xxx		;
+	cmp	xxx,	#scrdots;
+	ble	10$		;
+	mov	#scrdots, xxx	;
+10$:
+	br	xyset		;
+k.do:
+	inc	yyy		;
+	cmp	yyy,	#scrlins;
+	ble	10$		;
+	mov	#scrlins, yyy	;
+10$:
+	br	xyset		;
+k.le:
+	dec	xxx		;
+	bge	10$		;
+	clr	xxx		;
+10$:
+	br	xyset		;
+;................................
+.up:
+	sub	#dely,	yyy	;
+	bge	10$		;
+	clr	yyy		;
+10$:
+	br	xyset		;
+.ri:
+	add	#delx,	xxx	;
+	cmp	xxx,	#scrdots;
+	ble	10$		;
+	mov	#scrdots, xxx	;
+10$:
+	br	xyset		;
+.do:
+	add	#dely,	yyy	;
+	cmp	yyy,	#scrlins;
+	ble	10$		;
+	mov	#scrlins, yyy	;
+10$:
+	br	xyset		;
+.le:
+	sub	#delx,	xxx	;
+	bge	10$		;
+	clr	xxx		;
+10$:
+;	br	xyset		;
+;================================
+xyset:
+	CRSET	#aeraxy		;
+	return
+.ENDC				;--------------------------------
+;================================
+reslas:
+	mov	(r2)+,	r1	;
+	movb	#c.nor, (r1)	;
+	mov	r2,	r0	;
+	add	#4,	r0	;par
+	WPRINT	,,,,r1		;
+ret:
+	return			;
+;................................
+blink:	.word	2		;
+wi.mask:.word	0		;
+;================================
+; on enter:	r5 - addr of processing subr-table
+; on exit :	r0,r1,r3 - destroyed
+getcom:
+	mov	r5,	(sp)	;
+1$:
+	movb	#4,	@treg+2	;;;;;
+2$:
+	.push	<r2,r4>
+	mov	#ret,	r2
+	clr	r1
+	clr	r0
+	mov	blink,	r3
+	mov	#curs,	r4
+	WAITINT	wi.mask		;
+	call	(r2)		;
+	.pop	<r4,r2>
+	tst	r0
+	bne	5$
+	tst	r1
+	beq	2$
+5$:
+	movb	clsav,	@curadr
+	clrb	@treg+2		;;;;;
+	mov	@#acreg, r0	;
+	mov	#ctbl, r1	;
+	mov	(sp),	r5	;
+10$:
+	mov	(r1)+, r3	;
+	beq	20$		;
+	tst	(r5)+		;
+	cmp	r0, r3		;
+	bne	10$		;
+	tst	(sp)+		;
+	jmp	@-(r5)		;
+20$:
+	tst	(r5)+		;is there chars ?
+	bne	1$		;no
+	cmp	r0,	#100	;
+	blo	22$		;
+	bic	#40,	r0	;dirty bits !
+22$:
+	clr	r3		;state...
+30$:
+	tst	(r5)		;the end ?
+	beq	1$		;yes
+	cmp	(r5)+,	r0	;is it THE char ?
+	beq	40$		;yes
+	tst	(r3)+		;update state
+	br	30$		;
+40$:
+	tst	(sp)+		;
+	call	reslas		;
+	mov	r3,	(r2)	;
+	jmp	setlab		;
+;================================
+;on enter:	r4	- window table
+$sup:
+	mov	#dely,	r0	;
+	cmp	r0,	vw.sy1(r4)	;
+	blos	10$		;
+	mov	vw.sy1(r4),	r0	;
+10$:
+	sub	r0,	vw.sy1(r4)	;
+	sub	r0,	vw.sy2(r4)	;
+	br	$s		;
+$sdo:
+	mov	vw.sy2(r4),	r0	;
+	sub	vw.sy1(r4),	r0	;
+	add	#dely,	vw.sy2(r4)	;
+	cmp	vw.sy2(r4),	#scrlins-1 ;
+	blos	10$		;
+	mov	#scrlins-1, vw.sy2(r4) ;
+10$:
+	mov	vw.sy2(r4),	vw.sy1(r4)	;
+	sub	r0,	vw.sy1(r4)	;
+	br	$s		;
+$sle:
+	tst	vw.sx1(r4)		;
+	beq	$s		;
+	dec	vw.sx1(r4)		;
+	dec	vw.sx2(r4)		;
+	br	$s		;
+$sri:
+	cmp	vw.sx2(r4),	#bmax-1	;
+	bge	$s		;
+	inc	vw.sx2(r4)		;
+	inc	vw.sx1(r4)		;
+$s:
+	VWCRE	r4		;
+	VWTAKE	r4		;
+	return			;
+;--------------------------------
+$pre:
+	call	reslas		;
+	call	$$pre		;
+	br	setlab		;
+$suc:
+	call	reslas		;
+	call	$$suc		;
+setlab:
+	mov	(r2),	r1	;
+	add	r2,	r1	;
+	mov	ment-state(r1), r1 ;
+	mov	r1,	-(r2)	;
+	movb	#c.rev,	(r1)	;
+	WPRINT	,,,,r1		;
+	return			;
+$$pre:
+	sub	#2,	(r2)	;
+	bge	1$		;
+	mov	2(r2),	(r2)	;
+1$:
+	return			;
+$$suc:
+	add	#2,	(r2)	;
+	cmp	(r2),	2(r2)	;
+	ble	1$		;
+	clr	(r2)		;
+1$:
+	return			;
+;-------
+reskil:
+	call	reslas		;
+skill:
+	VWKILL	r4		;
+	return
+;================================
+; DATA
+
+itabl:	.word	numa,	man,	x.numa,	x.man,	y.numa,	y.man
+	.word	v.numa,	v.man,	a.numa,	a.man,	p.numa,	p.man
+	.word	pp.num
+	.word	0
+
+a.key:	.byte	21,0
+treg:	.word	acreg, ^c177777,	0,	2000,	getcom,	-1
+		;char table
+ctbl:
+	.word	36+400,	17+400
+	.word	24+400,	25+400,	26+400,	27+400
+	.word	24+440,	25+440,	26+440,	27+440
+	.word	0
+
+uwind:	.blkw	10.	;users view
+
+aeraxy:	.blkw	1
+xxx:	.word	100.		;curs-pos in dots [0..415]
+yyy:	.word	140.		;curs-pos in v-lines
+
+tarea:	.word	arinst
+arnum:	.word	0,0,0
+mtas:	.blkw	80.*2
+;...............menu - MAIN
+upstates= 8.		;num of upper menu items
+mstate	= upstates*2	;
+
+wind:	.blkw	2.	;main menu view
+man:	.blkw	1	;
+mayx:	.word   0,0	;
+my0:	.word	4	;
+my1:	.word   4+lh-1	;
+mx0:	.word	1	;
+mx1:	.word	lw*upstates+3/4+1
+mden:	.byte   2,2	;
+
+stptr:	.word	m0		;pointer to label of state
+state:	.word	0		;state of menu
+stm:	.word	mstate-2
+par:	.word	wprint
+numa:	.blkw	1	;area-number
+	.word	1,0	;absolute Y,X
+mes:	.blkw	1	;pointer to string
+
+ment:	.word	m0,	m1,	m2,	m3,	m4,	m5,	m6,	m7
+	.word	0		;end of table
+m0:
+	.byte	c.rev,	c.x,	lw*0.,	c.clr,	clr.n
+	.asciz	" Next   "
+m1:
+	.byte	c.nor,	c.x,	lw*1.,	c.clr,	clr.n
+	.asciz	" Back   "
+m2:
+	.byte	c.nor,	c.x,	lw*2.,	c.clr,	clr.n
+	.asciz	" Zoom X "
+m3:
+	.byte	c.nor,	c.x,	lw*3.,	c.clr,	clr.n
+	.asciz	" Zoom Y "
+m4:
+	.byte	c.nor,	c.x,	lw*4.,	c.clr,	clr.n
+	.asciz	" View   "
+m5:
+	.byte	c.nor,	c.x,	lw*5.,	c.clr,	clr.n
+	.asciz	" Area   "
+m6:
+	.byte	c.nor,	c.x,	lw*6.,	c.clr,	clr.n
+	.asciz	" Colors "
+m7:
+	.byte	c.nor,	c.x,	lw*7.,	c.clr,	clr.n
+	.asciz	" Palette"
+.even
+;...............menu - zoom-x
+x.upst	= 3.		;num of upper menu items
+x.mst	= x.upst*2	;
+
+x.wind:	.blkw	2.	;main menu view
+x.man:	.blkw	1	;
+x.mayx:	.word   12.,0.	;
+x.my0:	.word	16.	;
+x.my1:	.word   lh*a.upst-1+16.;
+x.mx0:	.word	5.	;
+x.mx1:	.word	5.+2	;
+x.mden:	.byte   2,2	;
+
+x.stpt:	.word	x.m0		;pointer to label of state
+x.st:	.word	0		;state of menu
+x.stm:	.word	x.mst-2
+x.par:	.word	wprint
+x.numa:	.blkw	1	;area-number
+	.word	12.,0.	;absolute Y,X
+x.mes:	.blkw	1	;pointer to string
+
+x.ment:	.word	x.m0,	x.m1,	x.m2
+	.word	0		;end of table
+x.m0:
+	.byte	c.nor,	c.y,	lh*0.,	c.clr,	clr.n
+	.asciz	" X x 4    "
+x.m1:
+	.byte	c.nor,	c.y,	lh*1.,	c.clr,	clr.n
+	.asciz	" X x 2    "
+x.m2:
+	.byte	c.nor,	c.y,	lh*2.,	c.clr,	clr.n
+	.asciz	" X x 1    "
+.even
+;...............menu - zoom-y
+y.upst	= 3.		;num of upper menu items
+y.mst	= y.upst*2	;
+
+y.wind:	.blkw	2.	;main menu view
+y.man:	.blkw	1	;
+y.mayx:	.word   12.,12.*2 ;
+y.my0:	.word	16.	;
+y.my1:	.word   lh*a.upst-1+16.;
+y.mx0:	.word	7.	;
+y.mx1:	.word	7.+2	;
+y.mden:	.byte   2,2	;
+
+y.stpt:	.word	y.m0		;pointer to label of state
+y.st:	.word	0
+y.stm:	.word	y.mst-2
+y.par:	.word	wprint
+y.numa:	.blkw	1	;area-number
+	.word	12.,12.*2 ;absolute Y,X
+y.mes:	.blkw	1	;pointer to string
+
+y.ment:	.word	y.m0,	y.m1,	y.m2
+	.word	0		;end of table
+y.m0:
+	.byte	c.nor,	c.y,	lh*0.,	c.clr,	clr.n
+	.asciz	" Y x 4    "
+y.m1:
+	.byte	c.nor,	c.y,	lh*1.,	c.clr,	clr.n
+	.asciz	" Y x 2    "
+y.m2:
+	.byte	c.nor,	c.y,	lh*2.,	c.clr,	clr.n
+	.asciz	" Y x 1    "
+.even
+;...............menu - VIEW
+v.upst	= 4.		;num of upper menu items
+v.mst	= v.upst*2	;
+
+v.wind:	.blkw	2.	;main menu view
+v.man:	.blkw	1	;
+v.mayx:	.word   12.,24.*2 ;
+v.my0:	.word	16.	;
+v.my1:	.word   lh*v.upst-1+16.;
+v.mx0:	.word	9.	;
+v.mx1:	.word	9.+2	;
+v.mden:	.byte   2,2	;
+
+v.stpt:	.word	v.m0		;pointer to label of state
+v.st:	.word	0		;state of menu
+v.stm:	.word	v.mst-2
+v.par:	.word	wprint
+v.numa:	.blkw	1	;area-number
+	.word	12.,24.*2 ;absolute Y,X
+v.mes:	.blkw	1	;pointer to string
+
+v.ment:	.word	v.m0,	v.m1,	v.m2,	v.m3
+	.word	0		;end of table
+v.m0:
+	.byte	c.rev,	c.y,	lh*0.,	c.clr,	clr.n
+	.asciz	" Move     "
+v.m1:
+	.byte	c.nor,	c.y,	lh*1.,	c.clr,	clr.n
+	.asciz	" Size     "
+v.m2:
+	.byte	c.nor,	c.y,	lh*2.,	c.clr,	clr.n
+	.asciz	" View +1  "
+v.m3:
+	.byte	c.nor,	c.y,	lh*3.,	c.clr,	clr.n
+	.asciz	" Kill     "
+.even
+;...............menu - area
+a.upst	= 3.		;num of upper menu items
+a.mst	= a.upst*2	;
+
+a.wind:	.blkw	2.	;main menu view
+a.man:	.blkw	1	;
+a.mayx:	.word   12.,36.*2 ;
+a.my0:	.word	16.	;
+a.my1:	.word   lh*a.upst-1+16.;
+a.mx0:	.word	11.	;
+a.mx1:	.word	11.+2	;
+a.mden:	.byte   2,2	;
+
+a.stpt:	.word	a.m0		;pointer to label of state
+a.st:	.word	0		;state of menu
+a.stm:	.word	a.mst-2
+a.par:	.word	wprint
+a.numa:	.blkw	1	;area-number
+	.word	12.,36.*2 ;absolute Y,X
+a.mes:	.blkw	1	;pointer to string
+
+a.ment:	.word	a.m0,	a.m1,	a.m2
+	.word	0		;end of table
+a.m0:
+	.byte	c.rev,	c.y,	lh*0.,	c.clr,	clr.n
+	.asciz	" Move     "
+a.m1:
+	.byte	c.nor,	c.y,	lh*1.,	c.clr,	clr.n
+	.asciz	" Lookup   "
+a.m2:
+	.byte	c.nor,	c.y,	lh*2.,	c.clr,	clr.n
+	.asciz	" Kill     "
+.even
+;...............menu - pallete
+p.upst	= 5.		;num of upper menu items
+p.mst	= p.upst*2	;
+
+p.wind:	.blkw	2.	;main menu view
+p.man:	.blkw	1	;
+p.mayx:	.word   12.,48.*2 ;
+p.my0:	.word	16.	;
+p.my1:	.word   lh*p.upst+16.;
+p.mx0:	.word	13.	;
+p.mx1:	.word	13.+6	;
+p.mden:	.byte   2,2	;
+
+p.stpt:	.word	p.m0		;pointer to label of state
+p.st:	.word	0		;state of menu
+p.stm:	.word	p.mst-2
+p.par:	.word	wprint
+p.numa:	.blkw	1	;area-number
+	.word	12.,48.*2 ;absolute Y,X
+p.mes:	.word	p.m0		;pointer to string
+
+p.ment:	.word	p.m0,	p.m1,	p.m2,	p.m3,	p.m4
+	.word	0		;end of table
+p.m0:
+	.byte	c.rev,	c.y,	lh*0.,	c.clr,	clr.n
+	.asciz	" Mode-1 "
+p.m1:
+	.byte	c.nor,	c.y,	lh*1.,	c.clr,	clr.n
+	.asciz	" Mode-2 "
+p.m2:
+	.byte	c.nor,	c.y,	lh*2.,	c.clr,	clr.n
+	.asciz	" Mode-40"
+p.m3:
+	.byte	c.nor,	c.y,	lh*3.,	c.clr,	clr.n
+	.asciz	" Mode-41"
+p.m4:
+	.byte	c.nor,	c.y,	lh*4.,	c.clr,	clr.n
+	.asciz	" Mode-8 "
+.even
+pp.mst	= 8.*2
+pp.par:	.word	wprint
+pp.num:	.blkw	1	;area-number
+pp.yy:	.word	lh+2	;absolute Y,X
+pp.xx:	.word	53.+3*2
+pp.mes:	.blkw	1	;pointer to string
+
+pp.stp:	.word	pp.m0	;
+pp.st:	.word	0	;state - num of pal
+pp.stm:	.word	pp.mst-2
+pp.men:	.word	pp.m0,	pp.m1,	pp.m2,	pp.m3,	pp.m4,	pp.m5,	pp.m6,	pp.m7
+	.word	0		;end of table
+;................................
+pp.m0:
+	.byte	c.clr,clr.n,c.nor
+	.ascii	"#"<c.rev>" 0 "<c.nor>"1 "
+pp.m00:	.ascii	"2 3 "
+pp.m01:	.asciz	"4 5 6 7 "
+;................................
+pp.m1:
+	.byte	c.clr,clr.n,c.nor
+	.ascii	"# 0"<c.rev>" 1 "<c.nor>
+pp.m10:	.ascii	"2 3 "
+pp.m11:	.asciz	"4 5 6 7 "
+;................................
+pp.m2:
+	.byte	c.clr,clr.n,c.nor
+	.ascii	"# 0 1"<c.rev>" 2 "<c.nor>"3 "
+pp.m21:	.asciz	"4 5 6 7 "
+;................................
+pp.m3:
+	.byte	c.clr,clr.n,c.nor
+	.ascii	"# 0 1 2"<c.rev>" 3 "<c.nor>
+pp.m31:	.asciz	"4 5 6 7 "
+;................................
+pp.m4:
+	.byte	c.clr,clr.n,c.nor
+	.asciz	"# 0 1 2 3"<c.rev>" 4 "<c.nor>"5 6 7 "
+pp.m5:
+	.byte	c.clr,clr.n,c.nor
+	.asciz	"# 0 1 2 3 4"<c.rev>" 5 "<c.nor>"6 7 "
+pp.m6:
+	.byte	c.clr,clr.n,c.nor
+	.asciz	"# 0 1 2 3 4 5"<c.rev>" 6 "<c.nor>"7 "
+pp.m7:
+	.byte	c.clr,clr.n,c.nor
+	.asciz	"# 0 1 2 3 4 5 6"<c.rev>" 7 "<c.nor>
+pp.m:
+	.byte	c.clr,clr.n,c.nor
+	.asciz	"                  "
+.even
+;...............menu - RGB
+cc.ups	= 6.		;num of upper menu items
+cc.mst	= cc.ups*2	;
+
+cc.win:	.blkw	2.	;main menu view
+cc.man:	.blkw	1	;
+cc.myx:	.word   0,0	;
+cc.my0:	.word	16.	;
+cc.my1:	.word   200.	;
+cc.mx0:	.word	1.	;
+cc.mx1:	.word	26.	;
+cc.den:	.byte   2,2	;
+
+cc.stp:	.word	cc.m0		;pointer to label of state
+cc.st:	.word	0
+cc.stm:	.word	cc.mst-2
+cc.par:	.word	wprint
+cc.num:	.blkw	1	;area-number
+	.word	4+64., 1;absolute Y,X
+cc.mes:	.blkw	1	;pointer to string
+
+cc.men:	.word	cc.m0,	cc.m1,	cc.m2,	cc.m3, cc.m4, cc.m5
+	.word	0		;end of table
+.print	.
+cc.m0:
+	.byte	c.nor,	c.x,	0.,	c.clr,	clr.n
+	.asciz	"R"<c.nor>
+cc.m1:
+	.byte	c.nor,	c.x,	2.,	c.clr,	clr.n
+	.asciz	"G"<c.nor>
+cc.m2:
+	.byte	c.nor,	c.x,	4.,	c.clr,	clr.n
+	.asciz	"B"<c.nor>
+cc.m3:
+	.byte	c.nor,	c.x,	6.,	c.clr,	clr.n
+	.byte	14,000,000,076,161,161,161,076,000,000,000,c.nor
+cc.m4:
+	.byte	c.nor,	c.x,	7.,	c.clr,	clr.n
+	.byte	14,000,000,030,030,000,146,146,000,000,000,c.nor
+cc.m5:
+	.byte	c.nor,	c.x,	8.,	c.clr,	clr.n
+	.byte	14,000,000,052,024,143,024,052,000,000,000,c.nor
+.even
+
+cl.win:	.blkw	2.	;view for color area
+cl.man:	.blkw	1	;
+cl.myx:	.word   0.,0.	;
+cl.my0:	.word	16.	;
+cl.my1:	.word   plin-2+16. ;
+cl.mx0:	.word	4.	;
+cl.mx1:	.word	4.+8.	;
+cl.den:	.byte	0,2	;
+
+palar:	.blkw	1	;
+	.byte	0,0	;mode,palnum
+cltbl:	.blkb	512.	;
+
+clnum:	.word	0	;current color number
+clmax:	.blkw	1	;max cols in curr mode (2,4,15.)
+
+c.pl00	= 0
+c.pl0	= 0
+c.pl1	= 34
+c.pl2	= 340
+c.pl3	= 3
+
+ccpal:	.word	0,	vm2
+	.byte	c.pl00,	0,	0,	c.pl0,	0,	0,	0,	c.pl1
+	.byte	0,	0,	0,	c.pl2,	c.pl0,	c.pl1,	c.pl2,	c.pl3
+	.blkb	16.
+
+.print	.
+
+dsect	20000		  ;start of AREA
+.print	$$	; marea
+dw	marea,vl*cc	  ;
+.print	$$	; carea
+dw	carea,16.*cclen/2 ;start of color-AREA
+.print	$$	; ccarea
+dw	ccarea,ccvl*cccc  ; start of RGB - area
+.print	$$	; x$buf
+dw	x$buf,256.
+.print	$$	; r$buf
+dw	r$buf,256.
+.print	$$	; g$buf
+dw	g$buf,256.
+.print	$$	; b$buf
+dw	b$buf,256.
+.print	$$	; end
+	.end	start

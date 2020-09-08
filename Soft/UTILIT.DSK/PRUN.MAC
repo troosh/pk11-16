@@ -1,0 +1,457 @@
+	.title	PRUN	- Process RUN
+.nlist
+	.include "sy:p16mac"
+.list
+IDENT	= "PC		;identifirer for type of file (block#0, offset 000)
+WINDOW	= 2		;offset in block#0 for starting window number
+NWIND	= 4		;offset in block#0 for num of 8K-blocks to allocate
+			; (=0, if up to eof)
+HILO	= 6		; offset in block#0 for =0 - take lower RAM
+			;			#0 - take higher RAM
+NAME	=10		; process name (16. byte)
+
+defpri	= 77777		;default priority
+usertop	= 50		;prog's high address in SYSCOM and SAV-block#0
+usersp	= 42		;prog's initial SP in ...
+userpc	= 40		;prog's start address in ...
+
+.mcall	.csigen,.print,	.wait,	.readw,	.exit,	.close,	.gtlin
+
+.macro	.mes	mes, go
+	.print	#m0
+	.print	#mes
+.if nb <go>
+	go	start
+.endc
+.endm	.mes
+
+START0:
+	MFHLT	#MAPLEN		;
+	mov	r0,	lenmap	;
+	mov	usertop, r1	;
+	mov	r1,	buff	;
+	add	#256.*2,r1	;
+	mov	r1,	ourmap	;
+	add	r0,	r1	;
+	mov	r1,	newmap	;
+	add	r0,	r1	;
+	mov	r1,	free	;
+START:
+	mov	#line,	r5	;adr of cmd buffer
+	.gtlin	r5,#prompt
+	tstb	@r5		;empty line ?
+	bne	10$		;
+	.print	#ver
+	br	start
+10$:
+	movb	(r5)+,	r0	;
+	bne	20$		;not end of line
+	mov	#line,	r5	;NAME = cmd line
+	br	30$		;
+20$:
+	cmpb	#'/,	r0	;
+	bne	10$		;continue scanning
+	clrb	-1(r5)		;mark the end of file spec
+	clr	mflag		;
+	cmpb	r0,	(r5)	;
+	bne	30$		;
+	inc	r5		;
+	mov	r0,	mflag	;set flag for map output
+	tstb	1(r5)		;only // ?
+	bne	30$		;no, use specified NAME
+	mov	#line,	r5	;
+30$:
+	mov	r5,	nam	;store addr of proc's NAME
+	.csigen	free,#dext,#line
+	bcc	40$		;OK
+	.mes	m9,br
+40$:
+	tst	(sp)+		;any switches ?
+	beq	60$		;no
+50$:
+	.mes	m10,br
+60$:
+	.wait	#3		;chan ok ?
+	bcc	70$		;yes
+	.mes	m20,br
+70$:
+	.readw	#ar,#3,buff,#256.,#0	;read block#0 of file
+	bcc	80$		;ok
+	.mes	m30,br
+80$:
+	mov	buff,	r0	;
+	cmp	(r0), #IDENT	;is it correct file ?
+	bne	90$		;no
+	clr	mask		;
+	tstb	57(r0)		;
+	bne	85$		;
+	mov	#20000,	mask	;
+85$:
+	cmp	WINDOW(r0), #7	;starting window correct ?
+	blo	100$		;yes
+90$:
+	.mes	m32,br
+100$:
+	GETBMAP	ourmap		;get current MAP
+	bcc	110$		;
+	.mes	m40,jmp		;no current bit-map
+110$:
+;-------------------------------
+	mov	buff,	r0	;
+	mov	WINDOW(r0), r5	;get num of starting window
+			;take the length of prog
+	mov	usertop(r0), r4;first get it
+	add	#7777,	r4	;
+	ash	#-12.,	r4	;... in blocks-4K
+	bic	#177760,r4	;+++1.7 - err: cant load more than 32K
+	sub	r5, r4		;
+	sub	r5, r4		;num of 4k to load
+	mov	r4,	r2	;
+	inc	r2		;
+	asr	r2		;num of 8k to load
+	mov	r2,	n8k	;for total reads
+	mov	NWIND(r0),  r3	;needed mem - parameter
+	blt	130$		;blocks 4k
+	bgt	160$		;blocks 8k
+			;no request => use file's length
+			;take the length of prog
+	mov	r4,	r3	;in 4K
+	cmp	r3,	#1	;is it only one ?
+;	cmp	r3,	#13.	;is it not more than 56k ?
+	ble	140$		;yyeess
+	tst	HILO(r0)	;
+	beq	140$		;
+	mov	r2,	r3	;
+	br	170$		;
+130$:
+	neg	r3		;
+140$:	cmp	r3,	#16.	;not more than 64k
+	blos	150$		;ok
+	.mes	m70,jmp		;"More than 64K of Lo-RAM requested"
+150$:
+	call	take4		;
+	br	180$		;
+160$:
+	tst	HILO(r0)	;
+	bne	170$
+	asl	r3		;
+	br	150$
+170$:
+	call	take8		;
+
+;-------------------------------
+180$:
+	mov	#dproc, r1	;F I L L proc's descriptor
+	clr	(r1)+	;succ
+	clr	(r1)+	;pred
+	clr	(r1)+	;r0
+	clr	(r1)+	;r1
+	clr	(r1)+	;r2
+	clr	(r1)+	;r3
+	clr	(r1)+	;r4
+	clr	(r1)+	;r5
+	mov	buff,	r2		;
+	mov	usersp(r2), (r1)+	;sp
+	mov	userpc(r2), (r1)	;pc
+	add	#2, (r1)+		; S T A R T  + 2 !!!!!!!!!
+	clr	(r1)+	;ps
+			;fill p.ur0-p.ur7
+	mov	#7., r2		;
+	tst	r5		;start with window#0 ?
+	beq	200$		;yes
+	sub	r5, r2		;
+190$:	mov	r0, (r1)+	;
+	sob	r5, 190$		;
+200$:
+	cmp	r3, r2		;
+	ble	210$		;
+	mov	r2, r3		;
+210$:
+	sub	r3, r2		;
+	mov	r0, r5		;save r0
+220$:	mov	r0, (r1)+	;
+	add	#40, r0		;
+	sob	r3, 220$		;
+	tst	r2		;is it 56K ?
+	beq	240$		;yes
+230$:	mov	r5, (r1)+	;
+	sob	r2, 230$	;
+240$:
+	clr	(r1)+		;ur7
+	mov	mask,	(r1)+	;mask
+	clr	(r1)+		;cprc
+	clr	(r1)+		;tim
+	mov	#defpri, (r1)+	;pri
+	clr	(r1)+		;mem
+
+	mov	#16.,	r3	;max length of proc's name
+	mov	#tnam,	r4	;to map-output
+	mov	nam,	r2	;
+	cmp	r2,	#line	;
+	bne	250$		;use NAME from cmd
+	mov	buff,	r2
+	add	#name,	r2
+	tstb	(r2)		;name in file exists ?
+	bne	250$		;yes
+	mov	#line,	r2	;else use cmd
+250$:
+	cmpb	(r2),	#40
+	blo	260$
+	movb	(r2)+,	(r1)
+	movb	(r1)+,	(r4)+
+	sob	r3,	250$
+	br	270$
+260$:
+	movb	#40,	(r1)
+	movb	(r1)+,	(r4)+
+	sob	r3,	260$
+270$:
+				;F I L L proc's MAP
+	mov	newmap, r1	;
+	GETBMAP	r1		;get new MAP
+	mov	lenmap, r0	;length of MAP in words
+	asr	r0		;
+	mov	ourmap, r2	;
+280$:
+	com	(r2)		;
+	bis	(r2), (r1)+	;
+	com	(r2)+		;
+	sob	r0, 280$	;
+
+	PUTBMAP	ourmap		;restore our MAP
+
+				;load new proc into its memory
+	mov	@#ur4, -(sp)	;save mapping
+	mov	r5, @#ur4	;map new-proc...
+	mov	buff, r5	;starting
+	mov	WINDOW(r5), r5	;starting
+	ash	#4, r5		;	 block#
+	mov	#100000, r3	;use wind #4
+	mov	n8k,	r4	;total reads
+290$:
+	.readw	#ar,#3,r3,#16.*256.,r5
+	bcs	310$		;error
+	tst	r5		;is it block 0 ?
+	bne	300$		;no
+	mov	r3, r0		;
+	clr	(r0)+		;0
+	clr	(r0)+		;2
+	mov	#6, (r0)+	;4
+	clr	(r0)+		;6
+	mov	#12, (r0)+	;10
+	clr	(r0)+		;12
+300$:
+	add	#40,@#ur4	;correct mapping
+	add	#16., r5	;
+	sob	r4, 290$	;
+	mov	(sp)+, @#ur4	;restore mapping
+
+	call	gtpadr		;returns r5 - future proc's descr addr
+	mov	newmap, r0	;CREATE and
+	NEWPROC	#dproc		;	START new process !!!
+	tst	mflag		;
+	beq	330$		;
+	call	setpid		;set proc's PID
+	call	mapout		;
+	br	330$
+310$:
+	mov	(sp)+, @#ur4	;restore mapping
+	.print	#m0		;
+	.print	#m100		; read-file error
+	mov	#par4,	r5	;
+	mov	(r5)+,	r0	;
+	mov	(r5)+,	r1	;mem4
+	beq	320$		;
+	FRE4K	r1		;
+320$:
+	mov	(r5)+,	r0	;par8
+	mov	(r5)+,	r1	;mem8
+	beq	330$		;
+	FREMEM	r1		;
+330$:
+	.close	#3
+	jmp	start		;;;
+;	.exit
+;------
+take8:
+	clr	mem4		;
+	mov	r3,	mem8	;store it for later
+	GET8K	r3		;allocate RAM
+	mov	r0,	par8	;store it for later
+	bcc	10$		;ok
+	.mes	m60,jmp		;cant allocate memory
+10$:
+	return
+;------
+take4:
+	mov	r3,	mem4	;
+	clr	mem8		;
+	GET4K	r3		;
+	mov	r0,	par4	;store it for later
+	bcc	10$		;OK
+	.mes	m61,jmp
+10$:
+	inc	r3		;convert to
+	asr	r3		; 8k blocks
+	return
+;-------
+esc	= 33
+so	= 16
+si	= 17
+
+mapout:
+	.print	#str0		;
+
+	mov	newmap, r1	;
+	mov	#tad,	r5	;
+	mov	lenmap,	r0	;
+	ash	#-3,	r0	;
+	mov	r0,	cnt	;
+1$:
+	mov	#s0,	r4	;
+	mov	#4, r0		;
+10$:
+	mov	(r1)+, r2	;
+	mov	#16., r3	;
+20$:
+	ror	r2		;
+	bcc	30$		;
+	movb	#40, (r4)+
+	br	40$		;
+30$:
+	movb	#'a, (r4)+
+40$:
+	sob	r3, 20$		;
+	sob	r0, 10$		;
+	.print	(r5)+		;
+	.print	#str1		;
+	dec	cnt		;
+	bne	1$		;
+
+	.print	#str2		;
+	return			;.exit
+;-------
+gtpadr:
+	MFHLT	#FREEPR		;
+	mov	r0,	r5	;
+	bne	10$		;
+	MFHLT	#HEAP		;
+	mov	r0,	r5	;
+10$:
+	return
+;-------
+setpid:
+			;r5 - proc's d-adr
+	mov	#PDPTR,	r2		;
+	mov	#60*400+60, r1		;num-counter DECIMAL !!!
+10$:
+	MFHLT	r2
+;	tst	r0		;???
+;	beq	44$		;???
+	cmpb	#'9,	r1		;
+	bne	20$			;
+	bic	#17,	r1		;
+	add	#1*400,r1		;
+	br	30$
+20$:
+	inc	r1			;
+30$:
+	mov	r0,	r2		;
+	add	#P.DSUCC,r2		;
+	cmp	r5,	r0		;
+	bne	10$
+44$:	movb	r1,	pid+1		;
+	swab	r1			;
+	movb	r1,	pid		;
+	return
+
+; D A T A  for MAPOUT
+
+cnt:	.word	0		;num of lines (4 = 256k*4)
+tad:	.word	s1,s2,s3,s4
+	.word	s5,s6,s7,s8
+	.word	s9,s10,s11,s12
+	.word	s13,s14,s15,s16
+str0:
+	.ascii	<esc>"[2J"
+;	.ascii	<esc>"[10;24r"
+	.ascii	<esc>"[2;1H"
+	.ascii	"Process number: "<esc>"[7m"
+pid:	.byte	0,0
+	.ascii	<esc>"[0m       "
+	.ascii	"Process name: "<esc>"[7m"
+tnam:	.blkb	16.
+	.ascii	<esc>"[0m"
+	.ascii	<esc>"[3;10H"
+	.ascii	"0               64               128              196"
+.ascii	<esc>"[4;9H"<so>
+.asciz	"tqqqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqqk"
+
+str1:
+s0	= .+3
+.asciz	<so>" xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaax"
+
+str2:
+.ascii	<esc>"[8C"
+.ascii	<so>"mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj"
+	.byte	si,0
+
+s1:	.ascii	<esc>"[5;2H   0 K"<200>
+s2:	.ascii	<esc>"[6;2H 256 K"<200>
+s3:	.ascii	<esc>"[7;2H 512 K"<200>
+s4:	.ascii	<esc>"[8;2H 768 K"<200>
+s5:	.ascii	<esc>"[9;2H1024 K"<200>
+s6:	.ascii	<esc>"[10;2H1280 K"<200>
+s7:	.ascii	<esc>"[11;2H1536 K"<200>
+s8:	.ascii	<esc>"[12;2H1792 K"<200>
+s9:	.ascii	<esc>"[13;2H2048 K"<200>
+s10:	.ascii	<esc>"[14;2H2304 K"<200>
+s11:	.ascii	<esc>"[15;2H2560 K"<200>
+s12:	.ascii	<esc>"[16;2H2816 K"<200>
+s13:	.ascii	<esc>"[17;2H3072 K"<200>
+s14:	.ascii	<esc>"[18;2H3328 K"<200>
+s15:	.ascii	<esc>"[19;2H3584 K"<200>
+s16:	.ascii	<esc>"[20;2H3840 K"<200>
+
+	.byte	15,12,0
+.even
+	; D A T A
+
+n8k:	.word	0		;num of reads (16. blocks each)
+par4:	.word	0		;
+mem4:	.word	0		;num of blocks (GET4K)
+par8:	.word	0		;
+mem8:	.word	0		;num of blocks (GET8K)
+dext:	.rad50	"SAVTMPTMPTMP"
+nam:	.blkw	1		;addr of NAME of proc
+line:	.blkb	80.
+prompt:	.byte	'*,200
+ver:	.asciz	"PRUN V3.1"
+m0:	.ascii	"?PRUN-F-"<200>
+m9:	.asciz	"Syntax error or file not found"
+m10:	.asciz	"No switches allowed"
+m20:	.asciz	"Illegal file position"
+m30:	.asciz	"Cant read block#0"
+m32:	.asciz	"Illegal type of file (no identification)"
+m40:	.asciz	"No map for current SYSTEM"
+;m50:	.asciz	"Illegal MAP's length"
+m60:	.asciz	"Cannot allocate higher memory"
+m61:	.asciz	"Cannot allocate lower memory"
+m70:	.asciz	"More than 64K of Lo-RAM requested"
+m100:	.asciz	"Read file error"
+	.even
+mflag:	.word	0		;flag for map-output
+ar:	.blkw	6
+mask:	.blkw	1		;
+dproc:	.blkb	prolen		;area for proc's descriptor
+;buff:	.blkw	256.
+;ourmap:	.blkb	maplen		;area for original MAP
+;newmap:	.blkb	maplen		;area for new-proc's MAP
+;free	= .
+
+lenmap:	.blkw	1		;len of MAP in bytes
+buff:	.blkw	1
+ourmap:	.blkw	1		;area for original MAP
+newmap:	.blkw	1		;area for new-proc's MAP
+free:	.blkw	1
+	.end	START0

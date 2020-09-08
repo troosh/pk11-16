@@ -1,0 +1,504 @@
+.mcall	.print,.csispc,.exit,.ttyin,.ttinr,.writw,.dstat
+.mcall	.lookup,.fetch,.sreset,.gtlin,.ttyout,.close
+.mcall	.spfun, .readw, .settop
+;................................
+.macro	.mes	mes
+	.print	#m0
+	.print	#mes
+.endm
+;--------------------------------
+	fdcsr	= 177130	;
+	cr	= 15
+	lf	= 12
+;--------------------------------
+.asect
+
+.=44
+	.word	1000		; overlay bit
+;--------------------------------
+.psect
+
+sw.y:	.blkw	1		; Yes (noquery)
+sw.w:	.blkw	1		; Wait
+sw.v:	.blkw	1		; Verify
+sw.u:	.blkw	1		; Update on disk
+sw.go:	.blkw	1		; Start format
+
+sw.d:	.word	0		; Density 0-250kb, 1-500kb
+sw.t:	.word	82.		; Tracks
+sw.s:	.word	10.		; Sectors
+sw.h:	.word	2		; Heads
+sw.l:	.word	1		; interLeave
+sw.g:	.word	35.		; Gap3 size
+sw.r:	.word	13.		; Step rate (15.-x) msec
+sw.p:	.word	100		; Pattren (filler byte)
+sw.f:	.word	0		; Drive #
+
+dev.tbl:.ascii	/FD0:/<200>
+.even
+dev.jmp:.word	form.fd
+dev.num:.blkw	1
+
+dext:	.rad50	"savtmptmptmp"
+line:	.blkb	80.
+;................................
+ver:	.asciz	/FORMAT V1.1/	;
+;........................................................
+help:							;
+.ascii	/    OPTIONS ::                          Current values:/<cr><lf>
+.ascii	'/Y - noquery'<cr><lf>				;
+.ascii	'/W - wait'<cr><lf>				;
+.ascii	'/V - verify'<cr><lf>				;
+.ascii	'/U - update defaults'<cr><lf>			;
+.ascii	'/D - density 0-800K, 1-1.4M             '	;
+v.d:	.ascii	/800K/<cr><lf>				;
+.ascii	'/L - interleave 1,2,...                 '	;
+v.l:	.ascii	/1/<cr><lf>				;
+.ascii	'/T - tracks                             '	;
+v.t:	.ascii	/82./<cr><lf>				;
+.ascii	'/S - sectors                            '	;
+v.s:	.ascii	/10./<cr><lf>				;
+.ascii	'/H - heads                              '	;
+v.h:	.ascii	/2/<cr><lf>				;
+.ascii	'/G - Gap3 size in bytes                 '	;
+v.g:	.ascii	/35./<cr><lf>				;
+.ascii	'/R - Step rate constant (15.-x)msec     '	;
+v.r:	.ascii	/13./<cr><lf>				;
+.ascii	'/P - Pattern (filler byte)              '	;
+v.p:	.ascii	/100/<cr><lf>				;
+.ascii	'/F - Flop #                             '	;
+.ascii	'FD'						;
+v.f:	.ascii	/0:/<cr><lf>				;
+.asciz	'// - Start formating'<cr><lf>			;
+;--------------------------------------------------------
+.even				;
+vv.d:	.word	1$,	2$	;
+1$:	.ascii	/800K/		;
+2$:	.ascii	/1.4M/		;
+;--------------------------------
+m0:	.ascii	/?FORMAT-F-/<200>
+m10:	.ascii	/Invalid option /<200>
+m11:	.ascii	/Invalid value with option /<200>
+m20:	.asciz	/Invalid device/
+m30:	.asciz	/Illegal device number/
+m40:	.asciz	/Device not ready/
+m50:	.asciz	/Protected disk/
+m60:	.ascii	/Mount new floppy in /<200>
+m70:	.ascii	/Mount system disk in /<200>
+m80:	.ascii	/; Continue? /<200>
+m100:	.ascii	'/Format; Are you sure? '<200>
+m110:	.ascii	/Track # /<200>
+m120:	.asciz	/Illegal number of sectors/
+m130:	.ascii	/ bad track /
+m131:	.ascii	/00 side /
+m132:	.asciz	/0 /
+;--------------------------------------------------------
+sw.tbl:	.asciz	'YWVUDTSHLGRPF/'
+	.even
+sw.jmp:	.word	s.noq,	s.wait,	s.ver,	s.upd
+	.word	s.den+1,s.trac+1,s.sect+1,s.head+1
+	.word	s.intr+1,s.gap+1,s.rate+1,s.patr+1,s.flop+1
+	.word	s.go
+ar:	.blkw	10
+;--------------------------------
+start:
+	mov	#1000,	sp
+	.close	#3
+	.ttinr				;free buffer
+	bcc	.-2
+
+	clr	sw.y			;noquery
+	clr	sw.w			;wait
+	clr	sw.v			;verify
+	clr	sw.u			;update
+	clr	sw.go
+	clr	dev.num
+	.sreset
+	.csispc	#free,#dext,#0,#line
+	tst	free+30.
+	beq	10$
+	.fetch	#free+100.,#free+30.
+	mov	r0,	r1
+	.settop	r1
+	.lookup	#ar, #3, #free+30.
+10$:	mov	#line,	r0
+	tstb	(r0)			; empty line ?
+	bne	20$			; no
+	call	dosw
+	.print	#ver
+	.print	#help
+	tst	(sp)+
+	br	start
+20$:
+	mov	(sp)+,	r5
+	bne	30$
+	br	start
+30$:
+	mov	#sw.tbl,r2
+	mov	#sw.jmp,r3
+	clr	r4
+	mov	(sp)+,	r1
+	bpl	40$
+	mov	(sp)+,	r4
+40$:	cmpb	r1,	(r2)+
+	beq	50$
+	tst	(r3)+
+	tstb	(r2)
+	bne	40$
+invop=.
+	.mes	m10			; invalid option
+	.ttyou	r1
+	.print	#0
+	br	start
+50$:
+	mov	(r3),	r3
+	tst	r1
+	bpl	70$
+	bit	#1,	r3
+	bne	80$
+60$:
+inval=.
+	.mes	m11
+	.ttyou	r1
+	.print	#0
+	br	start
+70$:
+	bit	#1,	r3
+	bne	60$
+80$:
+	bic	#1,	r3
+	call	(r3)
+	sob	r5,	30$
+	jmp	towork
+s.noq:	
+	inc	sw.y
+	return
+s.wait:
+	inc	sw.w
+	return
+s.ver:
+	inc	sw.v
+	return
+s.den:
+	mov	r4,	sw.d
+	bic	#^c1,	sw.d
+	bne	10$
+	mov	#10.,	sw.s
+	mov	#35.,	sw.g
+	mov	#13.,	sw.r
+	mov	#1,	sw.l
+	return
+10$:
+	mov	#17.,	sw.s
+	mov	#20.,	sw.g
+	mov	#12.,	sw.r
+	mov	#2,	sw.l
+	return
+s.intr:	
+	mov	r4,	sw.l
+	return
+s.trac:
+	mov	r4,	sw.t
+	return
+s.sect:
+	cmp	#21.,	r4
+	bcs	inval
+	mov	r4,	sw.s
+	return
+s.head:
+	mov	r4,	sw.h
+	return
+s.upd:
+	inc	sw.u
+	return
+s.gap:
+	mov	r4,	sw.g
+	return
+s.rate:
+	mov	r4,	sw.r
+	return
+s.patr:
+	bic	#^c377,	r4
+	mov	r4,	sw.p
+	return
+s.flop:
+	bic	#^c1,	r4
+	mov	r4,	sw.f
+	return
+s.go:	inc	sw.go
+	return
+;--------------------------------
+dosw:
+	mov	#vv.d,	r0
+	tst	sw.d
+	beq	10$
+	tst	(r0)+
+10$:
+	mov	(r0),	r0
+	mov	#v.d,	r1
+	movb	(r0)+,	(r1)+
+	movb	(r0)+,	(r1)+
+	movb	(r0)+,	(r1)+
+	movb	(r0)+,	(r1)+
+
+
+	movb	sw.l,	r0
+	add	#60,	r0
+	movb	r0,	v.l
+
+	mov	sw.t,	r1
+	call	div10
+	movb	r0,	v.t
+	movb	r1,	v.t+1
+
+	mov	sw.s,	r1
+	call	div10
+	movb	r0,	v.s
+	movb	r1,	v.s+1
+
+	mov	sw.h,	r0
+	add	#60,	r0
+	movb	r0,	v.h
+
+	mov	sw.g,	r1
+	call	div10
+	movb	r0,	v.g
+	movb	r1,	v.g+1
+
+	mov	sw.r,	r1
+	call	div10
+	movb	r0,	v.r
+	movb	r1,	v.r+1
+
+	mov	#v.p+3,	r2
+	mov	sw.p,	r1
+	mov	#3,	r3
+20$:
+	mov	r1,	r0
+	bic	#^c7,	r0
+	add	#'0,	r0
+	movb	r0,	-(r2)
+	ash	#-3,	r1
+	sob	r3,	20$
+
+	mov	sw.f,	r0
+	add	#'0,	r0
+	movb	r0,	v.f
+
+	return
+;--------------------------------
+div10:
+	cmp	#99.,	r1
+	bge	5$
+	mov	#99.,	r1
+5$:
+	clr	r0
+10$:	sub	#10.,	r1
+	blt	11$
+	inc	r0
+	br	10$
+11$:
+	add	#10.,	r1
+	add	#60,	r0
+	add	#60,	r1
+	return
+;--------------------------------
+err:
+	.mes	m30
+xxx:
+	jmp	start
+
+towork:
+	tst	sw.u
+	beq	100$
+	clr	sw.u			;update
+	.writw	#ar, #17, #1000, #400, #1
+100$:
+	mov	@#54,	r0
+	add	#3*5+2*2,r0
+	tst	(r0)		; open?
+	bpl	xxx		;
+	movb	9.(r0),	r0	;
+	bic	#^c7,	r0	;
+	mov	r0,	dev.num	;
+	mov	r0,	r1	;
+	bis	#10,	r1	;
+	movb	r1,	qq1+3	;
+	movb	r1,	qq0+3	;
+	add	#60,	r0	;
+	movb	r0,	dev.tbl+2
+;--------------------------------
+	mov	#part,	r4	;
+	mov	#40000,	(r4)+	;
+	mov	sw.t,	(r4)+	; tracks
+	clr	r0		;
+	tst	sw.d		;
+	bne	10$		;
+	bis	#2,	r0	;
+10$:				;
+	tst	sw.f		;
+	beq	20$		;
+	bis	#4,	r0	;
+20$:				;
+	mov	r0,	(r4)+	; sdh
+	mov	sw.h,	(r4)+	; # heads
+	mov	#1,	(r4)+	; first sect
+	mov	sw.s,	(r4)+	; # sect
+	movb	sw.g,	(r4)+	; Gap3 size
+	mov	sw.r,	r1	;
+	mul	#20,	r1	;
+	inc	r1		;
+	movb	r1,	(r4)+	; Step rate
+	mov	sw.p,	(r4)+	; Pattern (filler byte)
+	mov	sw.s,	r1
+	mul	sw.t,	r1
+	mul	sw.h,	r1
+	mov	r1,	(r4)+	; size lo
+	clr	(r4)+		; size hi
+30$:
+	.spfun	#ar, #3, #360, #part, #-1, #0	; send table
+;--------------------------------
+	tst	sw.go
+	bne	35$
+	jmp	start
+35$:
+	tst	sw.y
+	bne	40$
+	.ttinr
+	bcc	.-2
+	.print	#dev.tbl
+	.print	#m100
+	.ttyin
+	bic	#40,	r0
+	cmpb	#'Y,	r0
+	beq	40$
+	jmp	start
+40$:
+	tst	sw.w
+	beq	50$
+	.ttinr
+	bcc	.-2
+	.print	#m60
+	.print	#dev.tbl
+	.print	#m80
+	.ttyin
+	bic	#40,	r0
+	cmpb	#'Y,	r0
+	bne	40$
+50$:
+	call	form.fd
+60$:
+	tst	sw.w
+	beq	70$
+	.ttinr
+	bcc	.-2
+	.print	#m70
+	.print	#dev.tbl
+	.print	#m80
+	.ttyin
+	bic	#40,	r0
+	cmpb	#'Y,	r0
+	bne	60$
+70$:
+	jmp	start
+;********************************
+form.fd::
+;--------------------------------
+;	fill sector table	;
+	clr	track
+	clr	side
+	mov	#sec.tb,r0
+	mov	r0,	r4
+	mov	sw.s,	r5
+	mov	r5,	r1
+	asl	r1
+1$:
+	clr	(r0)+
+	sob	r1,	1$
+	inc	r1
+	mov	r4,	r3
+	add	r5,	r3	;
+	add	r5,	r3	;
+	add	r5,	r3	;
+	add	r5,	r3	; end
+2$:
+	tstb	2(r4)
+	beq	3$
+	add	#4,	r4
+	cmp	r4,	r3
+	blo	2$
+	mov	#sec.tb,r4
+	br	2$
+3$:	movb	r1,	2(r4)
+	inc	r1
+	add	sw.l,	r4
+	add	sw.l,	r4
+	add	sw.l,	r4
+	add	sw.l,	r4
+	cmp	r4,	r3
+	blo	4$	
+	sub	sw.s,	r4
+	sub	sw.s,	r4
+	sub	sw.s,	r4
+	sub	sw.s,	r4
+4$:
+	sob	r5,	2$
+;--------------------------------
+setbuf:
+	mov	#sec.tb, r0
+	mov	sw.s,	r1
+10$:
+	movb	track,	(r0)+	;
+	movb	side,	(r0)+	;
+	inc	r0		; sect#
+	movb	#2,	(r0)+	; sect size
+	sob	r1,	10$
+f.cont:
+	mov	track,	r1
+	mul	sw.h,	r1
+	add	side,	r1
+	.spfun	#ar, #3, #362, #sec.tb, #123456, r1 ; format
+	tst	sw.v
+	beq	10$
+	call	verify
+10$:
+	inc	side
+	cmp	side,	sw.h
+	blo	20$
+	clr	side
+	inc	track
+20$:
+	cmp	track,	sw.t
+	blo	setbuf
+	return
+;--------------------------------
+verify:
+	mov	sw.s,	r2
+	mul	r2,	r1
+	swab	r2
+	.Readw	#ar, #3, 50, r2, r1
+	bcc	10$
+	mov	track,	r1
+	call	div10
+	movb	r0,	m131
+	movb	r1,	m131+1
+	mov	side,	r0
+	add	#'0,	r0
+	movb	r0,	m132
+	.mes	m130
+10$:
+	return
+;--------------------------------
+sec.tb:	.blkb	21.*4
+
+qq1:	.word	0,	362,	sec.tb,	123456
+qq0:	.word	0,	360,	part,	-1
+
+part:	.word	40000,	0,	0,	0
+	.word	0,	0,	0,	0,	0,	0
+
+track:	.word	0
+side:	.word	0	
+free=.
+
+.end start

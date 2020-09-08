@@ -1,0 +1,90 @@
+.enabl lc
+.title	hd  x04.02
+.ident	/x04.01/
+
+; hard disk pk11/16 (fd) handler
+;
+
+
+ .mcall  .drdef
+ .drdef  fd,203,filst$!spfun$!varsz$,10.*2*80.,177130,234
+
+fdbuf	= fd$csr
+
+inte	= 1
+errflg	= 177400
+
+	.drbeg	fd
+	mov	#10,	repcnt
+rept:
+	mov	fdcqe,  r5
+	bisb	#10,	3(r5)
+	inc	r5		;inte
+	mov     r5,     @#fdbuf
+	.drast	fd,5
+ 	tstb	@#fdbuf+1
+	beq 	done
+	dec	(pc)+
+repcnt: .blkw	1
+	bpl	rept
+herror: mov	fdcqe,r5
+	bis	#1,@-(r5)
+done:	    
+	.drfin	fd
+.sbttl	bootstrap driver
+
+	.drbot	fd,boot1,read
+
+.	= fdboot+40
+boot1:	jmp	@#boot-fdboot
+
+.	= fdboot+210
+.enabl lsb
+read:	nop 
+	mov	#10,	77$	
+	mov	r0,	blk
+	movb	@#fdbuf,dev+1
+	bic	#^c1400, dev
+	bisb	#10,	dev+1
+2$:
+	mov	r2,	buf
+	mov	r1,	cntw
+	mov	pc,	r0
+ttt:	add	#blk-ttt,r0
+4$:	mov	r0,   	@#fdbuf
+	nop
+5$:	tstb	@#fdbuf
+	bpl	5$
+	nop
+	mtps	#0
+10$:	tstb     @#fdbuf+1
+	beq	20$
+	dec	(pc)+
+77$:	.word	0
+	bpl	4$
+	jmp	bioerr
+20$:	return               
+blk:	.blkw	1
+dev:	.blkw	1
+buf:	.blkw	1
+cntw:	.blkw	1
+.dsabl lsb
+.	= fdboot+574
+boot:	mov	#10000,sp
+	mov	@#fdbuf,-(sp)	;dev.num
+	bic	#^c3,	(sp)
+	mov	(sp),	dev
+	swab	dev
+	mov	#2,r0
+	mov	#<4*400>,r1
+	mov	#1000,r2
+	jsr	pc,read
+	mov	#read-fdboot,@#b$read
+	mov	#b$dnam,@#b$devn
+	mov	(sp)+,@#b$devu
+	jmp	@#b$boot
+
+	.drend	fd
+.end
+
+ 

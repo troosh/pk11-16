@@ -1,0 +1,97 @@
+	.title	PRINT	- process
+.INCLUDE	"sy:P16MAC"
+ur4	= 161230
+ur5	= 161232
+UR6	= 161234
+PRBUF=177516
+PRCSR=177514
+pr.buf	=<prbuf & 7777> + l.reg
+pr.csr	=<prcsr & 7777> + l.reg
+
+PRVEC=200
+
+PSTB=161030
+STB=2
+PDAT=161032
+t0=10;
+
+.asect
+	. = 0
+	.word	"PC, 0, 0, -1
+
+.mcall	.exit,.pop,.push
+	.psect
+start:
+	.exit			;
+	mov	#start, sp	;
+	PROREG  #tcsr
+	mov	r0,ps.copy
+	PROREG	#tbuf
+	SETPRI	#50000-m.prrd
+	MOV	#40,	UR4
+	MOV	#100,	UR5
+	clr	@#ur6
+;-------------------------------- end of init
+loop:
+	mov     #ret,r0
+	mov	r0,	r1
+	mov	r0,	r2
+	mov	#p.tio,	r4
+	mov	#t0,	r3
+	WAITINT	pr.mask		;
+	.push	<#loop,r0>
+	jsr	r1,	(r2)
+
+p.vrq:	bitb	p.cs0,	@ps.copy
+	beq	ret
+	SETINT	#prvec
+	clrb	p.cs0	
+ret:	return
+
+P.CSR:	
+	mov	pr.csr,	r0
+	aslb	r0
+	cmpb	r0,	p.cs1
+	beq	ret
+	movb	r0,	p.cs1
+	movb	r0,	p.cs0
+	bne	p.vrq
+	resint	#prvec
+	return
+
+p.tio:	
+P.BUF:  tstb	@#pdat
+	bpl	out
+	mov	#m.tio,pr.mask
+	bic	#200,	@#pr.csr
+	bic	#200,	@ps.copy
+	return
+
+out:	clr	pr.mask
+	MOV	@#PR.BUF,	@#PDAT
+	BIS	#STB,	@#PSTB
+	BIC	#STB,	@#PSTB
+	bis	#200, 	@ps.copy
+	bis	#200,	@#pr.csr
+	movb	p.cs1,	p.cs0
+	br	p.vrq
+
+; D A T A
+.PRINT
+TCSR:	.word	prcsr, ^c100,	200,	2000,	p.csr,	200
+TBUF:	.word   prbuf, ^c377,     0,    2000,   p.buf,   -1
+pr.mask:.word	0
+p.cs0:	.byte	0
+p.cs1:	.byte	0
+ps.copy:.word	0
+	.end	start
+
+
+
+
+
+
+
+
+
+

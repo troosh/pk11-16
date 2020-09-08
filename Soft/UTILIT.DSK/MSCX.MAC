@@ -1,0 +1,408 @@
+.include	/sy:p16mac/
+.asect
+
+msx	= 1	;msx (1) or Slavic (0) mouse 
+.=0
+.enabl ama
+.word	"PC,0,0,0
+.iif ne msx .asciz	/Msx mouse/
+.iif eq msx .asciz	/Slavic mouse/
+
+.=1000
+.mcall	.exit
+nclk	=4
+dx1	= 1
+dy1	= 1
+dx10	=10
+dy10	=10
+
+mvec	= 130
+cxreg	= 176200
+cyreg	= 176202
+csr	= 176204
+; key1	= 1	;r
+; key2	= 2	;r
+ mousflg= 10	;r
+ keyflg = 20	;r
+ clrxy	= 40	;w
+ inte	=100	;r/w
+ rdy	=200	;r
+acreg	= 176206
+
+
+cx.reg	= <cxreg & 7777>+l.reg
+cy.reg	= <cyreg & 7777>+l.reg
+cs.r	= <csr   & 7777>+l.reg
+ac.reg	= <acreg & 7777>+l.reg
+
+cl10	= 127
+cl1	= 327
+cr10	= 125
+cr1	= 325
+cd10	= 126
+cd1	= 326
+cu10	= 124
+cu1	= 324
+key1	= 100
+key2	= 112
+key3	= 116
+key1f	= 300
+key2f	= 312
+key3f	= 316
+start:	.exit
+	mov	pc,	sp
+	mov	#tr4,	@#4
+	clr	@#6
+	mov	@#hr4,	@#ur4
+	mov	@#hr5,	@#ur5
+	clr	@#ur6	
+	SETPRI	#123
+	UNPREG	#cxreg
+	UNPREG	#cyreg
+	UNPREG	#csr
+	UNPREG	#acreg
+	PROREG	#cxtbl
+	PROREG	#cytbl
+	mov	r0,	cy.cop
+	PROREG	#csrtbl
+	mov	r0,	cs.cop
+	PROREG	#actbl
+	mov	#c.key+1,r5
+10$:
+	KSTRIN	#ktbl
+	movb	(r5)+,	ktbl
+	bne	10$
+	call	mtst		;install mouse
+	mov	#dx10,	dx.10
+	mov	#dy10,	dy.10
+	mov	#stk,	stkptr
+;--------------------------------------------------
+	
+ttt:
+	clr	r5
+	mov	cs.cop,	r0
+	tst	dx
+	beq	2$
+	add	dx,	cx.cop
+	mov	cx.cop,	cx.reg
+	bis	#200,	r5	
+	clr	dx
+2$:
+	tst	dy
+	beq	3$
+	add	dy,	@cy.cop
+	mov	@cy.cop,cy.reg
+	bis	#200,	r5
+	clr	dy
+3$:
+	movb	kf,	key
+	bisb	kn,	key
+	bisb	mkey,	key
+	cmpb	key,	key0
+	beq	4$
+	bic	#3,	(r0)
+	bisb	key,	r5
+	bis	#220,	r5
+	movb	key,	key0
+4$:
+	tst	mflg
+	beq	7$
+	bis	#mousflg,(r0)
+	br	8$
+7$:	bic	#mousflg,(r0)
+8$:
+	bis	r5,	(r0)
+	tstb	r5
+	bpl	16$
+	tst	acadr
+	bpl	6$
+	mov	(r0),	@acadr
+	br	16$
+6$:
+	tstb	cs.r
+	bmi	16$
+	bit	#100,	cs.r
+	beq	16$
+	setint	#mvec	
+16$:	
+	bic	#^c100,	cs.r
+	bis	(r0),	cs.r
+
+	mov	#s.tim,	r4
+	mov	#nclk,	r3
+	mov	#ret,	r0
+	mov	r0,	r1
+	mov	r0,	r2
+	WAITINT	mflg		;M.TIO
+	mov	#ttt,	-(sp)
+	mov	r2,	-(sp)
+	clrb	kn
+	jsr	r0,	(r1)
+ret:	RETURN
+
+tr4:	cmp	stkptr,	#stk
+	bne	10$
+	call	s.res
+	rti
+10$:	call	s.s1
+	rti
+;------------------------------
+s.cx:
+	mov	cx.reg,	r0
+	mov	cx.cop,	cx.reg
+	movb	r0,	dx.10
+	swab	r0
+	movb	r0,	dy.10
+	return
+;------------------------------
+s.tim:
+	mov	PICMR,	-(sp)
+	mov	#377,	PICMR	;disable int's
+	call	mouse
+	mov	(sp)+,	PICMR	;restore picmr
+	neg	r0
+	neg	r1
+	mov	r0,	dy
+	mov	r1,	dx
+	bis	r0,	r1
+	beq	10$
+	bis	#mousflg,@cs.cop
+10$:
+	ash	#-5,	r2
+	bic	#177774,r2
+;	asr	r2
+;	bcc	15$
+;	add	#2,	r2
+15$:
+	mov	r2,	mkey
+	return
+;------------------------------
+s.cs:
+	bit	#100,	cs.r
+	beq	10$
+	tstb	cs.r
+	bpl	ret
+	setint	#mvec
+	return
+
+10$:	resint	#mvec
+	bit	#clrxy,	cs.r
+	beq	ret
+s.res:	bic	#140,	cs.r
+	clr	@cy.cop
+	clr	cx.cop
+	clr	cx.reg
+	clr	cy.reg
+	clr	key
+	mov	#dx10,	dx.10
+	mov	#dy10,	dy.10
+	clr	acadr
+	mov	#stk,	stkptr
+	return
+
+s.cy:	bic	#rdy+keyflg+mousflg,	@cs.cop
+	return
+.PRINT
+s.s1:	
+	mov	stkptr,	r1
+	cmp	#stk,	r1
+	beq	20$
+	movb	-(r1),	dy.10
+	movb	-(r1),	dx.10
+	mov	-(r1),	@cy.cop
+	mov	(r1),	cy.reg
+	mov	-(r1),	cx.cop
+	mov	(r1),	cx.reg
+	mov	-(r1),	acadr
+	mov	r1,	stkptr
+20$:	return
+s.ac:	
+	mov	ac.reg,	r0
+	bpl	6$
+	cmp	#-1,	r0
+	beq	s.s1
+.PRINT
+	mov	stkptr,	r1
+	cmp	#stkend,r1
+	bcs	5$
+	cmp	r0,	acadr
+	beq	5$
+	mov	acadr,	(r1)+
+	mov	cx.cop,	(r1)+
+	mov	@cy.cop,(r1)+
+	movb	dx.10,	(r1)+
+	movb	dy.10,	(r1)+
+	mov	r1,	stkptr	
+
+	mov	r0,	acadr
+	movb	#dx10,	dx.10
+	movb	#dy10,	dy.10
+5$:	return
+6$:
+	mov	#c.key,	r1
+10$:
+	cmpb	r0,	(r1)+
+	beq	15$
+	tstb	(r1)
+	bne	10$
+	return
+15$:
+	asl	r1
+	jmp	@c.jmp-<2*c.key>-2(r1)
+;------------------------------	
+s.cl1:	mov	#-dx1,	dx
+	return
+;------------------------------
+s.cl10:	mov	dx.10,	dx
+	neg	dx
+	return
+;------------------------------
+s.cr1:	mov	#dx1,	dx
+	return
+;------------------------------
+s.cr10:	mov	dx.10,	dx
+	return
+;------------------------------
+s.cu1:	mov	#-dy1,	dy
+	return
+;------------------------------
+s.cu10:	mov	dy.10,	dy
+	neg	dy
+	return
+;------------------------------
+s.cd1:	mov	#dy1,	dy
+	return
+;------------------------------
+s.cd10:	mov	dy.10,	dy
+	return
+;------------------------------
+s.key1:	
+	bisb	#1,	kn
+	return
+s.k1f:
+	bisb	#1,	kf
+	return
+;------------------------------
+s.key3:
+	bisb	#2,	kn
+	return
+s.k3f:
+	bisb	#2,	kf
+	return
+;------------------------------
+s.key2:
+s.k2f:
+	clrb	kf
+
+mtst:
+	mov	PICMR,	-(sp)
+	mov	#377,	PICMR	;disable int's
+	call	mouse
+	call	mouse
+	mov	(sp)+,	PICMR	;restore picmr
+	mov	#m.tio,	mflg
+	add	r0,	r1
+	bcc	10$
+	clr	mflg
+10$:	
+	clr	mkey
+	return
+
+	
+;------------------------------
+MOUSE:
+.macro delay n
+.if ne msx
+	mov	#n,	r0
+	sob	r0,	.
+.endc
+.endm
+
+nnn1	= 48.
+nnn2	=  8.
+stb	= 200
+
+	mov	#ppia,	r5
+	mov	#ppic,	r4
+	mov	#stb,	r3		
+
+	bis	r3,	(r5)
+	DELAY	nnn1
+	mov	(r4),	r0	;yh
+;----------------------------------------
+	xor	r3,	(r5)
+;	ash	#-3,	r0	;
+.rept	4			;
+	rolb	r0		;
+	rol	r1		;
+.endr	
+	DELAY	nnn2		;
+	mov	(r4),	r0	;yl
+;----------------------------------------
+	xor	r3,	(r5)	;
+;	ash	#-3,	r0	;
+.rept	4			;
+	rolb	r0		;
+	rol	r1		;
+.endr
+	DELAY	nnn2		;
+	mov	(r4),	r0	;xh
+;----------------------------------------
+	xor	r3,	(r5)
+;	ash	#-3,	r0	;
+.rept	4			;
+	rolb	r0		;
+	rol	r1		;
+.endr				;
+	DELAY	nnn2		
+	mov	(r4),	r0	;xl
+;----------------------------------------
+;	ash	#-3,	r0	;
+.rept	4			;
+	rolb	r0		;
+	rol	r1		;
+.endr				;
+	movb	r1,	r0	;dy
+	swab	r1		;
+	movb	r1,	r1	;dx
+	bis	#140,	(r5)	;
+	mov	(r5),	r2	;key
+	com	r2
+	return
+
+cx.cop:	.word	0
+cy.cop:	.word	0
+cs.cop:	.word	0
+dx.10:	.word	10
+dy.10:	.word	10
+dx:	.word	0
+dy:	.word	0
+key:	.byte	0
+key0:	.byte	0
+kf:	.byte	0
+kn:	.byte	0
+mkey:	.word	0
+acadr:	.word	0	; addr of user acreg
+mflg:	.word	0
+
+cxtbl:	.word	cxreg,	0,	0,   2000,	s.cx,	-1
+cytbl:	.word	cyreg, -1,	0,   4000,	s.cy,	-1
+csrtbl:	.word	csr,	^C140,	0,   2000,	s.cs,	0
+actbl:	.word	acreg,	0,	0,   2000,	s.ac,	-1
+c.key:	.byte	cl1,	cl10,	cr1,	cr10,	cd1,	cd10
+	.byte	cu1,	cu10,	key3,	key2,	key1,	key3f
+	.byte	key2f,	key1f,	0
+.even
+c.jmp:	.word	s.cl1,	s.cl10,	s.cr1,	s.cr10,	s.cd1,	s.cd10
+	.word	s.cu1,	s.cu10,	s.key3,	s.key2,	s.key1,	s.k3f
+	.word	s.k2f,	s.k1f,	0
+
+ktbl:	.word	cl1,	acreg
+.PRINT
+stkptr:	.word	0
+stk:	.blkw	4*32.
+stkend:
+
+.print
+.end	start
+

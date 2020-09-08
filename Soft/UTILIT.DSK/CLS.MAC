@@ -1,0 +1,10 @@
+	.title	cls	- clear screen
+
+start:
+	mov	#str, @#177566	;
+	clr	pc		;
+str:	.byte	33,	'[,	'2,	'J
+	.byte	33,	'[,	'H
+	.byte
+	.even
+	.end	start

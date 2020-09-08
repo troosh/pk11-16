@@ -1,0 +1,117 @@
+	.title	MEM	- display system mem usage map
+
+	.include	"sy:p16mac"
+	.mcall		.print
+
+esc	= 33
+so	= 16
+si	= 17
+
+start:
+	.print	#str0		;
+	mov	#tbl, r1	;
+	GETSMAP	r1		;
+	ash	#-3,	r0	;
+	mov	r0,	cnt	;
+	mov	#tad, r5	;
+1$:
+	mov	#s0,	r4	;start of line (256k)
+	mov	#4, r0		;
+10$:
+	mov	(r1)+, r2	;
+	mov	#16., r3	;
+20$:
+	ror	r2		;
+	bcc	30$		;
+	movb	#40, (r4)+
+	inc	bf		;;;;;
+	br	40$		;
+30$:
+	movb	#'a, (r4)+
+	inc	bu		;;;;;
+40$:
+	sob	r3, 20$		;
+	sob	r0, 10$		;
+	.print	(r5)+		;
+	.print	#str1		;
+	dec	cnt		;
+	bne	1$		;
+
+	mov	#bfs,	r5	;
+	mov	bf,	r1	;
+	call	100$		;
+	mov	#bus,	r5	;
+	mov	bu,	r1	;
+	call	100$		;
+
+	.print	#str2		;
+
+	clr	pc		;.exit
+
+100$:
+	mov	#4,	r2	;
+	add	r2,	r5	;
+	ash	#2,	r1	;
+110$:
+	clr	r0		;
+	div	#10.,	r0	;
+	add	#60,	r1	;
+	movb	r1,	-(r5)	;
+	mov	r0,	r1	;
+	sob	r2,	110$	;
+
+	return			;
+
+; D A T A
+bu:	.word	0	;used blocks-4K
+bf:	.word	0	;free blocks-4K
+cnt:	.word	0
+tad:	.word	s1,s2,s3,s4
+	.word	s5,s6,s7,s8
+	.word	s9,s10,s11,s12
+	.word	s13,s14,s15,s16
+str0:
+	.ascii	<esc>"[2J"
+;	.ascii	<esc>"[10;24r"
+	.ascii	<esc>"[1;30H"
+	.ascii	<esc>"[7m"
+	.ascii	"System memory map"
+	.ascii	<esc>"[0m"
+	.ascii	<esc>"[3;10H"
+	.ascii	"0               64               128              196"
+.ascii	<esc>"[4;9H"<so>
+.asciz	"tqqqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqqk"
+
+str1:
+s0	= .+3
+.asciz	<so>" xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaax"
+
+str2:
+.ascii	<esc>"[8C"
+.ascii	<so>"mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj"
+	.byte	si,15,12
+.ascii	"        Used : "
+bus:	.ascii	"1234 Kb"
+.ascii	"     Free : "
+bfs:	.asciz	"1234 Kb"
+
+s1:	.ascii	<esc>"[5;2H   0 K"<200>
+s2:	.ascii	<esc>"[6;2H 256 K"<200>
+s3:	.ascii	<esc>"[7;2H 512 K"<200>
+s4:	.ascii	<esc>"[8;2H 768 K"<200>
+s5:	.ascii	<esc>"[9;2H1024 K"<200>
+s6:	.ascii	<esc>"[10;2H1280 K"<200>
+s7:	.ascii	<esc>"[11;2H1536 K"<200>
+s8:	.ascii	<esc>"[12;2H1792 K"<200>
+s9:	.ascii	<esc>"[13;2H2048 K"<200>
+s10:	.ascii	<esc>"[14;2H2304 K"<200>
+s11:	.ascii	<esc>"[15;2H2560 K"<200>
+s12:	.ascii	<esc>"[16;2H2816 K"<200>
+s13:	.ascii	<esc>"[17;2H3072 K"<200>
+s14:	.ascii	<esc>"[18;2H3328 K"<200>
+s15:	.ascii	<esc>"[19;2H3584 K"<200>
+s16:	.ascii	<esc>"[20;2H3840 K"<200>
+.even
+lenmap:	.blkw	1
+tbl:
+.end	start

@@ -1,0 +1,8 @@
+clkcsr	= 177110
+ccc     = 570
+
+start:	
+	mov	#ccc,	@#clkcsr
+	clr	pc
+.end start
+

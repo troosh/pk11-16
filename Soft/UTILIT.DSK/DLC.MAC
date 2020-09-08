@@ -1,0 +1,244 @@
+.include	"sy:p16mac"
+.asect
+.=0
+.word "PC,0,0,0
+.=10
+.asciz	/DL 176500 300/
+.even
+defmod=316
+defcmd=5
+;........................
+rccsr	= 176500
+;........................
+rcbuf	= rccsr+2
+ err	= 100000 ;ro
+ fe	=  40000 ;ro
+ oe	=  20000 ;ro
+ pe	=  10000 ;ro
+ break	=   4000 ;ro
+ set	=   1000 ;wo
+ rs	=    400 ;rw
+;........................
+trcsr	= rccsr+4
+ break  =   1	 ;rw
+;........................
+trbuf	= rccsr+6
+;........................
+rc.csr	= <rccsr & 7777>+l.reg
+rc.buf	= <rcbuf & 7777>+l.reg
+tr.csr	= <trcsr & 7777>+l.reg
+tr.buf	= <trbuf & 7777>+l.reg
+
+rcvec	= 300
+trvec	= 304
+$$csr	= 60
+win	= 40000
+
+.=1000
+start:
+	.mcall	.exit
+	.exit
+	unpreg	#rccsr
+	unpreg	#rcbuf
+	unpreg	#trcsr
+	unpreg	#trbuf
+	proreg	#rcstbl
+	mov	r0,	rcs.cop
+	proreg	#rcbtbl
+	mov	r0,	rcb.cop
+	proreg	#trstbl
+	mov	r0,	trs.cop
+	proreg	#trbtbl
+	mov	r0,	trb.cop
+	
+	mov	#s.rcint+win,r0
+	mthlt	#v.rcrd
+	mov	#s.trint+win,r0
+	mthlt	#v.trrd
+	mov	@#ur0,	r0
+	mthlt	#hr2
+;........................
+	mov	#0,	@#dlcs
+	mov	#0,	@#dlcs
+	mov	#0,	@#dlcs
+	mov	#100,	@#dlcs
+	nop
+	nop
+	nop
+	mov	#defmod,@#dlcs
+	mov	#defcmd,@#dlcs
+;........................
+10$:
+	waitint	#m.rcrd
+	inc	#0
+	br	10$
+;--------------------------------
+dlcmd:	.word	defcmd
+dlcmd0:	.word	defcmd
+s.rbuf:
+	bit	#rs,	@#rc.buf
+	beq	10$
+	bis	#40,	dlcmd
+	br	15$
+10$:	bic	#40,	dlcmd
+15$:
+	cmp	dlcmd,	dlcmd0
+	beq	20$
+	mov	dlcmd,	@#dlcs
+	mov	dlcmd,	dlcmd0
+20$:
+	tst	@#rc.buf
+	bpl	25$
+	mov	dlcmd0,	r0
+	bis	#20,	r0
+	mov	r0,	@#dlcs
+	bic	#170000,@#rc.buf
+25$:	
+	bit	#set,	@#rc.buf
+	beq	40$
+;........................
+	mov	#0,	@#dlcs
+	mov	#0,	@#dlcs
+	mov	#0,	@#dlcs
+	mov	#100,	@#dlcs
+	nop
+	nop
+	nop
+	mov	@#rc.buf,@#dlcs
+	mov	dlcmd0,  @#dlcs
+	bic	#^cRS,	 @#rc.buf
+;........................
+40$:
+	bic	#200,	@rcs.cop
+	bic	#200,	@#rc.csr
+	bic	#m.rcrd,@#picmr	;en int
+	return
+;--------------------------------
+s.rcint:
+	movb	@#dlbuf, @#rc.buf
+	mov	@#dlcs,	r0
+	bic	#307,	r0
+	aslb	r0
+	beq	3$
+	bis	#200,	r0
+	bisb	r0,	@#rc.buf+1
+3$:
+	tstb	@#rc.csr
+	bpl	4$
+	bis	#120000,@#rc.buf
+	bis	#m.rcrd,@#picmr	;dis int
+4$:
+	bis	#200,	@rcs.cop
+	bis	#200,	@#rc.csr
+	bit	#100,	@#rc.csr
+	beq	10$
+; SET.INT               - SET REQUEST FOR VECTORED INT
+;................................
+	.push	<r5,r0>		;
+	mov	#vrqtbl - v.low + 4 + rcvec, r5
+        BIS     #C.IRQ, @#VRQFLG  ; ENABLE VECTOR REQUEST
+	MOV	(R5), R0	; REQUEST FOR THIS VECTOR...
+	BNE	5$		;  ALREADY EXISTS
+	MOV	@#VRQTBL, R0	;
+	MOV	R0, (R5)	;
+	MOV	2(R0), 2(R5)	;
+	MOV	R5, @2(R0)	;
+	MOV	R5, 2(R0)	;
+5$:				;
+	.pop	<r0,r5>		;
+;................................
+10$:
+	return
+
+;--------------------------------
+s.tbuf:				;
+	bit	#1,	@#dlcs	; tx.rdy ?
+	bne	s.tr		;
+	bic	#m.trrd,@#picmr	; enable tr.int
+	bic	#200,	@trs.cop; clr rdy-fflag
+	bic	#200,	@#tr.csr;
+	return			; & wait
+;--------------------------------
+
+s.trint:
+	bis	#m.trrd, @#picmr	;disable tr.int
+s.tr:
+	mov	@#tr.buf,@#dlbuf
+	bis	#200,	 @trs.cop
+	bis	#200,	 @#tr.csr
+	bit	#100,	 @#tr.csr
+	beq	10$
+; SET.INT               - SET REQUEST FOR VECTORED INT
+;................................
+	.push	<r5,r0>		;
+	mov	#vrqtbl - v.low + 4 + trvec, r5
+        BIS     #C.IRQ, @#VRQFLG  ; ENABLE VECTOR REQUEST
+	MOV	(R5), R0	; REQUEST FOR THIS VECTOR...
+	BNE	5$		;  ALREADY EXISTS
+	MOV	@#VRQTBL, R0	;
+	MOV	R0, (R5)	;
+	MOV	2(R0), 2(R5)	;
+	MOV	R5, @2(R0)	;
+	MOV	R5, 2(R0)	;
+5$:				;
+	.pop	<r0,r5>		;
+10$:
+	return
+;--------------------------------
+s.tcsr:
+	.push	r5
+	mov	@#tr.csr,r0
+	xor	r0,	(pc)+
+f.tcsr:	.word	0
+	bit	#1,	f.tcsr
+	beq	10$
+	mov	dlcmd0,	r5
+	bit	#1,	r0
+	beq	5$
+	bis	#10,	r5
+5$:	mov	r5,	@#dlcs
+10$:
+	bit	#100,	f.tcsr	
+	beq	99$
+	mov	#vrqtbl - v.low + 4 + trvec, r5
+	bit	#100,	r0
+	beq	20$
+;................................ setint
+        BIS     #C.IRQ, @#VRQFLG  ; ENABLE VECTOR REQUEST
+	MOV	(R5), R0	; REQUEST FOR THIS VECTOR...
+	BNE	99$		;  ALREADY EXISTS
+	MOV	@#VRQTBL, R0	;
+	MOV	R0, (R5)	;
+	MOV	2(R0), 2(R5)	;
+	MOV	R5, @2(R0)	;
+	MOV	R5, 2(R0)	;
+	br	99$		;
+;................................resint
+20$:
+	mov	(r5)+,	r0	;
+	beq	99$		;
+	cmp	(r5),	r0	;
+	bne	25$		;
+	clr	@#vrqflg	;
+25$:				;
+	mov	r0,	@(r5)+	;
+	mov	-(r5),	2(r0)	;
+	clr	-(r5)		;
+;................................
+99$:
+	mov	@#tr.csr,f.tcsr
+	.pop	r5
+	return
+;--------------------------------
+rcstbl:	.word	rccsr,	^c100,	 0, 2400,       $$csr, rcvec,   0
+rcbtbl:	.word	rcbuf,	    0,	 0, 6400,  s.rbuf+win,     0,  -1
+trstbl:	.word	trcsr,	^c101, 200, 2400,  s.tcsr+win, trvec, 200
+trbtbl:	.word	trbuf,	    0,   0, 2400,  s.tbuf+win,     0,  -1
+rcs.cop:.word 	0
+rcb.cop:.word	0
+trs.cop:.word	0
+trb.cop:.word	0
+
+.end start
+
+

@@ -1,0 +1,432 @@
+.nlist
+.include	"sy:p16mac"
+.include	"sy:wdc"
+.list
+.asect
+.=0
+.word	"PC,0,0,-1
+
+.=1000
+.mcall	.exit
+lin	= 12.
+sym	= 36.
+winx	= 17.
+winy	= 20.
+
+c.sec	= 161400
+a.sec	= 161401
+c.min	= 161402
+a.min	= 161403
+c.hou	= 161404
+a.hou	= 161405
+c.dow	= 161406
+c.day	= 161407
+c.mon	= 161410
+c.yea	= 161411
+c.sta	= 161412
+c.stb	= 161413
+c.stc	= 161414
+c.std	= 161415
+ram.base= 161416
+
+acreg = 177110
+ackey = 70
+l.key = 27
+d.key = 26
+r.key = 25
+u.key = 24
+c.col =  7
+c.nrev= 10
+c.rev = 11
+c.cx  = 12
+c.nop = 37
+;--------------------------------
+.macro	.on
+	bic	#1,	@#ppic
+.endm	.on
+;--------------------------------
+.macro	.off
+	bis	#1,	@#ppic
+.endm	.off
+;--------------------------------
+SETTAS:
+	mov	#area,	r1
+	mov	r1,	r2
+	mov	#lin,	r5
+10$:
+	mov	r1,	(r2)+
+	mov	ur0,	(r2)+
+	add	#sym,	r1
+	sob	r5,	10$
+	ARINST	#ard,#0,#lin,#sym
+	VWCRE	#wnd,#0,ard+2,#0,#0,#winy,#300.,#winx,#winx+10.,#1001
+	mov	#lin*sym/2,r5
+	mov	#area,	r2
+40$:
+	clr	(r2)+
+	sob	r5,	40$
+	RETURN
+
+wait:
+	.on
+	movb	@#c.sta, r0
+	.off
+	tstb	r0
+	bmi	wait
+	return
+RCLK:
+	call	wait
+	mov	#c.sec,	r0
+	mov	#sec,	r1
+	call	bcd
+	mov	#min,	r1
+	call	bcd
+	mov	#hh,	r1
+	call	bcd
+	RETURN
+
+RDAT:
+	call	wait
+	mov	#c.dow,	r0
+	mov	#ww,	r1
+	.on
+	mov	(r0),	r2
+	.off
+	dec	r2
+	bic	#^c7,	r2
+	asl	r2
+	asl	r2
+	movb	w.nam(r2), (r1)+
+	movb	w.nam+1(r2), (r1)+
+	movb	w.nam+2(r2), (r1)+
+	inc	r0			; r0 - c.day, r1 - dd
+	mov	#dd,	r1
+	call	bcd
+	dec	r0			; r0 - c.mon
+	mov	#mm,	r1
+	.on
+	mov	(r0),	r2
+	.off
+	dec	r2
+	asl	r2
+	asl	r2
+	movb	m.nam(r2),(r1)+
+	movb	m.nam+1(r2),(r1)+
+	movb	m.nam+2(r2),(r1)+
+	inc	r0			; r0 - c.yea
+	mov	#yy,	r1
+	call	bcd
+	return
+
+BCD:	clr	r2
+	.on
+	mov	(r0)+,	r3
+	.off
+	div	#10.,	r2
+	bis	#60,	r2
+	movb	r2,	(r1)+
+	bis	#60,	r3
+	movb	r3,	(r1)+
+	return
+
+rtcini:	WPRINT	#ptbl,ard+2,#1.,#1,#ms.in
+	.on
+	mov	#52,	@#c.sta
+	mov	#216,	@#c.stb
+	.off
+	mov	#c.sec,	r1
+	mov	#6,	r2
+1$:	.on
+	clr	(r1)		; clock & alarm: sec,min,hou
+	.off
+	inc	r1
+	sob	r2,	1$
+	mov	#3,	r2
+2$:	.on
+	mov	#1,	(r1)	; dow, day, mon
+	.off
+	inc	r1
+	sob	r2,	2$
+	.on
+	mov	#89.,	(r1)	; year
+	bic	#200,	@#c.stb
+	.off
+	return
+
+start:	.exit
+	mov	#1000,	sp
+	SETPRI	#15
+	UNPREG	#acreg
+	PROREG	#rtbl
+	KSTRIN	#ktbl
+	call	settas
+	.on
+	mov	@#c.std,r0
+	.off
+	tstb	r0		; power sense failed?
+	bmi	3$		; nop, continue
+	call	rtcini		; yep, init RTC
+
+3$:	.on
+	mov	#s.max,	r0
+	mov	#s.reg,	r1
+	mov	#7,	r2
+1$:	cmp	(r0)+,	@(r1)+
+	bge	2$
+	.off
+	call	rtcini
+	br	10$
+2$:	sob	r2,	1$
+	.off
+10$:
+	MFHLT	#16
+	mov	#5,	r3
+	mov	#serno+7,r2
+20$:
+	mov	r0,	r1
+	clr	r0
+	div	#10.,	r0
+	add	#60,	r1
+	movb	r1,	-(r2)
+	sob	r3,	20$
+
+	WPRINT	#ptbl,ard+2,#1.,#27.,#serno
+ttt:
+	mov	#ttt10,	r4
+	mov	#25.,	r3
+	mov	#ret,	r0
+	mov	r0,	r1
+	mov	r0,	r2
+	WAITINT	#M.TIO
+	mov	#ttt,	-(sp)
+	mov	r2,	-(sp)
+10$:
+	jsr	r0,	(r1)
+ret:	RETURN
+
+kkk:
+	mov	@#acreg, r0
+	cmpb	#ackey,	r0
+	bne	k10
+	comb	kflg
+	beq	10$
+	VWFORE	#rtbl,wnd+2
+	bic	#100000,ktbl+2
+	mov	s.ptr,	r1
+	movb	#c.rev,	@i.i(r1)
+	br	12$
+10$:
+	bis	#100000,ktbl+2
+	mov	s.ptr,	r1
+	movb	#c.nrev,@i.i(r1)
+12$:
+	KSTRIN	#ktbl
+	incb	dflg
+	br	ttt10
+
+k10:	
+	cmp	#570,	r0
+	bne	k12
+
+	mov	#d00,	r0
+	mov	#dd,	r1
+	movb	(r1)+,	(r0)+		;date
+	movb	(r1)+,	(r0)+		;date
+	tstb	(r0)+
+	mov	#mm,	r1
+	movb	(r1)+,	(r0)+		;month
+	movb	(r1)+,	(r0)+		;month
+	movb	(r1)+,	(r0)+		;month
+	tstb	(r0)+
+	mov	#yy,	r1
+	movb	(r1)+,	(r0)+		;year
+	movb	(r1)+,	(r0)+		;year
+
+	mov	#h00,	r0
+	mov	#hh,	r1
+	movb	(r1)+,	(r0)+		;hour
+	movb	(r1)+,	(r0)+		;hour
+	tstb	(r0)+			; /:/
+	mov	#min,	r1
+	movb	(r1)+,	(r0)+		;min
+	movb	(r1)+,	(r0)+		;min
+	tstb	(r0)+			; /:/
+	mov	#sec,	r1
+	movb	(r1)+,	(r0)+		;sec
+	movb	(r1)+,	(r0)+		;sec
+	RESPON	#str3
+	RESPON	#str4
+	RETURN
+;--------------------------------
+k12:
+	cmp	r0,	#-1
+	bne	k14
+	jmp	prodat
+;--------------------------------
+k14:
+	sub 	#424,	r0
+	bmi	ret
+	cmp	#3,	r0
+	bcs	ret
+	incb	dflg
+	mov	s.ptr,	r1
+	.on
+	mov	@s.reg(r1),r2
+	.off
+	movb	#c.nrev,@i.i(r1)
+	asl	r0
+	add	r0,pc
+	br	s.up
+	br	s.ri
+	br	s.do
+s.le:	sub	#2,	r1
+	bge	s.com
+	mov	#12.,	r1
+	br	s.com
+s.ri:	add	#2,	r1
+	cmp	#14.,	r1
+	bne	s.com
+	clr	r1
+	br	s.com
+s.up:	cmp	s.max(r1),r2
+	ble	1$
+	inc	r2
+	br	s.com1
+1$:	mov	s.min(r1),r2
+	br	s.com1
+
+s.do:	cmp	s.min(r1),r2
+	bge	1$
+	cmp	s.max(r1),r2
+	blt	1$
+	dec	r2
+	br	s.com1
+1$:	mov	s.max(r1),r2
+
+s.com1:	.on
+	mov	r2,	@s.reg(r1)
+	.off
+s.com:	
+	mov	r1,	s.ptr
+	movb	#c.rev,	@i.i(r1)
+
+ttt10:
+	call	RCLK
+	tstb	dflg
+	bne	20$
+	WPRINT	#ptbl,ard+2,#1.,#1,#TXT
+	RETURN
+
+20$:
+	call	rdat
+99$:	clrb	dflg
+	WPRINT	#ptbl,ard+2,#1.,#1,#txt
+	RETURN
+;--------------------------------
+prodat:
+	clr	r0
+	GETPDS	#pds
+	mov	p.r0+pds, r0
+	call	map
+	mov	#ww,	r1
+	movb	(r1)+,	(r0)+
+	movb	(r1)+,	(r0)+
+	movb	(r1)+,	(r0)+
+	movb	#40,	(r0)+
+
+	mov	#dd,	r1
+	movb	(r1)+,	(r0)+
+	movb	(r1)+,	(r0)+
+	movb	#'-,	(r0)+
+
+	mov	#mm,	r1
+	movb	(r1)+,	(r0)+
+	movb	(r1)+,	(r0)+
+	movb	(r1)+,	(r0)+
+	movb	#'-,	(r0)+
+
+	mov	#yy,	r1
+	movb	(r1)+,	(r0)+
+	movb	(r1)+,	(r0)+
+	movb	#40,	(r0)+
+
+	mov	#hh,	r1
+	movb	(r1)+,	(r0)+
+	movb	(r1)+,	(r0)+
+	movb	#':,	(r0)+
+	
+	mov	#min,	r1
+	movb	(r1)+,	(r0)+
+	movb	(r1)+,	(r0)+
+	movb	#':,	(r0)+
+	
+	mov	#sec,	r1
+	movb	(r1)+,	(r0)+
+	movb	(r1)+,	(r0)+
+
+	return	
+;--------------------------------
+MAP: 
+	mov	r0,	r1
+	ash	#-12.,	r1
+	bic	#^c16,	r1
+	add	#pds+p.ur0,r1
+	mov	(r1)+,	ur2
+	mov	(r1),	ur3
+     	bic	#160000,r0
+	bis	#40000, r0
+	return
+;--------------------------------
+txt:
+i.ww:	.byte	c.nrev,	40
+ww:	.ascii	/SUN /
+i.dd:	.byte	c.nrev
+dd:	.ascii	/11/<c.nrev>/-/
+i.mm:	.byte	c.nrev
+mm:	.ascii	/Jan/<c.nrev>/-/
+i.yy:	.byte	c.nrev
+yy:	.ascii	/89/<c.nrev>/ /
+hh0:	.byte	c.cx,	0,	c.cx,	15.
+i.hh:	.byte	c.nrev
+hh:	.ascii	/23/<c.nrev>/:/
+i.mi:	.byte	c.nrev
+min:	.ascii	/45/<c.nrev>/:/
+i.ss:	.byte	c.nrev
+sec:	.asciz	/00/<c.nrev>/ /
+str3:	.ascii	/da /
+d00:	.asciz	/12-Jan-89/<15>
+str4:	.ascii	/ti /
+h00:	.asciz	/10:37:00/<15>
+
+ms.in:	.asciz	/ÂÐÙÜÕà Á±À¾Èµ½ !/
+
+SERNO:	.asciz	/ü 12345/
+
+.even
+i.i:	.word	i.ww, i.dd, i.mm, i.yy, i.hh, i.mi, i.ss
+s.min:	.word	1,    1,    1,    89.,  0,    0,    0
+s.max:	.word	7,    31.,  12.,  99.,  23.,  59.,  59.
+s.reg:	.word	c.dow,c.day,c.mon,c.yea,c.hou,c.min,c.sec
+s.ptr:	.word	0
+
+mptr:	.word	m.len
+w.nam:	.ascii	/SUN MON TUE WED THU FRI SAT /
+m.nam:	.ascii	/Jan-Feb-Mar-Apr-May-Jun-Jul-Aug-Sep-Oct-Nov-Dec-/
+m.len:	.word	 31.,28.,31.,30.,31.,30.,31.,31.,30.,31.,30.,31.
+kflg:	.byte	0
+dflg:	.byte	1
+
+ptbl:	.blkw	5
+rtbl:	.word	acreg, 0, 0, 2000, kkk, -1
+ktbl:	.word	ackey, acreg
+.=<. & 177774>+4
+.print
+wnd:	.blkw	10.	
+ard:	.blkw	4
+area:	.blkw	lin*sym/2
+pds:	.blkw	REGLEN/2
+
+.print
+
+.end	start
+
