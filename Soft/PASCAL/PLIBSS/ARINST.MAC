@@ -1,0 +1,40 @@
+	.title	arinst
+WCSR = 177530
+ARINST::
+        MOV     R1,-(SP)
+        MOV     R2,-(SP)
+        MOV     R3,-(SP)
+        MOV     R4,-(SP)
+        MOV     R5,-(SP)
+        CLR     ERR$FL
+        MOV     SP,R1
+        MOV     14.(SP),R2
+        MOV     2(R2),R4
+        ASL     R4
+        SUB     R4,SP
+        SUB     #8.,SP
+        MOV     SP,R5
+        CLR     (R5)+
+        MOV     (R2)+,(R5)+
+        MOV     (R2)+,(R5)+
+        MOV     (R2)+,(R5)+
+        MOV     12.(R1),R3
+1$:
+        MOV     (R3)+,(R5)+
+        SOB     R4,1$
+        MOV     SP,@#WCSR
+	TST	(SP)+
+	BMI	2$
+	INC	ERR$FL
+	MOV	(SP),@14.(R1)
+2$:
+	MOV	R1,SP
+	MOV	(SP)+,R5
+	MOV	(SP)+,R4
+	MOV	(SP)+,R3
+	MOV	(SP)+,R2
+	MOV	(SP)+,R1
+	MOV	(SP)+,2(SP)
+	TST	(SP)+
+	RETURN
+	.END 

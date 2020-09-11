@@ -1,0 +1,6 @@
+	.TITLE	GR$ERR
+GR$ERR::
+	.WORD	0
+AREA::
+	.BLKW	10.
+	.END

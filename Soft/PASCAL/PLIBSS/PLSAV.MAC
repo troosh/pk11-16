@@ -1,0 +1,14 @@
+	.title	plsav
+WCSR = 177530
+PLSAV::
+	CLR	ERR$FL
+	MOV	#20.,@2(SP)
+	MOV	2(SP),@#WCSR
+	NOP
+	TST 	@2(SP)
+	BMI	1$
+	INC	ERR$FL
+1$:
+	MOV	(SP)+,(SP)
+	RETURN
+	.END

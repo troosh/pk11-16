@@ -1,0 +1,37 @@
+	.title	hbmove
+WCSR = 177530
+HBMOVE::
+	MOV	R1,-(SP)
+	MOV	R2,-(SP)
+	MOV	R3,-(SP)
+	MOV	SP,R1
+	CLR	ERR$FL
+	SUB	#20.,SP
+	MOV	SP,R2
+	MOV	#40.,(R2)+
+	CLR	R3
+	BISB	22.(R1),R3
+	SWAB	R3
+	BISB	24.(R1),R3
+	MOV	R3,(R2)+
+	MOV	20.(R1),(R2)+
+	MOV	18.(R1),(R2)+
+	MOV	16.(R1),(R2)+
+	MOV	14.(R1),(R2)+
+	MOV	12.(R1),(R2)+
+	MOV	10.(R1),(R2)+
+	MOV	8.(R1),(R2)+
+	MOV	SP,@#WCSR
+	NOP
+	TST	(SP)
+	BMI	2$
+	INC	ERR$FL
+2$:
+	MOV	R1,SP
+	MOV	(SP)+,R3
+	MOV	(SP)+,R2
+	MOV	(SP)+,R1
+	MOV	(SP),18.(SP)
+	ADD	#18.,SP
+	RETURN
+	.END

@@ -1,0 +1,14 @@
+	.title	fnfind
+WCSR = 177530
+FNFIND::
+	CLR	ERR$FL
+	MOV	#30.,@2(SP)
+	MOV	2(SP),@#WCSR
+	NOP
+	TST	@2(SP)
+	BMI	1$
+	INC	ERR$FL
+1$:
+	MOV	(SP)+,(SP)
+	RETURN
+	.END

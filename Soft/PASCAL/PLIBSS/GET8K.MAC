@@ -1,0 +1,14 @@
+	.TITLE	GET8K
+.INCLUDE	"P12MAC"
+GET8K::
+	MOV	R0,-(SP)
+	CLR	6(SP)
+	GET8K	@4(SP)
+	BCS	1$
+	INC	6(SP)
+1$:
+	MOV	R0,@4(SP)
+	MOV	(SP)+,R0
+	MOV	(SP)+,(SP)
+	RETURN
+	.END

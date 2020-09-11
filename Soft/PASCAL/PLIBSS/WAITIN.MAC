@@ -1,0 +1,29 @@
+	.TITLE	WAITIN
+.INCLUDE	"P12MAC"
+WAITINT::
+	MOV	R0,-(SP)
+	MOV	R1,-(SP)
+	MOV	R2,-(SP)
+	MOV	R3,-(SP)
+	MOV	R4,-(SP)
+	CLR	24.(SP)
+	MOV	20.(SP),R3
+	MOV	18.(SP),R4
+	WAITINT	22.(SP)
+	BCS	1$
+	INC	24.(SP)
+	MOV	R0,@16.(SP)
+	MOV	R1,14.(SP)
+	BR	2$
+1$:
+	MOV	R2,@12(SP)
+2$:
+	MOV	(SP)+,R4
+	MOV	(SP)+,R3
+	MOV	(SP)+,R2
+	MOV	(SP)+,R1
+	MOV	(SP)+,R0
+	MOV	(SP),12.(SP)
+	ADD	#12.,SP
+	RETURN
+	.END

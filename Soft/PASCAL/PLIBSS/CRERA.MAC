@@ -1,0 +1,8 @@
+	.title	crera
+WCSR = 177530
+CRERA::
+	MOV	#24.,-(SP)
+	MOV	SP,@#WCSR
+	TST	(SP)+
+	RETURN
+	.END

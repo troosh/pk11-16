@@ -1,0 +1,11 @@
+	.TITLE	KSTRIN
+KSTRIN::
+	CLR	4(SP)
+	MOV	2(SP),@#^O174106
+	NOP
+	BCS	1$
+	INC	4(SP)
+1$:
+	MOV	(SP)+,(SP)
+	RETURN
+	.END

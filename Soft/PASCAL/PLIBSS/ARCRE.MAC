@@ -1,0 +1,28 @@
+	.title	arcre
+WCSR = 177530
+ARCRE::
+	MOV	R1,-(SP)
+	MOV	R2,-(SP)
+	MOV	SP,R1
+	CLR	ERR$FL
+	SUB	#10.,SP
+	MOV	6(R1),R2
+	MOV	#38.,(SP)
+	MOV	8.(R1),2(SP)
+	MOV	2(R2),4(SP)
+	MOV	4(R2),6(SP)
+	MOV	6(R2),8.(SP)
+	MOV	SP,@#WCSR
+	NOP
+	TST	(SP)
+	BMI	1$
+	MOV	2(SP),(R2)
+	INC	ERR$FL
+1$:
+	MOV	R1,SP
+	MOV	(SP)+,R2
+	MOV	(SP)+,R1
+	MOV	(SP)+,2(SP)
+	TST	(SP)+
+	RETURN
+	.END

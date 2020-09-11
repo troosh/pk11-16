@@ -1,0 +1,14 @@
+	.title	vwfore
+WCSR = 177530
+VWFORE::
+	CLR	ERR$FL
+	MOV	#10.,@2(SP)
+	MOV	2(SP),@#WCSR
+	NOP
+	TST	@2(SP)
+	BMI	1$
+	INC	ERR$FL
+1$:
+	MOV	(SP)+,(SP)
+	RETURN
+	.END

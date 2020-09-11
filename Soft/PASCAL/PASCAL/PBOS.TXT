@@ -1,0 +1,97 @@
+	s O D E R V A N I E   B I B L I O T E K I   P B O S
+
+ 1.  Procedure binit	.	.	.	- INICIALIZACIQ bos
+ 2.  Procedure bexit	.	.	.	- WYHOD W KLAWIATURNYJ MONITOR
+ 3.  Procedure btim(state:integer).	.	- UPRAWLENIE TAJMEROM
+ 4.  Function bmem : integer	.	.	- ^TENIE SOSTOQNIQ PAMQTI
+ 5.  Function btest(p:page)	.	.	- ^TENIE STATUSA STRANICY
+ 6.  Procedure bpage(p:page)	.	.	- PODKL@^ENIE STRANICY ozu/pzu
+ 7.  Procedure bwork(p:page)	.	.	- NAZNA^ENIE RABO^EJ STRANICY 
+ 8.  Function bgetw(addr:address) : integer	- ^TENIE SLOWA IZ RABO^EJ STRANICY
+ 9.  Function bgetb(addr:addres) : char.	- ^TENIE BAJTA IZ RABO^EJ STRANICY
+10.  Procedure bputw(addr:address,word:integer)	- ZAPISX SLOWA W RABO^U@ STRANICU
+11.  Procedure bputb(addr:address,byte:char)	- ZAPISX BAJTA W RABO^U@ STRANICU
+12.  Procedure bmove(mv:memrw) 	.	.	- PERESYLKA MASSIWA SLOW
+13.  Procedure bwovb(mv:memrw)	.	.	- PERESYLKA MASSIWA BAJTOW
+14.  Procedure bjsr(addr:address)	.	- WYZOW PODPROGRAMMY IZ RABO^EJ STRANICY
+15.  Procedure bjmp(addr:address)	.	- PEREHOD W RABO^U@ STRANICU BEZ WOZWRATA
+16.  Procedure bkini	.	.	.	- INICIALIZACIQ DRAJWERA KLAWIATURY
+17.  Procedure bkset(kbstate:integer)	.	- USTANOWKA REVIMA DRAJWERA KLAWIATURY
+18.  Function bkget : integer	.	.	- ^TENIE REVIMA DRAJWERA KLAWIATURY
+19.  Function bttin : char	.	.	- WWOD SIMWOLA S OVIDANIEM
+20.  Function binkey :char	.	.	- WWOD SIMWOLA BEZ OVIDANIQ
+21.  Procedure bglin(addr:address,cnt:integer)	- WWOD STROKI S REDAKTIROWANIEM
+22.  Procedure bedit(addr:address,cnt:integer)	- REDAKTIROWANIE SU]ESTWU@]EJ STROKI
+23.  Procedure bkres	.	.	.	- SBROS BUFERA KLAWIATURY
+24.  Procedure bsfun(num:integer,addr:address) 	- USTANOWKA FUNKCIONALXNYH KLAWI[
+25.  Procedure bgfun(num:integer,addr:address)	- ^TENIE FUNKCIONALXNYH KLAWI[
+26.  Procedure btini	.	.	.	- INICIALIZACIQ DRAJWERA \KRANA
+27.  Procedure btset(tvstate:integer)	.	- USTANOWKA REVIMA DRAJWERA \KRANA
+28.  Function btget : integer	.	.	- ^TENIE REVIMA DRAJWERA \KRANA
+29.  Procedure bscol(col:color) .	.	- USTANOWKA CWETOW
+30.  Procedure bgcol : color	.	.	- ^TENIE CWETOW
+31.  Procedure bpal(pal:palet)	. 	.	- USTANOWKA/^TENIE PALITRY
+32.  Procedure bbuf(buff:integer)	.	- PEREKL@^ENIE BUFEROW \KRANA
+33.  Procedure bspos(coord:integer)	.	- USTANOWKA KOORDINAT A/C KURSORA
+34.  Function bgpos : integer	.	.	- ^TENIE KOORDINAT A/C KURSORA
+35.  Procedure bscrl(num:integer)	.	- SDWIG \KRANA
+36.  Procedure bcls	.	.	.	- O^ISTKA \KRANA
+37.  Procedure btout(c:char)	.	.	- WYWOD SIMWOLA
+38.  Procedure  bstr(str:string).	.	- WYWOD STROKI SIMWOLOW
+39.  Procedure bsgrf(x,y:integer)	.	- USTANOWKA TEKU]IH GRAFI^ESKIH KOORDINAT
+40.  Procedure bggrf(var x,y:integer)	.	- ^TENIE TEKU]IH GRAFI^ESKIH KOORDINAT
+41.  Procedure bscgr(col:color)	.	.	- USTANOWKA GRAFI^ESKOGO CWETA
+42.  Function bgcgr : color	.	.	- ^TENIE GRAFI^ESKOGO CWETA
+43.  Procedure bsmod(mod:integer)	.	- USTANOWKA/^TENIE REVIMA RISOWANIQ
+44.  Procedure bspnt(x,y:integer)	.	- WYWOD GRAFI^ESKOJ TO^KI
+45.  Function bgpnt(x,y:integer) : color.	- ^TENIE CWETA GRAFI^ESKOJ TO^KI
+46.  Procedure bvect(x,y:integer)	.	- WYWOD GRAFI^ESKOGO WEKTORA
+47.  Procedure bline(xb,yb,xe,ye:integer)	- WYWOD GRAFI^ESKOJ LINII
+48.  Procedure brect(xb,yb,xe,ye:integer)	- WYWOD PRQMOUGOLXNIKA
+49.  Procedure bfrct(x,y:integer)	.	- WYWOD ZAKRA[ENNOGO PRQMOUGOLXNIKA
+50.  Procedure bcirc(circ:circle)	.	- WYWOD DUGI ILI OKRUVNOSTI
+51.  Procedure bfill(col:color) .	.	- ZAKRASKA GRANI^NO-OPREDELENNOJ OBLASTI
+52.  Procedure bsound(len,tone:integer)	.	- WYDA^A ZWUKA
+53.  Procedure bswin(wind:window)	.	- USTANOWKA GRAFI^ESKOGO OKNA
+54.  Procedure bgwin(wind:window)	.	- ^TENIE GRAFI^ESKOGO OKNA
+55.  Procedure bcwin(col:color)	.	.	- O^ISTKA GRAFI^ESKOGO OKNA UKAZANNYM CWETOM
+56.  Procedure bstyp(type:integer)	.	- USTANOWKA TIPA WEKTORA
+57.  Function bgtyp : integer	.	.	- ^TENIE TIPA WEKTORA
+58.  Procedure bgoset(orient:integer)	.	- USTANOWKA/^TENIE ORIENTACII GRAFI^ESKIH SIMWOLOW
+59.  Procedure bgout(c:char) 	.	.	- GRAFI^ESKIJ WYWOD SIMWOLA
+60.  Procedure bgstr(str:string).	.	- GRAFI^ESKIJ WYWOD STROKI 
+61.  Procedure bgsts(str:string).	.	- UPLOTNENNYJ GRAFI^ESKIJ WYWOD STROKI /GORIZONTALXNYJ/
+TYPE
+
+  page    = [1..15];
+
+  address = [-32768..32767]; 
+
+  memrv   = record
+	     memadr   : integer;
+	     memlow   : integer;
+             pages    : integer;
+	     memcount : integer;
+	   end;
+
+  color   = [0..3];
+
+  palet   = [0..15];
+
+  circle  = record
+	     xc : integer;
+	     yc : integer;
+	     rc : integer;
+	     kx : integer;
+	     ky : integer;
+	     rb : integer;
+	     re : integer;
+	    end;
+
+  window  = record
+	     Xmin : integer;
+	     Xmax : integer;
+	     Ymin : integer;
+	     Ymax : integer;
+	    end;
+

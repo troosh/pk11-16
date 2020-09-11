@@ -1,0 +1,187 @@
+					;******	File gm.mac ******
+
+;===============================	register & constant definition
+g.csr	=	177600
+;-------------------------------	errors
+err.00	=	100000			; no memory
+err.01	=	100001			; invalid parameters
+err.02	=	100002			; no raster
+err.03	=	100003			; to many rasters
+err.04	=	100004			; very complex contour
+;===============================	masro-definitions
+.macro CM3...	arg,offse,ins,bb
+.if nb <arg>
+  .if idn <arg>,#0
+	clr'bb	offse(0)
+  .iff
+	mov'bb	arg,offse(0)
+  .endc
+.endc
+.if nb <ins>
+	mov	r0, @#g.csr
+	nop
+.endc
+.endm
+;-------------------------------	create graphic raster
+G.CREA	=	0
+.macro	GCREA	area,width,height,modpal
+	cm5...	area,g.crea
+	cm3...	width,2
+	cm3...	height,4
+	cm3...	modpal,6,%
+.endm
+;-------------------------------	kill raster, its plane & views
+G.KILL	=	1
+.macro	GKILL	area,ident
+	cm5...	area,g.kill
+	cm3...	ident,2,%
+.endm
+;-------------------------------	clear raster	
+G.CLRR	=	2
+.macro	GCLRR	area,ident
+	cm5...	area,g.clrr
+	cm3...	ident,2,%
+.endm
+;-------------------------------	set aspect ratio
+G.ASP	=	3
+.macro	GASP	area,ident,xcmp,ycmp
+	cm5...	area,g.asp
+	cm3...	ident,2
+	cm3...	xcmp,4
+	cm3...	ycmp,6,%
+.endm
+;-------------------------------	set window
+G.WNDW	=	4
+.macro	GWNDW	area,ident,x1,y1,x2,y2
+	cm5...	area,g.wndw
+	cm3...	ident,2
+	cm3...	x1,4
+	cm3...	y1,6
+	cm3...	x2,8.
+	cm3...	y2,10.,%
+.endm
+;-------------------------------	set colors
+G.FGC	=	5			; i foreground
+G.BGC	=	6			; i background
+.macro	GFGC	area,ident,color
+	cm5...	area,g.fgc
+	cm3...	ident,2
+	cm3...	color,4,%
+.endm
+.macro	GBGC	area,ident,color
+	cm5...	area,g.bgc
+	cm3...	ident,2
+	cm3...	color,4,%
+.endm
+;-------------------------------	set raster operation
+G.ROP	=	7
+.macro	GROP	area,ident,code
+	cm5...	area,g.rop
+	cm3...	ident,2
+	cm3...	code,4,%
+.endm
+;-------------------------------	set line pattern
+G.TYPE	=	8.
+.macro	GTYPE	area,ident,type
+	cm5...	area,g.type
+	cm3...	ident,2
+	cm3...	type,4,%
+.endm
+;-------------------------------	set figure pattern
+G.PTRN	=	9.
+.macro	GPTRN	area,ident,addr
+	cm5...	area,g.ptrn
+	cm3...	ident,2
+	cm3...	addr,4,%
+.endm
+;-------------------------------	move to point
+G.MOVE	=	10.
+.macro	GMOVE	area,ident,x,y
+	cm5...	area,g.move
+	cm3...	ident,2
+	cm3...	x,4
+	cm3...	y,6,%
+.endm
+;-------------------------------	draw point
+G.DOT	=	11.
+.macro	GDOT	area,ident,x,y
+	cm5...	area,g.dot
+	cm3...	ident,2
+	cm3...	x,4
+	cm3...	y,6,%
+.endm
+;-------------------------------	get value of pixel
+G.GET	=	12.
+.macro	GGET	area,ident,x,y
+	cm5...	area,g.get
+	cm3...	ident,2
+	cm3...	x,4
+	cm3...	y,6,%
+.endm
+;-------------------------------	draw line
+G.LINE	=	13.
+.macro	GLINE	area,ident,x,y
+	cm5...	area,g.line
+	cm3...	ident,2
+	cm3...	x,4
+	cm3...	y,6,%
+.endm
+;-------------------------------	draw arc
+G.ARCC	=	14.			; i counter-clock-wise
+G.ARCW	=	15.			; i clock-wise
+.macro	GARCC	area,ident,xc,yc,xf,yf
+	cm5...	area,g.arcc
+	cm3...	ident,2
+	cm3...	xc,4
+	cm3...	yc,6
+	cm3...	xf,8.
+	cm3...	yf,10.,%
+.endm
+.macro	GARCW	area,ident,xc,yc,xf,yf
+	cm5...	area,g.arcw
+	cm3...	ident,2
+	cm3...	xc,4
+	cm3...	yc,6
+	cm3...	xf,8.
+	cm3...	yf,10.,%
+.endm
+;-------------------------------	contour filling (figure)
+G.FILL	=	16.
+.macro	GFILL	area,ident,x,y
+	cm5...	area,g.fill
+	cm3...	ident,2
+	cm3...	x,4
+	cm3...	y,6,%
+.endm
+;-------------------------------	move block from RAM to VRAM
+G.RVR	=	17.
+.macro	GRVR	area,ident,x,y,addr
+	cm5...	area,g.rvr
+	cm3...	ident,2
+	cm3...	x,4
+	cm3...	y,6
+	cm3...	addr,8.,%
+.endm
+;-------------------------------	move block from VRAM to RAM
+G.VRR	=	18.
+.macro	GVRR	area,ident,x1,y1,x2,y2,addr
+	cm5...	area,g.vrr
+	cm3...	ident,2
+	cm3...	x1,4
+	cm3...	y1,6
+	cm3...	x2,8.
+	cm3...	y2,10.
+	cm3...	addr,12.,%
+.endm
+;-------------------------------	move block from VRAM to VRAM
+G.VRVR	=	19.
+.macro	gvrvr	area,ident,x1,y1,x2,y2,x,y
+	cm5...	area,g.vrvr
+	cm3...	ident,2
+	cm3...	x1,4
+	cm3...	y1,6
+	cm3...	x2,8.
+	cm3...	y2,10.
+	cm3...	x,12.
+	cm3...	y,14.,%
+.endm

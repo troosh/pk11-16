@@ -1,0 +1,18 @@
+	.title	vwkill
+WCSR = 177530
+VWKILL::
+	CLR	ERR$FL
+	MOV	#6,@2(SP)
+	MOV	2(SP),@#WCSR
+	NOP
+	TST	@2(SP)
+	BMI	1$
+	INC	ERR$FL
+	MOV	R1,-(SP)
+	MOV	4(SP),R1
+	CLR	2(R1)
+	MOV	(SP)+,R1
+1$:
+	MOV	(SP)+,(SP)
+	RETURN
+	.END

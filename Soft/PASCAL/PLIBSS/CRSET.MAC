@@ -1,0 +1,21 @@
+	.title	crset
+WCSR = 177530
+CRSET::
+	MOV	R1,-(SP)
+	CLR	ERR$FL
+	MOV	SP,R1
+	SUB	#6,SP
+	MOV	#22.,(SP)
+	MOV	6(R1),2(SP)
+	MOV	4(R1),4(SP)
+	MOV	SP,@#177530
+	TST	(SP)
+	BMI	1$
+	INC	ERR$FL
+1$:
+	MOV	R1,SP
+	MOV	(SP)+,R1
+	MOV	(SP)+,2(SP)
+	TST	(SP)+
+	RETURN
+	.END

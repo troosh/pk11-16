@@ -1,0 +1,4 @@
+	.TITLE ERRFL
+ERR$FL::
+	.WORD	0
+	.END

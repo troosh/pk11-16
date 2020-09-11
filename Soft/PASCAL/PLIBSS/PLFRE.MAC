@@ -1,0 +1,13 @@
+	.title	plfre
+WCSR = 177530
+PLFRE::
+	CLR	ERR$FL
+	MOV	#16.,@2(SP)
+	MOV	2(SP),@#WCSR
+	TST	@2(SP)
+	BMI	1$
+	INC	ERR$FL
+1$:
+	MOV	(SP)+,(SP)
+	RETURN
+	.END

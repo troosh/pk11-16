@@ -1,0 +1,19 @@
+	.TITLE	PROVEC
+.INCLUDE	"P12MAC"
+PROVEC::
+	MOV	R0,-(SP)
+	CLR	10.(SP)
+	CLR	@4(SP)
+	MOV	8.(SP),R0
+	PROVEC	6(SP)
+	BCS	1$
+	INC	10.(SP)
+	BR	2$
+1$:
+	MOV	R0,@4(SP)
+2$:
+	MOV	(SP)+,R0
+	MOV	(SP)+,4(SP)
+	CMP	(SP)+,(SP)+
+	RETURN
+	.END

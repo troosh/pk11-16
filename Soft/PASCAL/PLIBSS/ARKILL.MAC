@@ -1,0 +1,21 @@
+	.title	arkill
+WCSR = 177530
+ARKILL::
+	MOV	R1,-(SP)
+	CLR	ERR$FL
+	MOV	SP,R1
+	SUB	#4,SP
+	MOV	#2,(SP)
+	MOV	@4(R1),2(SP)
+	MOV	SP,@#WCSR
+	NOP
+	TST	(SP)
+	BMI	1$
+	INC	ERR$FL
+	CLR	@4(R1)
+1$:
+	MOV	R1,SP
+	MOV	(SP)+,R1
+	MOV	(SP)+,(SP)
+	RETURN
+	.END

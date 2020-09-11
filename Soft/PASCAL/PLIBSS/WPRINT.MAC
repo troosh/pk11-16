@@ -1,0 +1,24 @@
+	.title	wprint
+WCSR = 177530
+WPRINT::
+	MOV	R1,-(SP)
+	MOV	SP,R1
+	CLR	ERR$FL
+	SUB	#10.,SP
+	MOV	#36.,(SP)
+	MOV	10.(R1),2(SP)
+	MOV	6.(R1),4(SP)
+	MOV	8.(R1),6(SP)
+	MOV	4(R1),8.(SP)
+	MOV	SP,@#WCSR
+	NOP
+	TST	(SP)
+	BMI	1$
+	INC	ERR$FL
+1$:
+	MOV	R1,SP
+	MOV	(SP)+,R1
+	MOV	(SP),8.(SP)
+	ADD	#8.,SP
+	RETURN
+	.END
