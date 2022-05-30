@@ -65,10 +65,101 @@ open GRAPH, "> graph.gv" || die "Can't open file graph.gv\n";
 
 print GRAPH "digraph pk11 {\nrankdir=LR;\nranksep=\"4 equally\";\nnode [shape=record;fontsize=24];\n";
 
+sub uniq {
+    my %seen;
+    grep !$seen{$_}++, @_;
+}
 
 $nl=3;
 sub check_r
 {
+        if(defined $r)
+        {
+		if((substr($r,-3) eq ".oe")) {
+			$cur_v = $v;
+
+			my $register = ($r =~ /^rf/);
+			# Только у ПЛМки VB реально используются буфера с 3 состояниями у регистров
+			# (у остальных они занулены), - можно оптимизировать RTL код
+			my $remove_reg_buf = ($fw ne "VB" && $cur_v eq "OE");
+
+
+			$prev_v =~ s#\+#\ |#g;
+			$prev_v =~ s#\/#\~#g;
+
+ # DEBUG
+ @outs = uniq(sort($prev_v =~ /(~?o\d+)/g));
+ print "!!! $fw/$prev_r: ", join(", ", @outs), "\n" if @outs;
+
+			$cur_v =~ s#\+#\ |#g;
+			$cur_v =~ s#\/#\~#g;
+			$cur_v = "vcc" if $remove_reg_buf;
+			$cur_v =~ s/^OE/oe_n/;
+
+			# Перенос инверсии с выхода на вычисляемое выражение
+			if($prev_n eq '/') {
+				$prev_v = "~($prev_v)";
+			} else {
+				if ($register) {
+					# Что сброс влиял на всё выражение (вроде в прошивках не встречается, где это можно проверить)
+					printf "$fw";
+					die;
+					$prev_v = "($prev_v)" if $register;
+				}
+			}
+
+			# Отрабатываем константу "1"
+			$prev_v =~ s/^~\(vcc\)$/1'b0/;
+			$prev_v =~ s/^vcc$/1'b1/;
+
+			push @RTL_CODE, "reg $prev_r;" if $register && !$remove_reg_buf;
+			push @RTL_CODE, "always @(posedge clk || !rst_n)" if $register;
+			if ($cur_v eq "vcc" || $register) {
+				$rval  = "$prev_v;";
+			} else {
+				$rval = "($cur_v)? $prev_v : 1'bz;";
+			}
+			if($register) {
+				if (($fw eq "V1" && $prev_r eq "rf17") || ($fw eq "V3" && $prev_r eq "rf13"))
+				{
+					# Чтобы xbus и ybus считали именно с нуля, то по сбору нужно сбрасывать в ноль
+					# только выходы rf17 у V1 и выход rf13 у V3
+					push @RTL_CODE, "\t$prev_r <= rst_n & $rval";
+				} else {
+					push @RTL_CODE, "\t$prev_r <= ~rst_n | $rval";
+				}
+			} else {
+				push @RTL_CODE, "assign $prev_r = $rval";
+			}
+
+			push @RTL_OUTPUTS, $register? ($remove_reg_buf? "output reg ${prev_r}"
+								      : "output ${prev_r}_buf")
+						    : (($cur_v eq "vcc")? "output "
+									: "inout ") . $prev_r;
+
+			if ($register && !$remove_reg_buf)
+			{
+				if ($cur_v eq "vcc") {
+					push @RTL_CODE, "assign ${prev_r}_buf = $prev_r;"; 
+				} else {
+					push @RTL_CODE, "assign ${prev_r}_buf = ($cur_v)? $prev_r : 1'bz;"; 
+				}
+			}
+			push @RTL_CODE, "";
+
+			$RTL_USE_CLK = 1 if $register;
+			$RTL_USE_OE = 1 if $cur_v =~ /oe_n/;
+			foreach $i ($prev_v =~ /i\d+/g) { $RTL_INPUTS{$i} = 1; }
+			foreach $i ($cur_v =~ /i\d+/g ) { $RTL_INPUTS{$i} = 1; }
+		}
+		else
+		{
+			$prev_n = $n;
+			$prev_r = $r;
+			$prev_v = $v;
+		}
+	}
+
         if(defined $r and !(substr($r,-3) eq ".oe" and ($v eq "vcc" or ($chip ne "VB" and $v eq "OE"))))
         {
              $r = uc($r);
@@ -166,7 +257,7 @@ for $jedfile (@JEDFILES)
 #printf "\n\n[[$jedfile]] => [[%s]]\n\n", readlink($jedfile);
 $chip = dirname($jedfile) . '/'. basename(readlink($jedfile), qw(.jed .JED));
 open FILE, "< $chip.eqn" || die "Can't open file $chip.eqn\n";
-#open RTL, "> $chip.v" || die "Can't open file $chip.v\n";
+open RTL, "> $chip.v" || die "Can't open file $chip.v\n";
 
 $chip_text = $chip . "  (" . basename($jedfile). ")";
 $chip_text =~ s/([_])/\\$1/g;
@@ -182,9 +273,16 @@ $fw=$firmware; ####################3
 $FWused{$firmware}=1;
 $type=dirname(dirname($jedfile));
 print GRAPH "# <<< $firmware >>>\n";
+print RTL "module $fw(\n\t";
 undef %OUTPUTS;
 undef %INPUTS;
 undef %FEEDBACKS;
+undef %RTL_INPUTS;
+undef @RTL_INPUTS;
+undef @RTL_OUTPUTS;
+undef @RTL_CODE;
+$RTL_USE_CLK = 0;
+$RTL_USE_OE = 0;
 
 while(<FILE>)
 {
@@ -224,6 +322,19 @@ while(<FILE>)
 check_r() if defined $r;
 $nl=0;
 print TEX " \\end{eqnarray*}\n\\pagebreak[1]\n\n";
+
+foreach $i (sort { my @a=$a=~/^(\w+)(\d+)/; my @b=$b=~/^(\w+)(\d+)/; $a[0] cmp $b[0] || $a[1] <=> $b[1] } keys %RTL_INPUTS) { push @RTL_INPUTS, "input $i"; }
+
+undef @RTL_SHADOW_INPUTS;
+push @RTL_SHADOW_INPUTS, "input rst_n", if $RTL_USE_CLK;
+push @RTL_SHADOW_INPUTS, "input clk",   if $RTL_USE_CLK;
+push @RTL_INPUTS, "input oe_n",         if $RTL_USE_OE;
+print RTL join(",\n\t", @RTL_SHADOW_INPUTS, @RTL_INPUTS, @RTL_OUTPUTS);
+print RTL ");\n\n\t";
+print RTL join("\n\t", @RTL_CODE);
+print RTL "\nendmodule\n";
+
+#exit if $fw eq "V7";
 
 undef @INPS;
 undef @OUTS;
