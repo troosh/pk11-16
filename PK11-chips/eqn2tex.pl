@@ -112,27 +112,33 @@ sub check_r
 			$prev_v =~ s/^~\(vcc\)$/1'b0/;
 			$prev_v =~ s/^vcc$/1'b1/;
 
-			push @RTL_CODE, "reg $prev_r;" if $register && !$remove_reg_buf;
-			push @RTL_CODE, "always @(posedge clk || !rst_n)" if $register;
+			if($register) {
+				# Чтобы xbus и ybus считали именно с нуля, чтобы первый VSYNC не был очень динным
+				# то по сбору нужно сбрасывать в ноль только  выходы rf13/rf17 у "V3",
+				# выходы rf17/15 у "V9", а также, у все регистры у "V1" и у "V4".
+ 				$init_val = 1;
+				if (($fw eq "V1") || ($fw eq "V4") || ($fw eq "V9") ||
+				    ($fw eq "V2" && ($prev_r eq "rf16"||$prev_r eq "rf17")) ||
+				    ($fw eq "V3" && ($prev_r eq "rf13" || $prev_r eq "rf17"))
+				   )
+				{
+					$init_val = 0;
+				}
+			}
+			push @RTL_CODE, "reg $prev_r = $init_val;" if $register && !$remove_reg_buf;
+			push @RTL_CODE, "always @(posedge clk)" if $register;
 			if ($cur_v eq "vcc" || $register) {
 				$rval  = "$prev_v;";
 			} else {
 				$rval = "($cur_v)? $prev_v : 1'bz;";
 			}
 			if($register) {
-				if (($fw eq "V1" && $prev_r eq "rf17") || ($fw eq "V3" && $prev_r eq "rf13"))
-				{
-					# Чтобы xbus и ybus считали именно с нуля, то по сбору нужно сбрасывать в ноль
-					# только выходы rf17 у V1 и выход rf13 у V3
-					push @RTL_CODE, "\t$prev_r <= rst_n & $rval";
-				} else {
-					push @RTL_CODE, "\t$prev_r <= ~rst_n | $rval";
-				}
+				push @RTL_CODE, "\t$prev_r <= " . ($remove_reg_buf? "#25":"#15") . " $rval";
 			} else {
-				push @RTL_CODE, "assign $prev_r = $rval";
+				push @RTL_CODE, "assign #25 $prev_r = $rval";
 			}
 
-			push @RTL_OUTPUTS, $register? ($remove_reg_buf? "output reg ${prev_r}"
+			push @RTL_OUTPUTS, $register? ($remove_reg_buf? "output reg ${prev_r} = $init_val"
 								      : "output ${prev_r}_buf")
 						    : (($cur_v eq "vcc")? "output "
 									: "inout ") . $prev_r;
@@ -140,9 +146,9 @@ sub check_r
 			if ($register && !$remove_reg_buf)
 			{
 				if ($cur_v eq "vcc") {
-					push @RTL_CODE, "assign ${prev_r}_buf = $prev_r;"; 
+					push @RTL_CODE, "assign #10 ${prev_r}_buf = $prev_r;"; 
 				} else {
-					push @RTL_CODE, "assign ${prev_r}_buf = ($cur_v)? $prev_r : 1'bz;"; 
+					push @RTL_CODE, "assign #10 ${prev_r}_buf = ($cur_v)? 1'bz : $prev_r;"; 
 				}
 			}
 			push @RTL_CODE, "";
@@ -273,7 +279,7 @@ $fw=$firmware; ####################3
 $FWused{$firmware}=1;
 $type=dirname(dirname($jedfile));
 print GRAPH "# <<< $firmware >>>\n";
-print RTL "module $fw(\n\t";
+print RTL "`timescale 1ns/100ps\nmodule $fw(\n\t";
 undef %OUTPUTS;
 undef %INPUTS;
 undef %FEEDBACKS;
@@ -330,7 +336,7 @@ push @RTL_SHADOW_INPUTS, "input rst_n", if $RTL_USE_CLK;
 push @RTL_SHADOW_INPUTS, "input clk",   if $RTL_USE_CLK;
 push @RTL_INPUTS, "input oe_n",         if $RTL_USE_OE;
 print RTL join(",\n\t", @RTL_SHADOW_INPUTS, @RTL_INPUTS, @RTL_OUTPUTS);
-print RTL ");\n\n\t";
+print RTL "\n  );\n\n\t";
 print RTL join("\n\t", @RTL_CODE);
 print RTL "\nendmodule\n";
 
