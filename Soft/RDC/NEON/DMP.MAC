@@ -1,0 +1,1860 @@
+;	DUAL MODULE PLAYER v2.10beta
+;	(C) 1994 by Russian Digital Computing, inc.
+
+	.MCALL	.CSTAT,.CSIGEN,.TTYIN,.TTYOUT,.SCCA,.GTLIN,.DSTAT
+	.MCALL	.EXIT,.PRINT,.READW,.CLOSE,.PURGE,.READ,.WAIT,.LOOKUP
+
+	.INCLUD	/FILMAC.MAC/
+
+	.MACRO	VERSION
+	.ASCII	/2.11/
+	.ENDM
+
+	.MACRO	DATIME
+	.ASCII	/02-Nov-94 19:48:43/
+	.ENDM
+
+	.MACRO	PRINT	ARG
+	MOV	ARG,-(sp)
+	call	prin
+	.ENDM
+
+	.macro	R
+	halt
+	.endm
+
+	.macro	RM	arg1,arg2
+	mov	arg1,R4
+	.irp	arg,<arg2>
+	mov	R4,arg
+	.endr
+	.endm	RM
+
+	.macro	CM	arg1
+	.irp	arg,<arg1>
+	CLR	arg
+	.endr
+	.endm	CM
+
+	UR1	= 161222
+	UR2	= UR1+2
+	UR3	= UR2+2
+	UR4	= UR3+2
+	UR5	= UR4+2
+	UR6	= UR5+2
+
+	DMPCSR	= 177574
+	RET	= 207
+	defext	= ^RMOD
+
+	.ASECT
+
+	.=0
+
+	.WORD	"PC,0,2,177777
+	.ASCIZ	/DualModulePlayer/
+
+	.=1000
+
+BEGIN:	BR	BGRR
+	BR	PRSTRT
+F10BIT:	WAIT
+BGRR:	MOV	@#4,TRAP
+	MFPS	TRAPS
+	MOV	#AAAA,@#4
+	MOV	@#161220,@#161220
+	MOV	TRAP,@#4
+	MTPS	TRAPS
+	JMP	AA3
+AAAA:	MOV	TRAP,@#4
+	MTPS	TRAPS
+	.PRINT	#ONLY
+	.EXIT
+
+KSTRIN:	.WORD	223
+PROREG:	.WORD	DMPCSR,0,0,2000,123456,-1
+ARFIL:	.BLKW	10.
+
+PRSTRT:	INC	FPRC
+	CLR	FCHAN
+	CLR	NCP
+	MOV	#FCOVO,R4
+	CALL	CORECT
+	MOV	#11,@#174152	;SET PRIORITY
+	NOP
+	MOV	#PROREG,@#174160
+	NOP
+	MOV	#KSTRIN,@#174106
+	NOP
+BPRC:	call	kset
+	MOV	#514,LPLAY
+	MOV	#514,LPMAX
+	MOV	#1000,SP
+	MOV	#0,@#174164	;WAITINT
+	NOP
+	TST	@#DMPCSR
+	BPL	10$
+	MOV	@#DMPCSR,R0
+	BIC	#174000,R0
+	BEQ	10$
+	MOV	R0,LPLAY
+	MOV	R0,LPMAX
+10$:	CLR	-(SP)
+bploa:	TST	FCHAN
+	BEQ	30$
+	.PURGE	CHAN
+30$:	call	kset
+	FILCSI	#ARFIL,(SP)+,#prost,#0,#defext
+	tst	ARFIL+14
+	BEQ	BPRC
+	.LOOKUP	#AREA,#0,#ARFIL+12
+	bcc	10$
+	CMP	ARFIL+20,#defext
+	BNE	20$
+	MOV	#^RMOD,ARFIL+20
+	.LOOKUP	#AREA,#0,#ARFIL+12
+	BCC	10$
+20$:	MOV	#FLERR,-(SP)
+	call	beep
+	BR	bploa
+10$:	bic	#100000,kstrin+2
+	MOV	#KSTRIN,@#174106
+	mov	sp,kst
+	MOVB	@#52,CHAN
+	INC	FCHAN
+	.CSTAT	#AREA,CHAN,#STAT
+	MOV	#1000,SP
+	JMP	BEGL
+
+
+AA3:	PRINT	#FRAM		;Запускаемся...
+	CLR	FPRC
+BGGA:	MOV	#3,CHAN
+	CLR	FSPEAK
+	CLR	PCF
+	CLR	NCP
+	MOV	#514,LPLAY
+	.PURGE	#3
+	MOV	#760,SP
+	.GTLIN	#cstr,#WELCOM
+	.CSIGEN	#PREND,#DEXT1,#cstr
+	bcc	20$
+	CMPB	@#52,#4
+	BNE	1$
+	MOV	#760,SP
+	.CSIGEN	#PREND,#DEXT2,#cstr
+	BCC	20$
+1$:	movB	@#52,R5
+	ASL	R5
+	PRINT	ERRTAB(R5)
+	BR	BGGA
+10$:	BIS	#40,R0
+	MOVB	R0,OPTION
+	PRINT	#ERROPT
+	BR	BGGA
+20$:	CLR	BLEN-2
+	.CSTAT	#AREA,#3,#STAT
+	BCC	30$
+	PRINT	#INF
+	br	BGGA
+30$:	TST	BLEN-2
+	BNE	50$
+	.DSTAT	#DSTAT,#BLEN+6
+	tst	dstat
+	bmi	40$
+	PRINT	#ERRNED
+	BR	BGGA
+40$:	PRINT	#ERRIM
+	BR	BGGA
+50$:	MOV	#FCOVO,R4
+	MOV	(SP)+,R5
+	BEQ	120$
+60$:	CLR	R1
+	MOV	(SP)+,R0
+	BPL	70$
+	MOV	(SP)+,R1
+70$:	CMPB	#'D,R0
+	BNE	80$		;играем на динамик
+	MOV	#FSPEA,R4
+	INC	FSPEAK
+	BR	110$
+80$:	CMPB	#'N,R0
+	BNE	91$
+	TST	R1
+	BNE	90$
+	INC	R1		;играем R1 раз
+90$:	MOV	R1,NCP
+	BR	110$
+91$:	CMPB	#'T,R0
+	BNE	100$
+	TST	R1
+	BEQ	10$
+	CMP	#4000,R1
+	BLO	10$
+	MOV	R1,LPLAY
+	BR	110$
+100$:	CMPB	#'P,R0
+	BNE	10$
+	TST	R1
+	BEQ	10$
+	MOV	R1,PCF
+110$:	SOB	R5,60$
+120$:	CALL	CORECT
+begl:	MOV	LPLAY,R0
+	ASL	R0
+	TST	(R0)+
+	MOV	R0,LONG
+	PRINT	#CUR
+	cmp	blen,#5
+	blo	noform
+	CLR	FMOD	;*.STM
+
+;	MOV	#7633,@#174100	;HEADER LOADING
+;	NOP
+
+	CLR	FER	;признак ошибки
+	.READW	#AREA,CHAN,#INTAB,#1110,#0	;Грузим заголовок
+	BCC	10$
+	inc	FER
+	PRINT	#ERR		;Если ошибка
+	JMP	EXIT		;тогда выходим
+10$:	mov	#INTAB+24,R0	;Проверка метки !Scream!
+	mov	#SCREAM,R1
+	mov	#4,R2
+20$:	cmp	(R0)+,(R1)+
+	bne	30$
+	sob	R2,20$
+	br	ok3		;всё о.к.
+30$:	mov	#INTAB+24,R0	;Проверка метки BMOD2STM
+	mov	#MOD2ST,R1
+	mov	#4,R2
+40$:	cmp	(R0)+,(R1)+
+	bne	50$
+	sob	R2,40$
+	br	ok3		;всё о.к.
+50$:	mov	#INTAB+24,R0	;Проверка метки SWavePro
+	mov	#SWAVEP,R1
+	mov	#4,R2
+60$:	cmp	(R0)+,(R1)+
+	bne	70$
+	sob	R2,60$
+	br	ok3		;всё о.к.
+70$:	cmp	intab+2070,#"M.	;проверка метки M.K.
+	bne	noform
+	CMP	INtab+2072,#"K.
+	bne	noform
+	INC	FMOD
+	call	cnhead
+	br	ok3
+NOFORM:	TST	FPRC
+	BEQ	10$
+	.PURGE	CHAN
+	MOV	#FLNF,-(SP)
+	call	beep
+	JMP	BPLOA
+10$:	PRINT	#NF		;Ошибка формата
+	jmp	BGGA
+ok3:	MOVB	INTAB+41,R0	;RO - количество PATTERN'ов
+	ble	noform		;Если нет ни одного или глюк
+	movb	R0,lenpat
+	mov	R0,R1
+	asl	R1
+	add	#3,R1
+	cmp	blen,R1
+	blo	noform		;Если глюк
+	mov	#200,R5
+	mov	#intab+2020,R1
+	clr	R2
+10$:	movb	(R1)+,R3
+	bmi	30$
+	cmpb	#100,R3
+	blos	30$
+	cmpb	R3,R2
+	blos	20$
+	movb	R3,R2
+20$:	sob	R5,10$
+30$:	cmp	#200,R5
+	beq	noform		;Если нет ни одного position'а
+	inc	R2
+	cmp	R2,R0
+	bhis	40$
+	movb	R2,lenpat	;Если PATTERN'ов меньше чем кажется
+40$:	TST	FPRC
+	BNE	41$
+	.SCCA	#AREA,#SSTERM
+	CLR	@#177560
+41$:	CLR	R0
+	MOV	#137,(R0)+
+	MOV	#EXIT,(R0)
+	CLR	INTAB+24	;Если нет нуля в конце
+	CLR	R0
+	BISB	INTAB+40,R0
+	add	#10,R0
+	ash	#-4,R0
+	MOVB	R0,TEMP		;Темп воспроизведения по умолчанию
+	MOV	LENPAT,R0
+	DEC	R0		;Вычисляем, сколько раз
+	ASR	R0		;по 4кб
+	ASR	R0		;и учитываем 16кб
+	ADD	#5,R0		;таблицы громкостей (5=4+1)
+	mov	R0,-(sp)
+	MOV	#31.,R5		;Цикл по 31 инструменту
+	MOV	#INTAB+100,R2	;Адрес середины первой записи в списке
+50$:	clr	qc
+	CLR	12(R2)		;Длина зацикл. = 0
+	MOV	(R2),R1
+	CLR	(R2)
+	CMP	#17,R1		;Если инструмент слишком мал
+	BHIS	110$		;тогда не грузим
+	MOV	R1,R3
+	DEC	R3
+	CLC
+	ROR	R3
+	ASH	#-3,R3
+	INC	R3		;Выясняем, сколько раз по 16 байт в инстр.
+	ADD	-2(R2),R3	;Прибавляем адрес в файле
+	BMI	110$
+	DEC	R3
+	ASH	#-5,R3		;Пересчитываем в блоки
+	CMP	BLEN,R3		;Если выходит за границу файла, не грузим
+	BLOS	110$
+	MOV	R1,(R2)
+	MOV	2(R2),R3
+	MOV	4(R2),R4
+	bne	60$
+	dec	R4
+60$:	CMP	#-1,R4		;Если нет зацикл.
+	BEQ	100$
+	CMP	PCF,#1		;!!!!!!!!!
+	BHI	100$		;!!!!!!!!!
+	CMP	R1,R4
+	BLO	70$
+	MOV	R4,R1		;Если нонсенс
+70$:	SUB	R3,R4
+	BLOS	100$		;Опять нонсенс
+	MOV	R1,(R2)
+	MOV	R4,4(R2)
+	SUB	R4,R1
+	MOV	R1,2(R2)
+	MOV	R4,R1		;В R1 копия длины для суммирования
+	CLR	R3
+80$:	CMP	LONG,R1		;Вычисляем, сколько раз повторять
+	BLOS	90$		;область зацикливания
+	ADD	R4,R1	
+	SOB	R3,80$		;R3 - счётчик повторений
+90$:	NEG	R3
+	MOV	R3,14(R2)	;Кол-во повторений области зацикл.
+	MOV	R1,12(R2)	;Новая длина зацикл.	
+	ADD	2(R2),R1	;дл. обл. зацикл. + нач. байт зацикл.
+	adc	qc
+
+100$:	ADD	LONG,R1
+	adc	qc
+	sub	#1,R1
+	sbc	qc
+	ror	qc
+	ROR	R1
+	clc
+	ROR	R1
+	ASH	#-12,R1
+	INC	R1		;в R1 длина инструмента в 4-кб сегментах
+	ADD	R1,R0
+110$:	ADD	#40,R2		;переходим на следующую позицию в списке
+	DEC	R5
+	BNE	50$
+	cmp	(sp)+,R0
+	bne	120$
+	jmp	noform
+120$:	MOV	R0,R5		;В R0 - кол-во занимаемых 4-кб сегментов
+	SUB	#4,R5
+	MOV	#40000,R1
+	CLR	R0
+	DIV	R5,R0
+	MOV	R0,INCREM
+	MOV	R1,LENGTH
+	ADD	#3,R5
+	ASR	R5
+	INC	R5		;в R5 - кол-во занимаемых 8-кб сегментов
+	MOV	R5,LENSEG
+	MOV	R5,@#174200	;GET8K
+	NOP
+	BCC	130$
+	TST	FPRC
+	BEQ	111$
+
+	MOV	#FLMEM+7,R2
+	MOV	#40,R1
+	MOVB	R1,(R2)+	;забиваем пробелами поле числа
+	MOVB	R1,(R2)+
+	MOVB	R1,(R2)+
+	MOVB	R1,(R2)+
+	CALL	DECOUT		;выводим необх. память в десятичном виде
+
+	MOV	#FLMEM,-(SP)	;адрес сообщения о нехватке памяти
+	call	beep
+	JMP	BPLOA
+
+111$:	PRINT	#TOUT
+	MOV	#MRNEED,R2
+	CALL	DECOUT
+	PRINT	R2
+	MOV	R0,R5
+	MOV	#MRFREE,R2
+	CALL	DECOUT
+	PRINT	R2
+	JMP	EXIT
+130$:	MOV	#FREMEM,@#2
+	PRINT	#IM		;Выводим имя модуля
+	MOV	R0,FIRSEG	;в R0 - код первого свободного сегмента
+	MOV	#TRIB,R0
+	mov	R0,oldr
+	mov	#40,R1
+	movb	#'▒,(R0)+
+	sob	R1,.-4
+	movb	#200,(R0)+
+	print	#lrib
+	movb	#200,trib
+	print	#lrib
+	CALL	RIBB
+PLOAD:
+;	MOV	#7732,@#174100
+;	NOP
+
+	MOV	LENPAT,Q1	;Q1 - кол-во PATTERN'ов
+	MOV	FIRSEG,TEKSEG
+	ADD	#100,TEKSEG	;код первого сегмента загрузки
+	MOV	#2,Q3		;Q3 - начальный блок для загрузки
+	CALL	LDPAT
+	br	20$
+10$:	CALL	LDPAT
+	mov	#2000,R5
+	CALL	CONPAT
+20$:	tst	fprc
+	bne	40$
+	.WAIT	CHAN
+30$:	BCC	60$
+	BR	50$
+40$:	TSTB	@#177130
+	BPL	40$
+	TSTB	@#177131
+	BEQ	60$
+50$:	INC	FER
+	JMP	ERR2
+60$:	ADD	#10,Q3
+	add	#20,tekseg
+	mov	Q1,R5
+	SUB	#4,Q1
+	BGT	10$
+	ash	#10,R5
+	CALL	CONPAT
+SLOAD:	MOV	#INTAB,Q1	;Q1 - адрес в таблице инструментов
+	MOV	#INTAB+100,Q3	;Q3 - адрес в STM-списке инструментов
+	MOV	#31.,Q7		;Q7 - макс. количество инструментов
+10$:	MOV	Q1,R0
+	MOV	Q3,R1
+	TST	(R1)		;Если длина=0... 
+	BNE	20$
+	CLR	(R0)+		;...тогда переходим к след. инстр.
+	CLR	(R0)+
+	CLR	(R0)+
+	MOV	#157600,(R0)+
+	MOV	R0,Q1
+	JMP	280$
+20$:	MOV	12(R1),R2
+	BEQ	30$		;Если нет зацикливания
+	DEC	R2
+	CLC
+	ROR	R2
+	ASH	#-13,R2
+	INC	R2
+	ASH	#4,R2
+30$:	MOV	R2,(R0)+	;1 элемент списка
+	SWAB	R2
+	SUB	12(R1),R2
+	MOV	R2,(R0)+	;2 элемент
+40$:	MOVB	6(R1),R2
+	BEQ	50$
+	DEC	R2
+50$:	BIC	#177700,R2
+	SWAB	R2
+	SUB	#157600,R2
+	NEG	R2
+	MOV	TEKSEG,(R0)+	;3 элемент - начальный сегмент
+	MOV	R2,(R0)+	;4 элемент - громкость по умолчанию
+	MOV	R0,Q1
+	MOV	-2(R1),R0
+	MOV	R0,R2
+	ASH	#4,R2
+	tst	fmod
+	beq	17$
+	ADD	-4(R1),R2	;для *.mod файлов
+17$:	BIC	#177000,R2
+	SUB	#40000,R2
+	NEG	R2
+	MOV	R2,Q4		;Q4 - адрес загрузки
+
+	ASH	#-5,R0
+	MOV	R0,Q5		;Q5 - начальный блок
+	MOV	(R1),Q6		;Q6 - счётчик длины инструмента
+
+60$:	MOV	TEKSEG,UR2
+	MOV	Q6,R2
+	CMP	R2,#10000
+	BLOS	70$
+	MOV	#10000,R2
+70$:	SUB	Q4,R2
+	ADD	#40000,R2
+	DEC	R2
+	ASR	R2
+	INC	R2		;в R2 - длина в словах
+
+;	MOV	#7553,@#174100
+;	NOP
+
+	.READW	#AREA,CHAN,Q4,R2,Q5
+	BCC	80$
+	INC	FER
+	JMP	ERR2
+80$:	ADD	#10,Q5
+	CALL	INCRIB
+
+;	MOV	#7771,@#174100
+;	NOP
+
+	MOV	Q6,R2		;конвертируем инструменты
+	MOV	#401,R5
+	CMP	#10000,R2
+	BLO	90$
+	MOV	R2,R4
+	BIC	#177760,R4
+	CLC
+	ROR	R2
+	ASH	#-3,R2
+	BEQ	120$
+	BR	100$
+90$:	MOV	#400,R2
+	CLR	R4
+100$:	MOV	#40000,R3
+110$:	BIS	R5,(R3)+	;Устанавливаем младший бит
+	BIS	R5,(R3)+
+	BIS	R5,(R3)+
+	BIS	R5,(R3)+
+	BIS	R5,(R3)+
+	BIS	R5,(R3)+
+	BIS	R5,(R3)+
+	BIS	R5,(R3)+
+	SOB	R2,110$		;чтобы опознавать конец инструмента
+120$:	TST	R4
+	BEQ	140$
+130$:	BISB	R5,(R3)+
+	SOB	R4,130$
+
+140$:	MOV	#40000,R3	;"Перецифровка"
+	MOVB	PCF,R2
+	DECB	R2
+	BMI	170$
+	BEQ	170$
+150$:	MOV	R2,R1
+	MOVB	(R3)+,R0
+160$:	MOVB	R0,(R3)+
+	SOB	R1,160$
+	CMP	#50000,R3
+	BHI	150$
+
+170$:	SUB	#10000,Q6
+	BEQ	180$
+	BCC	60$
+180$:	MOV	Q3,R0		;Список в заголовке
+	MOV	Q1,R1		;Список	"INTAB"
+	TST	12(R0)
+	BEQ	260$
+	MOV	14(R0),R5
+	BEQ	240$
+
+190$:	MOV	-4(R1),UR2
+	MOV	2(R0),R2
+	MOV	R2,R3
+	BIC	#170000,R2
+	CLRB	R3
+	SWAB	R3
+	BIC	#17,R3
+	ADD	R3,UR2
+	ADD	#40000,R2
+	MOV	R2,R4
+	MOV	R2,R3
+	ADD	4(R0),R3
+	MOV	14(R0),R5
+200$:	MOV	4(R0),R1
+	beq	220$
+	MOV	R4,R2
+210$:	MOVB	(R2)+,(R3)+
+	SOB	R1,210$
+	SOB	R5,200$
+220$:	CMP	#50000,R3
+	BHIS	230$
+	CALL	INCRIB
+230$:	MOV	Q3,R0
+	MOV	Q1,R1
+
+240$:	MOV	-4(R1),UR3
+	MOV	-4(R1),UR2
+	MOV	2(R0),R3
+	MOV	R3,R2
+	ADD	12(R0),R2
+	MOV	R3,R5
+	BIC	#170000,R3
+	CLRB	R5
+	SWAB	R5
+	BIC	#17,R5
+	ADD	R5,UR3
+	MOV	R2,R5
+	BIC	#170000,R2
+	CLRB	R5
+	SWAB	R5
+	BIC	#17,R5
+	ADD	R5,UR2
+	ADD	#60000,R3
+	ADD	#40000,R2
+	MOV	LONG,R5
+	MOV	#1,R4
+250$:	MOVB	(R3)+,(R2)
+	BICB	R4,(R2)+
+	SOB	R5,250$
+	CMP	#50000,R2
+	BHIS	280$
+	CALL	INCRIB
+	BR	280$
+260$:	MOV	-4(R1),UR2
+	MOV	(R0),R2
+	MOV	R2,R5
+	BIC	#170000,R2
+	CLRB	R5
+	SWAB	R5
+	BIC	#17,R5
+	ADD	R5,UR2
+	ADD	#40000,R2
+	MOV	LONG,R3
+270$:	CLRB	(R2)+
+	SOB	R3,270$
+	CMP	#50000,R2
+	BHIS	280$
+	CALL	INCRIB
+280$:	ADD	#40,Q3
+	DEC	Q7
+	BEQ	290$
+	JMP	10$
+290$:	.PURGE	CHAN
+	CLR	FCHAN
+
+PTRANS:	MOV	#INTAB+2020,R2	;Транслируем список PATTERN'ов
+	MOV	#PATTAB,R3
+	MOV	#200,R5
+	MOV	LENPAT,R4
+	CLR	LENPOS
+	MOV	#1,COMQ
+10$:	MOVB	(R2)+,R0
+	bmi	20$
+	CMPB	R0,R4
+	BHIS	20$
+	CMPB	#100,R0
+	BLOS	20$
+	INC	LENPOS
+	MOV	R0,R1
+	ASH	#-2,R0
+	ASH	#4,R0
+	ADD	FIRSEG,R0
+	ADD	#100,R0
+	MOV	R0,(R3)+	;1 слово - код сегмента
+	BIC	#177774,R1
+	ASH	#12,R1
+	ADD	#120000,R1
+	MOV	R1,(R3)+	;2 слово - адрес в сегменте
+	SOB	R5,10$
+20$:	CMP	#100,R5
+	BLO	30$
+	CLR	COMQ
+30$:	CLR	(R3)+
+
+	mov	#1,R0
+	mov	#100600,@#174216
+	mov	@#161002,inter+2
+	MOV	#377,@#161002
+	CALL	VOLSAV
+	mov	#40000,(R5)
+	CALL	SAVTIM
+	CALL	N8253
+
+PLAYER:	MOV	#PRIB,R0	;рисуем полоску
+	MOV	LENPOS,R1
+	CMP	#100,R1
+	BHIS	10$
+	DEC	R1
+	ASR	R1
+	INC	R1
+10$:	MOV	#102,R2
+	MOV	#'▒,R3
+	MOV	#40,R4
+20$:	MOVB	R3,(R0)+
+	DEC	R2
+	SOB	R1,20$
+30$:	MOVB	R4,(R0)+	
+	SOB	R2,30$
+	PRINT	#REST
+	MOV	TEMP,TP+2
+	CM	<R0,R1,R2,R3,QQ0,QQ1,QQ2,QQ3> ;Глушим звук по всем каналам
+	mov	#111004,inc0
+	mov	#111104,inc1
+	mov	#111204,inc2
+	mov	#111304,inc3
+	RM	#120200,<VOL0+2,VOL1+2,VOL2+2,VOL3+2>
+	CM	<CL0+2,CL0+10,CL1+2,CL1+10,CL2+2,CL2+10,CL3+2,CL3+10>
+	MOV	#PATTAB,Q1	;адрес в списке PATTERN'ов
+PATTER:	MOV	#Q3,R5
+	MOV	Q1,R4
+	cmpb	keytab+1,#200	;ТАБ - зацикливание
+	bne	10$
+	cmp	-(R4),-(R4)
+10$:	MOV	(R4)+,(R5)+	;Q3 - текущий сегмент со списком
+	BEQ	20$
+	MOV	(R4)+,(R5)+	;Q4 - адрес в PATTERN'е
+	MOV	#100,(R5)+	;Q5 - макс. длина PATTERN'а
+	MOV	R4,Q1
+	BR	NOTE
+20$:	DEC	(PC)+
+NCP:	R
+	BNE	PLAYER
+	JMP	FREMEM
+NOTE:	MOV	Q3,UR5		;А отсюда мы берём ноты
+	MOV	Q4,R4
+
+	;определение процедуры обработки одного канала
+	.MACRO	OPER	QQQ,INCCC,VOLUME,EFFTAB,CL,vl
+	.ENABL	LSB
+	CLR	R5
+	BISB	(R4)+,R5
+	BEQ	10$		;Если инструмент не менялся
+	INCB	R5
+	BEQ	30$		;Пауза (заглушаем звук)
+	ADD	#INTAB-10,R5	;Адрес начала таблицы инструментов
+	MOV	(R5)+,CL+2	;Кол-во сегментов зацикливания
+	MOV	(R5)+,CL+10	;Кол-во байтов зацикливания
+	MOV	R5,20$+2	;сохраняем адрес в таблице
+10$:	MOVB	(R4)+,R5	;Если нота не менялась
+	BMI	50$
+	MOV	#ADINST,%REG	;Адрес начала инструмента
+	MOV	TABL(R5),QQQ	;Выбор константы
+20$:	MOV	#0,R5
+	MOV	(R5)+,URREG	;Начальный сегмент инструмента
+	BEQ	40$
+	MOV	(R5)+,VOLUME+2	;Громкость по умолчанию
+	MOV	#CODE,INCCC
+	ASL	QQQ
+	BCC	50$
+	MOV	#CODE+1000,INCCC ;Устанавливаем автоинкремент
+	BR	50$		 ;для увеличения скорости воспр.
+30$:	INC	R4		;Если нота не обработана и не было (R4)+
+40$:	CLR	QQQ		;Заглушаем звук
+	MOV	#CODE,INCCC
+	clr	%REG
+50$:	CLR	VL+2		;Сбрасываем изменение громкости
+	MOVB	(R4),R5
+	BPL	60$		;Если спецкоманда
+	MOV	(R4)+,VOLUME+2	;Устанавливаем громкость
+	BR	70$
+60$:	CALL	@EFFTAB(R5)	;Обрабатываем спецкоманду
+	TST	(R4)+
+70$:	CODE	= CODE+100
+	ADINST	= ADINST+20000
+	REG	= REG+1
+	URREG	= URREG+2
+	.DSABL	LSB
+	.ENDM
+
+	CODE	= 111004
+	REG	= 0
+	URREG	= UR1
+	ADINST	= 20000
+	OPER	QQ0,INC0,VOL0,EFTAB0,CL0,vl0
+	OPER	QQ1,INC1,VOL1,EFTAB1,CL1,vl1
+	OPER	QQ2,INC2,VOL2,EFTAB2,CL2,vl2
+	OPER	QQ3,INC3,VOL3,EFTAB3,CL3,vl3
+QUR5:	MOV	#0,UR5
+	;Проигрывание ноты
+TP:	MOV	#0,Q6
+SLL1:	MOV	LPLAY,DELAY
+CORRR:	sec
+	bcs	CORQ
+LOOP:	ADD	(PC)+,(PC)+
+QQ0:	.BLKW	2
+	ADC	R0
+INC0:	MOVB	(R0),R4
+VOL0:	MOV	120200(R4),R5
+	ADD	(PC)+,(PC)+
+QQ1:	.BLKW	2
+	ADC	R1
+INC1:	MOVB	(R1),R4
+VOL1:	ADD	120200(R4),R5
+COR1:	MOV	R5,@#161020
+CORQ:	ADD	(PC)+,(PC)+
+QQ2:	.BLKW	2
+	ADC	R2
+INC2:	MOVB	(R2),R4
+VOL2:	MOV	120200(R4),R5
+	ADD	(PC)+,(PC)+
+QQ3:	.BLKW	2
+	ADC	R3
+INC3:	MOVB	(R3),R4
+VOL3:	ADD	120200(R4),R5
+COR3:	MOV	R5,@#161022
+	DEC	(PC)+
+DELAY:	R
+	BNE	LOOP
+
+	;процедура обработки перехода через сегмент и зацикливания
+	.MDELET	OPER
+	.MACRO	OPER	QQQ,INCCC,CL,volume,vl,vll
+	.ENABL	LSB
+VL:	MOV	#0,R5
+	BEQ	10$
+	ADD	R5,VOLUME+2
+VLL:	CMP	#0,VOLUME+2
+	BLO	10$
+	mov	vll+2,VOLUME+2
+	CLR	VL+2
+10$:	CMP	%REG,#ADINST
+	BLO	20$
+	SUB	#10000,%REG
+	ADD	#20,UREG
+20$:	BITB	R4,@%REG
+	BNE	40$
+CL:	SUB	#0,UREG
+	ADD	#0,%REG
+30$:	TSTB	@%REG
+	BNE	40$
+	CLR	QQQ
+	MOV	#code,INCCC
+	clr	%REG
+40$:	REG	= REG+1
+	code	= code+100
+	ADINST	= ADINST+20000
+	UREG	= UREG+2
+	.DSABL	LSB
+	.ENDM
+
+	REG	= 0
+	code	= 111004
+	ADINST	= 30000
+	UREG	= 161222
+	MOV	#1,R4
+	OPER	QQ0,INC0,CL0,vol0,vl0,vll0
+	OPER	QQ1,INC1,CL1,vol1,vl1,vll1
+	OPER	QQ2,INC2,CL2,vol2,vl2,vll2
+	OPER	QQ3,INC3,CL3,vol3,vl3,vll3
+	DEC	Q6
+	BEQ	50$
+	JMP	SLL1
+50$:	ADD	#20,Q4
+	DEC	Q5
+	bne	kt
+	jmp	ENDPAT
+KT:	TST	#0
+	beq	kkt
+	call	ktest
+	sxt	kt+2
+nt:	jmp	note
+kkt:	CALL	KTEST
+	sxt	kt+2
+	beq	nt
+KEYT:	CALL	INKEY
+	CMPB	KEYTAB+2,#100	;СТОП
+	bne	20$
+10$:	jmp	FREMEM
+20$:	CMPB	KEYTAB+7,#4	;СБРОС
+	BNE	40$
+30$:	JMP	PLAYER	
+40$:	CMPB	KEYTAB+4,#1	;ФИКС
+	BNE	70$
+	TST	FPRC
+	BEQ	50$
+	JMP	FIXPRC
+50$:	CALL	KTEST
+	BNE	50$
+60$:	CALL	INKEY	;Ожидаем кнопку во время паузы
+	CMPB	KEYTAB+4,#1	;ФИКС
+	BEQ	NT
+	CMPB	KEYTAB+2,#100	;СТОП
+	beQ	10$
+	CMPB	KEYTAB+7,#4	;СБРОС
+	BEQ	30$
+	CMPB	KEYTAB+5,#10	;─Ў
+	BEQ	80$
+	CMPB	KEYTAB+4,#40	;ў─
+	BEQ	100$
+	CMPB	KEYTAB,#2	;─┐
+	BLO	60$		; │
+	CMPB	KEYTAB,#5	;─┤
+	BLOS	120$		; │
+	CMPB	KEYTAB,#20	;─┴─ если нажали K1 · K5
+	BEQ	120$
+	BR	60$
+70$:	CMPB	KEYTAB+6,#3	;УСТ
+	BNE	75$
+	JMP	DEVICE
+75$:	CMPB	KEYTAB+5,#10	;─Ў
+	BNE	90$
+80$:	jmp	ENDPAT	
+90$:	CMPB	KEYTAB+4,#40	;ў─
+	BNE	120$
+100$:	CMP	Q1,#PATTAB+4
+	BEQ	30$
+	SUB	#10,Q1
+	TST	COMQ
+	BEQ	110$
+	PRINT	#DEL	
+110$:	COM	COMQ
+	JMP	PATTER
+120$:	mov	#inctab,R5
+	movb	keytab,R4
+
+	.mdelet	oper
+	.macro	oper	num,ntt,arg,nop
+	cmpb	num,R4
+	bne	ntt
+	mov	nop,CORRR
+	mov	arg,R4
+	br	170$
+	.endm	oper
+
+	oper	#5,130$,#corr,#241
+130$:	oper	#2,140$,#corr0,#241
+140$:	oper	#4,150$,#corr1,#241
+150$:	oper	#3,160$,#corr2,#261
+160$:	oper	#20,180$,#corr3,#261
+170$:	mov	(R4)+,@(R5)+
+	mov	(R4)+,@(R5)+
+	mov	(R4)+,@(R5)+
+	mov	(R4)+,@(R5)+
+180$:	jmp	note
+ENDPAT:	cmpb	keytab+1,#200	;ТАБ (зацикливание)
+	beq	10$
+	COM	COMQ
+	BEQ	10$
+	PRINT	#'█
+10$:	JMP	PATTER
+
+DEVICE:	MOV	R0,-(SP)
+	MOV	R1,-(SP)
+	MOV	R2,-(SP)
+	MOV	R3,-(SP)
+	TST	FSPEAK
+	BEQ	20$
+	CLR	FSPEAK
+	MOV	#FCOVO,R4
+	BR	10$
+20$:	INC	FSPEAK
+	MOV	#FSPEA,R4
+10$:	CALL	CORECT
+	CALL	VOLSAV
+	CALL	N8253
+	BR	EXP
+
+
+FIXPRC:	MOV	R0,-(SP)
+	MOV	R1,-(SP)
+	MOV	R2,-(SP)
+	MOV	R3,-(SP)
+	call	kset
+
+	CALL	RESTIM
+	MOV	INTER+2,@#161002
+	CLR	R0
+	mov	#100600,@#174216
+
+20$:	MOV	#0,@#174164	;WAITINT
+	NOP
+
+	CALL	INKEY
+	MOV	#KEYTAB,R0
+	TST	(R0)+
+	BNE	10$
+	TST	(R0)+
+	BNE	10$
+	CMP	#1,(R0)+
+	BEQ	30$
+	TST	-2(R0)
+	BNE	10$
+30$:	TST	(R0)+
+	BEQ	20$
+
+10$:	TSTB	@#177130
+	BPL	10$
+
+	TST	@#DMPCSR
+	BPL	40$
+	MOV	@#DMPCSR,R0
+	BIC	#174000,R0
+	BEQ	40$
+	CMP	R0,LPMAX
+	BHI	40$
+	MOV	R0,LPLAY
+40$:
+	mov	#1,R0
+	mov	#100600,@#174216
+	mov	@#161002,inter+2
+	MOV	#377,@#161002
+	CALL	SAVTIM
+	CALL	N8253	;Настройка 8259 и 8253 (если играем на динамик)
+
+EXP:	MOV	(SP)+,R3
+	MOV	(SP)+,R2
+	MOV	(SP)+,R1
+	MOV	(SP)+,R0
+	JMP	NOTE
+
+ERR2:	PRINT	#ENTERR
+	;Выход из программы...
+FREMEM:	MOV	#161220,R1	;восстановление карты памяти системы
+	MOV	(R1)+,R0
+	MOV	#6,R2
+10$:	ADD	#40,R0
+	MOV	R0,(R1)+
+	SOB	R2,10$
+20$:	CALL	KTEST
+	BNE	20$
+	CALL	RESTIM
+inter:	mov	#0,@#161002
+	CLR	R0
+	mov	#100600,@#174216
+	MOV	FIRSEG,R0
+	MOV	LENSEG,@#174202	;запрос "FREMEM" - освобождаем память
+	NOP
+EXIT:	TST	FPRC
+	BEQ	10$
+	TST	FER
+	BEQ	20$
+	MOV	#FLERRR,-(SP)
+	call	beep
+	JMP	BPLOA
+20$:	JMP	BPRC
+10$:	CLR	R0
+	MOV	#40000,(R0)+
+	MOV	#104350,(R0)
+	MOV	#100,@#177560
+	PRINT	#CURENT
+	.SCCA	#AREA,#0
+	.PURGE	#3
+	JMP	BGGA
+KTEST:	MOV	#161066,R4	;Опрос клавиатуры
+	MOV	#302,(R4)
+	MOV	#120,(R4)
+	MOV	-(R4),R5
+	.REPT	7
+	BIS	(R4),R5
+	.ENDR
+	neg	R5
+	RET
+INKEY:	MOV	#161066,R4
+	MOV	#KEYTAB,R5
+	MOV	#302,(R4)
+	MOV	#120,(R4)
+	DEC	R4
+	MOVB	-(R4),(R5)+
+	MOVB	(R4),(R5)+
+	MOVB	(R4),(R5)+
+	MOVB	(R4),(R5)+
+	MOVB	(R4),(R5)+
+	MOVB	(R4),(R5)+
+	MOVB	(R4),(R5)+
+	MOVB	(R4),(R5)+
+	RET
+
+prin:	MOV	(SP)+,20$
+	TST	FPRC
+	BNE	10$
+	MOV	(SP),@#177566
+	NOP
+10$:	TST	(SP)+
+	JMP	@(PC)+
+20$:	HALT
+
+CORECT:	MOV	(R4)+,COR1	;Корректируем муз. драйвер
+	MOV	(R4)+,corr+4	;для COVOXа
+	MOV	(R4),COR3+2	;или динамика
+	mov	#corr,R4
+	mov	#inctab,R5
+	mov	(R4)+,@(R5)+
+	mov	(R4)+,@(R5)+
+	mov	(R4)+,@(R5)+
+	mov	(R4)+,@(R5)+
+	mov	(R4)+,@(R5)+
+	RET
+
+N8253:	MOV	#TSPEAK,R0
+	TST	FSPEAK
+	BEQ	50$	;Настройка 8259 и 8253 (если играем на динамик)
+	MOV	#13,R1
+40$:	MOV	(R0)+,@(R0)+
+	SOB	R1,40$
+50$:	MOV	(R0)+,@(R0)+
+	MOV	(R0)+,@(R0)+
+	MOV	(R0)+,@(R0)+
+	MOV	(R0)+,@(R0)+
+	RET
+
+SAVTIM:	MOV	#161012,R2
+	mov	#400,R4
+	CLR	R0
+	CLR	R1
+10$:	mov	(R2),R3		;ловим первый максимум таймера
+	cmp	R3,R0
+	blo	20$
+	mov	R3,R0
+20$:	NOP
+	NOP
+	NOP
+	MOV	(R2),R3		;ловим второй максимум
+	CMP	R3,R1
+	BLO	30$
+	MOV	R3,R1
+30$:	SOB	R4,10$
+	SUB	R1,R0
+	BPL	40$
+	NEG	R0
+40$:	BIC	#3,R0		;выясняем различия, если 0,
+	MOVB	R0,STIM		;период - байт, иначе слово.
+	MOVB	R1,FTIM		;байтовый период
+	RET
+
+RESTIM:	mov	#tsp,R0
+	mov	(R0)+,@(R0)+
+	mov	(R0)+,@(R0)+
+	mov	(R0)+,@(R0)+
+	mov	(R0)+,@(R0)+
+	MOV	#161016,R0
+	MOV	#66,@R0
+	TSTB	STIM
+	BEQ	20$
+	MOV	#166,@R0
+	RET
+20$:	mov	#126,@R0
+	MOVB	FTIM,R0
+	MOV	#FTAB,R1
+30$:	MOV	(R1)+,R2
+	BEQ	40$
+	CMP	R2,R0
+	BLO	30$
+	MOV	R2,R0
+40$:	MOV	R0,@#161012
+	RET
+
+VOLSAV:	MOV	FIRSEG,R0	;построение таблицы громкостей
+	MOV	R0,UR5
+	MOV	R0,QUR5+2
+	ADD	#40,R0
+	MOV	R0,UR6
+	CLR	80$
+	CLR	60$
+	CLR	R3
+	MOV	#100000,R4
+	MOV	#1000,R1
+	TST	F10BIT
+	BEQ	10$
+	CLR	R4
+	MOV	#4000,R1
+	MOV	#2,60$
+10$:	TST	FSPEAK
+	BEQ	20$
+	CLR	60$
+	INC	R3
+	MOV	#62000,R4
+	MOV	#620,R1
+20$:	MOV	60$,90$
+	MOV	R1,70$
+	MOV	#120000,R1
+	MOV	#100,100$
+	MOV	R4,R2
+30$:	MOV	R3,R0
+	MOV	#200,R5
+	CLR	50$
+40$:	MOV	R0,(R1)+
+	ADD	R4,(PC)+
+50$:	HALT
+	ADC	R0
+	ADD	(PC)+,R0
+60$:	HALT
+	SOB	R5,40$
+	SUB	(PC)+,R4
+70$:	HALT
+	SBC	60$
+	ADD	R2,(PC)+
+80$:	HALT
+	ADC	R3
+	ADD	(PC)+,R3
+90$:	HALT
+	DEC	(PC)+
+100$:	HALT
+	BNE	30$
+	RET
+
+kset:	tst	kst
+	beq	10$
+	clr	kst
+	bis	#100000,kstrin+2
+	mov	#kstrin,@#174106
+10$:	ret
+
+coma:	beq	nocom	;Обработка темпа
+	add	#10,r1
+	asr	R1	;Делим на 16
+	asr	R1
+	asr	R1
+	asr	R1
+	ret
+nocom:	clrb	-1(R0)	;Если нуль, то нет команды
+	ret
+comd:	beq	nocom	;Обработка изменения громкости
+	mov	R1,R2
+	bic	#360,R1
+	ash	#-4,R2
+	sub	R2,R1
+	mov	R1,R2
+	asr	R2
+	add	R2,R1
+	ret
+comb:
+comc:
+come:
+comf:
+comg:
+comh:
+comi:
+comj:
+comk:
+coml:
+comz:	ret
+
+STEMP:	movb	1(R4),tp+2	;Обработка команды изменений темпа
+	RET
+SJUMP:
+SBREAK:	MOV	#1,Q5		;Команда перехода к след. PATTERN'у
+RRET:	RET
+S1PORT:
+S0PORT:
+SPORT:
+SVIBR:
+STREM:
+SAPRED:
+SVPORT:
+SVVIBR:	RET
+	.mdelet	OPER
+	.macro	OPER	vl,vll
+	.enabl	lsb
+	movb	1(R4),vl+3
+	bpl	10$
+	mov	#120200,vll+2
+	movb	#207,vll+7	;код команды BLO
+	ret
+10$:	mov	#157600,vll+2
+	movb	#202,vll+7	;код команды BHI
+	ret
+	.dsabl	lsb
+	.endm
+	;обработка команды плавного изменения громкости
+svol0:	OPER	vl0,vll0
+svol1:	OPER	vl1,vll1
+svol2:	OPER	vl2,vll2
+svol3:	OPER	vl3,vll3
+
+	.mdelet	OPER
+	.macro	OPER	arg1,arg2
+	movb	1(R4),R5
+	bic	#177760,R5
+	swab	R5
+	add	R5,arg1
+	movb	1(R4),R5
+	bic	#177417,R5
+	add	R5,arg2	
+	RET
+	.endm
+	;обработка смещения в инструменте
+ofset0:	OPER	R0,UR1
+ofset1:	OPER	R1,UR2
+ofset2:	OPER	R2,UR3
+ofset3:	OPER	R3,UR4
+FCOVO:	.WORD	20537,66405,161032	;Коды модификации команд муз.
+FSPEA:	.WORD	10537,16405,161022	;драйвера - динамик или COVOX
+tsp:	.word	34,161026,134,161026,0,161020,0,161022
+TSPEAK:	;Таблица настройки 1 и 2 каналов 8253 в режим широтно-
+	;-импульсной модуляции (несущая частота - 20 килогерц)
+	;пары слов: что и куда заносить (четвёртые 2 слова - для 8259)
+	.WORD	377,161002
+	.WORD	0,161020,0,161022,0,161024
+	.WORD	74,161016,144,161010,0,161010
+	.WORD	174,161016,144,161012,0,161012,22,161026
+	.WORD	0,161020,122,161026,0,161022,0222,161026
+inctab:	.word	vol0,vol1,vol2,vol3,corrr
+corr:	.word	16405,66405,16405,66405,241
+corr3:	.word	16404
+corr2:	.word	16404
+corr1:	.word	16404
+corr0:	.word	16405,16404,16404,16404
+EFTAB0:	;адреса п-п обработки спецкоманд при воспр. по 4 каналам
+	.WORD	RRET,STEMP,SJUMP,SBREAK,SVOL0,S1PORT,S0PORT
+	.WORD	SPORT,SVIBR,STREM,SAPRED,SVPORT,SVVIBR
+	.WORD	RRET,RRET,RRET,RRET,RRET,RRET,RRET,RRET,RRET,RRET,RRET
+	.WORD	RRET,RRET,OFSET0
+EFTAB1:	.WORD	RRET,STEMP,SJUMP,SBREAK,SVOL1,S1PORT,S0PORT
+	.WORD	SPORT,SVIBR,STREM,SAPRED,SVPORT,SVVIBR
+	.WORD	RRET,RRET,RRET,RRET,RRET,RRET,RRET,RRET,RRET,RRET,RRET
+	.WORD	RRET,RRET,OFSET1
+EFTAB2:	.WORD	RRET,STEMP,SJUMP,SBREAK,SVOL2,S1PORT,S0PORT
+	.WORD	SPORT,SVIBR,STREM,SAPRED,SVPORT,SVVIBR
+	.WORD	RRET,RRET,RRET,RRET,RRET,RRET,RRET,RRET,RRET,RRET,RRET
+	.WORD	RRET,RRET,OFSET2
+EFTAB3:	.WORD	RRET,STEMP,SJUMP,SBREAK,SVOL3,S1PORT,S0PORT
+	.WORD	SPORT,SVIBR,STREM,SAPRED,SVPORT,SVVIBR
+	.WORD	RRET,RRET,RRET,RRET,RRET,RRET,RRET,RRET,RRET,RRET,RRET
+	.WORD	RRET,RRET,OFSET3
+	.word	rret
+	;Адреса п-п обработки инф. байтов спецкоманд при трансляции
+comcon:	.word	coma,comb,comc,comd,come,comf,comg,comh,comi,comj,comk,coml
+	.WORD	RRET,RRET,RRET,RRET,RRET,RRET,RRET,RRET,RRET,RRET,RRET,RRET
+	.WORD	RRET,COMZ
+DEXT1:	.RAD50	/MOD/	;Расширение по умолчанию
+dext2:	.RAD50	/STM/
+	.BLKW	3
+AREA:	.BLKW	6
+DSTAT:	HALT
+STAT:	.BLKW	2	;Информация о канале после CSTAT
+BLEN:	.BLKW	4	;Длина файла в блоках
+SSTERM:	R		;Sлово Sостояния TERMинала для .SCCA
+IM:	.ascii	/Имя модуля: /
+INTAB:	.BLKW	200	;Таблица инструментов (вообще-то здесь был заголовок
+PATTAB:	.BLKW	400	;STM-файла - он загружался в начале программы)
+KEYTAB:	.BLKW	4	;Битовая карта клавиатуры
+	.BLKW	1110-200-400-4
+LENPOS:	R		;Кол-во positions
+LENGTH:	R		;Рабочая ячейка - длина полоски при загрузке...
+INCREM:	R		;...а это мы к ней прибавляем
+OLDR:	R		;Адрес конца предыдущего куска полоски
+LENPAT:	R		;Количество PATTERN'ов
+TEMP:	R		;Темп по умолчанию
+LENSEG:	R		;Кол-во занимаемых 8-кб сегментов
+FIRSEG:	R		;Код первого занятого (здесь таблица громкостей)
+TEKSEG:	R		;Текущий сегмент для загрузки
+Q1:	R		;\
+Q2:	R		; |
+Q3:	R		; | Рабочие
+Q4:	R		; |
+Q5:	R		; |
+Q6:	R		; | Ячейки.
+Q7:	R		; |
+Q8:	R		;/
+COMQ:	WAIT		;Флаг масштаба полоски (если > 64, то через одну)
+FSPEAK:	HALT		;Флаг воспроизведения на динамик (если 0 - на COVOX)
+FMOD:	HALT		;признак формата *.mod
+FPRC:	HALT		;признак работы процесса
+FCHAN:	HALT		;признак открытого канала
+FER:	HALT		;признак ошибки
+CHAN:	HALT		;номер канала для загрузки
+kst:	HALT		;kstring flag
+PCF:	R		;Константа "перецифровки"
+LPLAY:	R		;Количество циклов работы драйвера
+LPMAX:	R
+LONG:	R		;Длина "хвоста" инструмента для зацикл.
+TRAP:	R		;Буфер для сохранения @#4...
+TRAPS:	R		;...и @#6 при определении типа машины
+QC:	R		;C flag
+STIM:	.BYTE	0
+FTIM:	.BYTE	0
+FTAB:	.WORD	15,32,64,150,320,0
+
+TABL:	.WORD	007777,010363,010765,011406,012050,012533,013240,013770
+	.WORD	014545,015350,016202,017064,017777,020746,021753,023015
+	.WORD	024121,025266,026501,027761,031313,032721,034404,036150
+	.WORD	037777,041715,043726,046033,050242,052555,055202,057743
+	.WORD	062627,065642,071010,074320,077777,103633,107654,114067
+	.WORD	120504,125333,132404,137707,145457,153504,162021,170640
+	.WORD	177777,177777,177777,177777,177777,177777,177777,177777
+	.WORD	177777,177777,177777,177777,177777
+ERRTAB:	.WORD	ERR0,ERR1,ERR0,ERR0,ERR4
+
+SCREAM:	.ascii	/!Scream!/
+MOD2ST:	.ASCII	/BMOD2STM/
+SWAVEP:	.ASCII	/SWavePro/
+ERROPT:	.ASCII	"?DMP-F-Недопустимый ключ /"
+OPTION:	.ASCIZ	" , используйте /t (до 4000), /d и /n"
+ERR0:	.ASCIZ	/?DMP-F-Ошибка в командной строке/
+ERR1:	.ASCIZ	/?DMP-F-Указанное устройство не существует/
+ERRNED:	.ASCIZ	/?DMP-F-Устройство нефайловой структуры недопустимо/
+ERR4:	.ASCIZ	/?DMP-F-Файл не найден/
+ERRIM:	.ASCIZ	/?DMP-F-Имя файла не указано/
+ENTERR:	.BYTE	15,12
+ERR:	.ASCII	/?DMP-F-Ошибка при чтении файла/<200>
+NF:	.ASCIZ	/?DMP-F-Файл не в формате *.MOD (или *.STM)/<33>/W/
+TOUT:	.ASCII	/?DMP-F-Необходима непрерывная память /<200>/    /
+MRNEED:	.ASCII	/. Кбайт, доступно только /<200>/    /
+MRFREE:	.ASCII	/. Кбайт/<200>
+DEL:	.ASCII	<33>/[1D▒/<33>/[1D/<200>
+CURENT:	.ASCII	<15><12>
+CUR:	.ASCII	<33>/W/<200>
+LRIB:	.ASCII	<15>/Загрузка: /
+TRIB:	.BLKB	50
+REST:	.ASCII	<15>/Мелодия: /
+PRIB:	.BLKB	102
+ENDPRB:	.ASCII	<15><33>/[09C/<200>
+FRAM:	.BYTE	33,'<	;Включаем режим ANSI (если был выключен)
+	.ASCII	/╔═════════╦════════════════════╦═══════════╗/<15><12>
+	.ASCII	/║ DMP.SAV ║ Dual Module Player ║ v/
+	VERSION
+	.ASCII	/beta ║/<15><12>
+	.ASCIZ	/╚═════════╩════════════════════╩═══════════╝/
+WELCOM:	.ASCII	/DMP> /<200>
+INF:	.ASCII	<33>/</<33>/[?7h/<33>/W/ ;ANSI: fuck ON, WRAP & CUR: fuck OFF
+.ASCII /╔══════════════════════════════════════════════════════════════════════════════╗/
+.ASCII /║									   tm  ║/
+.ASCII /║    █▀▄ █ █ ▄▀█ █     █▄ ▄█ ▄▀█ █▀▄ █ █ █   █▀▀    █▀▄ █   ▄▀█ █ █ █▀▀ █▀▄    ║/
+.ASCII /║    █ █ █ █ █▄█ █     █ ▀ █ █ █ █ █ █ █ █   █▀     █▄▀ █   █▄█ ▀▄▀ █▀	█▄▀    ║/
+.ASCII /║    ▀▀▀  ▀▀ ▀ ▀ ▀▀▀   ▀   ▀ ▀▀  ▀▀▀  ▀▀ ▀▀▀ ▀▀▀    ▀	▀▀▀ ▀ ▀  ▀  ▀▀▀ ▀ ▀    ║/
+.ASCII /║									       ║/
+.ASCII /╠══════════════════════════════════════════════════════════════════════════════╣/
+.ASCII /║ Эта программа воспроизводит музыку из файлов *.STM и *.MOD на динамик машины ║/
+.ASCII /║ или COVOX (схема в файле COVOX.HLP). Запускается как под RT, так и процессом ║/
+.ASCII /║ (вызывается по ФИКС+ИСП). Для управления воспроизведением используйте клави- ║/
+.ASCII /║ ши: К1-К5 - микширование, ў─Ў - перемотка, СБРОС - в начало, СТОП - останов, ║/
+.ASCII /║ ТАБ - зацикливание, ФИКС - пауза. При работе процессом при ФИКС мелодия сох- ║/
+.ASCII /║ раняется в памяти и ФИКС+ИСП продолжает воспроизведение, а при СТОП - загру- ║/
+.ASCII /║ жается новый файл. УСТ переключает вывод: на динамик или на COVOX.	       ║/
+.ASCII /║ 									       ║/
+.ASCII /║ 	ЗДЕСЬ КОГДА НИБУДЬ ЧТО НИБУДЬ ЕЩЁ НАПИШУ ;-)			       ║/
+.ASCII /║ 									       ║/
+.ASCII /║ При "перемотке" возможны небольшие искажения.  Внимание! При воспроизведении ║/
+.ASCII /║ прерывания запрещены, и параллельное исполнение других процессов невозможно. ║/
+.ASCII /╠═══════════════════════╦══════════════════════════════════════════════════════╣/
+.ASCII /║ Автор: Сотченко Денис ║ (C) 1994 by Russian Digital Computing software, inc. ║/
+.ASCII /║ Phone: (095) 352-0931 ║ v/
+
+	VERSION
+
+.ASCII /b from /
+
+	DATIME
+
+.ASCII /, all rights reserved. ║/
+.ASCII <33>/[?7l╚═══════════════════════╩══════════════════════════════════════════════════════╝/<33>/[?7h/
+.BYTE	33,'W,0
+cstr:	.blkb	80.
+ONLY:	.ASCII	\?DMP-F-This program intended only for PC-11/16 computer!\<15><12>
+	.ASCIZ	/For more information you can call: (095) 352-0931, Denis/
+PROST:	.ASCIZ	\Введите имя MOD/STM файла:\
+FLERR:	.ASCIZ	/ ЭТОГО ФАЙЛА НА ДИСКЕ НЕТ /
+FLMEM:	.ASCIZ	/ НУЖНО  .... КБАЙТ ПАМЯТИ /
+FLNF:	.ASCIZ	\ФАЙЛ НЕ В ФОРМАТЕ MOD/STM!\
+FLERRR:	.ASCIZ	/  ОШИБКА ЗАГРУЗКИ МОДУЛЯ  /
+	.EVEN	
+
+LDPAT:	MOV	TEKSEG,UR2
+	MOV	Q1,R5
+	CMP	R5,#4
+	BLOS	10$
+	MOV	#4,R5
+10$:	ASH	#11,R5
+	MOV	#40000-74,-(SP)
+	ADD	#36,R5
+	TST	FMOD
+	BNE	20$
+	ADD	#52,R5
+	MOV	#40000-220,(SP)
+20$:	.READ	#AREA,CHAN,(SP)+,R5,Q3
+	RET
+
+CONPAT:	;Конвертируем PATTERN'ы в нормальный формат
+	mov	tekseg,R0
+	sub	#20,R0
+	mov	R0,uR3
+	TST	FMOD
+	BEQ	1000$
+	MOV	R5,-(SP)
+	CALL	CONMOD
+	MOV	(SP)+,R5
+1000$:	MOV	#60000,R0
+10$:	CMPB	#373,(R0)
+	BEQ	40$
+20$:	CMPB	#375,(R0)
+	BEQ	40$
+30$:	CMPB	#377,(R0)
+	BNE	50$
+40$:	MOVB	#200,(R0)+
+	BR	90$
+50$:	CMPB	#374,(R0)
+	BEQ	70$
+60$:	CMPB	#376,(R0)
+	BNE	80$
+70$:	MOV	#177400,(R0)+
+	CLR	R1
+	BR	110$
+80$:	CLR	R1		;обработка ноты
+	BISB	(R0),R1
+	MOV	R1,R2
+	BIC	#360,R2		;В R2 - нота в октаве
+	ASH	#-4,R1		;В R1 - номер октавы
+	MUL	#14,R1		;Пересчитываем октаву в ноты
+	ADD	R1,R2		;В R2 - номер ноты
+	ASL	R2
+	MOVB	R2,(R0)+
+90$:	CLR	R1		;обработка номера инструмента
+	BISB	(R0),R1
+	MOV	R1,R2
+	BIC	#7,R2
+	BEQ	100$
+	DEC	R2
+100$:	MOVB	R2,(R0)+
+110$:	BIC	#177770,R1	;всё	остальное
+	MOVB	(R0),R2
+	BMI	150$
+	TSTB	PCF
+	BEQ	120$
+	CLR	(R0)+
+	BR	170$
+120$:	SWAB	R1		;=ASH #10,R1
+	ASR	R2
+	SWAB	R2		;=ASH #7,R2
+	BIS	R2,R1
+130$:	SUB	#157600,R1
+	NEG	R1
+140$:	MOV	R1,(R0)+	;Громкость 0 · 63
+	BR	170$
+150$:	CMPB	#233,R2
+	BHI	160$
+	CLR	R2
+160$:	ASL	R2
+	MOVB	R2,(R0)+	;Спецкоманда
+	movb	R2,R2
+	clr	R1
+	bisb	(R0),R1
+	call	@comcon-2(R2)	;Конвертируем инф. байт
+	movb	R1,(R0)+
+170$:	SWAB	-4(R0)
+	DEC	R5
+	BNE	10$
+	br	incri
+
+DECOUT:	MOV	#10.,R1	;Перевод R5 из сегментов в Кбайты
+	ASH	#3,R5	;и размещение десятич. числа по адр. R2
+10$:	CLR	R4
+	DIV	R1,R4
+	ADD	#60,R5
+	MOVB	R5,-(R2)
+	mov	R4,R5
+	BNE	10$
+	RETURN
+
+INCRIB:	;Подпрограмма вывода полоски при загрузке
+	ADD	#20,TEKSEG
+incri:	ADD	INCREM,LENGTH
+ribb:	MOV	#TRIB,R0
+	MOV	#40,R1
+10$:	MOVB	#'▒,(R0)+
+	SOB	R1,10$
+	MOV	#TRIB,R0
+	MOV	LENGTH,R1
+	CLC
+	ROR	R1
+	ASH	#-10,R1
+	BEQ	30$
+20$:	MOVB	#'█,(R0)+
+	SOB	R1,20$
+30$:	movb	#200,(R0)
+	print	oldr
+	mov	R0,oldr
+	RET
+
+NAD:	HALT
+MAD:	.BLKW	2
+
+CONMOD:	MOV	R5,CC
+	MOV	#MAD,R1
+	MOV	#60000,R2
+	MOV	R2,NAD
+
+NC:	MOV	@NAD,(R1)
+	ADD	#2,NAD
+	MOV	@NAD,2(R1)
+	ADD	#2,NAD
+
+	CLR	R3
+	BISB	(R1),R3
+	MOV	R3,R4
+	MOVB	2(R1),R5
+	BIC	#17,R5
+	ASH	#-4,R4
+	ASR	R4
+	RORB	R5
+	MOVB	R5,1(R2)	;Sample Number
+	BIC	#177760,R3
+	SWAB	R3
+	BISB	1(R1),R3	;Note Period
+	BNE	10$
+	MOVB	#377,(R2)
+	BR	50$
+10$:	MOV	#TAB,R5
+	MOV	#20,R4	;BEGINNER OCTAVE
+20$:	CLR	R0	;BEGINNER NOTE
+30$:	CMP	(R5)+,R3
+	BLOS	40$
+	INC	R0
+	CMP	#14,R0
+	BNE	30$
+	ADD	#20,R4
+	BR	20$
+40$:	BIS	R4,R0
+	MOVB	R0,(R2)
+50$:	BISB	#1,1(R2)
+	MOVB	2(R1),R0
+	BIC	#177760,R0
+	ASL	R0
+	ASL	R0
+	ADD	#EFFTAB,R0
+	MOV	(R0)+,2(R2)
+	CALL	@(R0)+	;Special Effects Translation
+	CMP	(R2)+,(R2)+
+
+KC:	DEC	(PC)+
+CC:	HALT
+	BNE	NC
+	RETURN
+
+ARP:	MOVB	3(R1),R0
+	BNE	RETR
+	br	zap
+
+TEM:	MOVB	3(R1),R0
+	cmp	#17,R0
+	blo	ZAP
+	ASH	#4,R0
+	MOVB	R0,3(R2)
+	RET
+
+OFFSET:	TSTB	3(R1)
+	BNE	SET
+zap:	MOV	#200,2(R2)
+	RET
+
+VOLUM:	MOVB	3(R1),R0
+	CMP	#100,R0
+	BHI	1$
+	MOV	#77,R0
+1$:	MOV	R0,-(SP)
+	BIC	#177770,R0
+	BICB	#7,1(R2)
+	BISB	R0,1(R2)
+	MOV	(SP)+,R0
+	BIC	#177707,R0
+	ASL	R0
+	MOV	R0,2(R2)
+	RET
+
+SET:	MOVB	3(R1),3(R2)
+RETR:	RET
+
+EFFTAB:	.WORD	212,	ARP	; 0 - None/Arpeggio
+	.WORD	206,	SET	; 1 - Portamento Up
+	.WORD	205,	SET	; 2 - Portamento Down
+	.WORD	207,	SET	; 3 - TonePortamento
+	.WORD	210,	SET	; 4 - Vibrato
+	.WORD	204,	SET	; 5 - TonePortamento + VolumeSlide
+	.WORD	204,	SET	; 6 - Vibrato + VolumeSlide
+	.WORD	211,	SET	; 7 - Tremolo
+	.WORD	200,	RETR	; 8 - * NOT USED *
+	.WORD	232,	OFFSET	; 9 - SampleOffset
+	.WORD	204,	SET	; A - VolumeSlide
+	.WORD	202,	SET	; B - PositionJump
+	.WORD	200,	VOLUM	; C - Set Volume
+	.WORD	203,	RETR	; D - PatternBreak
+	.WORD	230,	SET	; E - Misc. Cmds
+	.WORD	201,	TEM	; F - Set Speed
+
+TAB:	.WORD	856.,808.,762.,720.,678.,640.,604.,570.,538.,508.,480.,453.
+	.WORD	428.,404.,381.,360.,339.,320.,302.,285.,269.,254.,240.,226.
+	.WORD	214.,202.,190.,180.,170.,160.,151.,143.,135.,127.,120.,113.
+	.WORD	107.,101.,095.,090.,085.,080.,075.,071.,067.,063.,060.,056.
+	.WORD	053.,050.,047.,045.,042.,040.,037.,035.,033.,031.,030.,028.
+	.WORD	0
+
+
+
+cnhead:	mov	#intab+2070,R0	;*.MOD ─Ў *.STM HEADER CONVERTOR
+	mov	#intab+2220,R1
+	mov	#416,R2
+1$:	mov	-(R0),-(R1)
+	MOV	-(R0),-(R1)
+	SOB	R2,1$
+
+
+160$:	MOV	#200,R5		;Max Song Length
+	CLR	R4
+	BISB	intab+130+1666,R4	;Real Song Length
+	MOV	#intab+130+1670,R1
+	MOV	#INTAB+2020,R2
+	CLR	R3
+170$:	MOVB	(R1)+,R0
+	MOVB	R0,(R2)+
+	CMP	R0,R3
+	BLO	.+4
+	MOV	R0,R3
+	DEC	R5
+	SOB	R4,170$
+	TST	R5
+;	BMI	150$	;NOFORM
+	BEQ	190$
+180$:	MOVB	#143,(R2)+
+	SOB	R5,180$
+190$:	INC	R3
+	MOVB	R3,-(SP)
+	CLR	R4
+	SWAB	R3
+	ASL	R3
+	ASL	R3
+	ADC	R4
+	ADD	#2074,R3
+	ADC	R4
+
+	MOV	#intab+130,R1
+	MOV	#INTAB,R2
+	MOV	#10.,R5
+200$:	MOV	(R1)+,(R2)+
+	SOB	R5,200$
+	ADD	#10,R2
+	MOV	#1032,(R2)+
+	MOV	#12402,(R2)+
+	MOVB	#140,(R2)+
+	MOVB	(SP)+,(R2)+
+	MOVB	#100,(R2)+
+	ADD	#13.,R2
+
+	MOV	#31.,R5		;31. samples loop
+210$:	MOV	#6,R0
+	MOV	(R1)+,(R2)+	;First 12. letters of samplename
+	SOB	R0,.-2
+	ADD	#12,R1
+	MOV	R4,(R2)+
+	MOV	R3,(R2)+	;Address in STM file
+	MOV	(R1)+,R0
+	SWAB	R0
+	CLC
+	ROL	R0
+;	BCC	220$
+;	.PRINT	#MSG5
+;	JMP	START
+220$:	MOV	R0,(R2)+	;Length in bytes
+	ADD	R0,R3
+	ADC	R4
+230$:	MOV	(R1)+,R0
+	CLRB	R0
+	SWAB	R0
+	MOV	R0,-(SP)	;push Volume
+	MOV	(R1)+,R0
+	SWAB	R0
+	ASL	R0
+	MOV	R0,(R2)+	;Repeat Point
+	MOV	(R1)+,-(SP)
+	SWAB	(SP)
+	ASL	(SP)
+	ADD	(SP)+,R0
+	beq	240$
+	CMP	#10,R0
+	Blo	250$
+240$:	MOV	#177777,R0
+	clr	-2(R2)
+250$:	MOV	R0,(R2)+	;Repeat End
+	MOV	(SP)+,(R2)+	;Volume
+	MOV	#20400,(R2)+	;DigiSpeed
+	ADD	#6,R2
+	SOB	R5,210$
+
+	MOV	#INTAB+74,R0
+	MOV	#31.,R1
+10$:	CLR	R2
+	MOV	#4,R3
+20$:	ROR	(R0)
+	ROR	2(R0)
+	ROR	R2
+	SOB	R3,20$
+	SWAB	R2
+	ASH	#-4,R2
+	MOV	R2,(R0)
+	ADD	#40,R0
+	SOB	R1,10$
+	RET
+
+beep:	clr	@#ur6
+	tst	@#157576
+	beq	10$
+	mov	#0,@#177576
+10$:	ret
+
+	.SAVE
+	.ASECT
+	.=30
+	.WORD	EMTDIS,0
+	.RESTORE
+
+EMTDIS:	bic	#1,	2(sp)
+	mov	r2,	-(sp)
+	mov	2(sp),	r2
+	mov	-(r2),	r2
+	CLR	RFL
+	CMP	#1,10(R0)
+	BNE	10$
+	CMPB	#10,1(R0)
+	BNE	10$
+	INC	RFL
+10$:	mov	r0,	@#174060
+	NOP
+	NOP
+	br	30$
+20$:	.word	0
+	.word	0
+	.word	0
+	.word	0
+30$:
+	bcc	40$
+	inc	4(sp)
+40$:
+	tst	r2
+	beq	80$
+
+	cmp	#177130, R2
+	bne	60$
+
+50$:	tstb	(R2)
+	nop
+	bpl	50$
+
+60$:	mov	#20$,	(r2)
+	NOP
+	NOP
+	cmp	#177130, r2
+	beq	70$
+	tst	-(r2)
+	nop
+	clr	(r2)
+	nop
+70$:	TST	RFL
+	BNE	80$
+	tstb	(r2)
+	NOP
+	NOP
+	bpl	70$
+	bit	#177400, (r2)
+	beq	80$
+	bis	#1,	4(sp)
+80$:
+	mov	(sp)+,	r2
+	rtt
+
+RFL:	HALT
+
+PREND:	R
+	.END	BEGIN
+                                                                                                                                                                                                                                                                                                       
