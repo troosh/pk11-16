@@ -1,0 +1,597 @@
+;	┌───────────────────────────────────────────────────
+;	│  Coryright (C) 1994 by Russian Digital Computing
+;	│  All rights reserved.
+
+; компилятор мелодий музыкального редактора SOUND TRACKER для
+; ZX-SPECTRUM 128 на БК-11М. поддерживает либо AY-3-8910(12),
+; либо две КР580ВИ53 при условии их успешного подключения ;-)
+
+; для использования уже скомпилированных мелодий используйте
+; декомпилятор, встроенный в SOUND TRACKER, доработанный KSA
+
+; для использования скомпилированных мелодий в программах для
+; БК, скомпонуйте скомпилированный текст проигрывающего блока
+; с результатом компиляции мелодии. Затраты машинного времени
+; на воспроизведение - приблизительно 5-7%.
+
+; ------------------------------------------------------------
+
+; ПРИБЛИЗИТЕЛЬНОЕ ОПИСАНИЕ ФОРМАТА ФАЙЛОВ SOUND TRACKER'А
+
+; 1) Набор сэмплов с начала до смещения 3635 по 202(8) байта
+;    Формат сэмпла:
+;    а) 40 байт - таблица уровней громкости
+;    б) 40 байт - таблица шума, 6 бит - тон, 7 (ст.) бит - шум
+;    в) 40 слов - таблица тона
+;    г) два байта - REPEAT (откуда зацикливать), REPLEN-1
+; 2) со смещения 3636 - последовательность проигрывания
+;    PATTERN'ов (мл. байт - номер, ст. байт - HEIGHT)
+;    если в списке не упоминается какой-либо PATTERN, в файле
+;    его нет физически!
+;    4636 - LENGHT-1
+; 3) со смещения 4677 - набор орнаментов по 40(8) байт
+; 4) 5677 - темп воспроизведения, 5700 - длина PATTERN'а
+; 5) 5701 - начало мелодии, нота занимает три байта, идут
+;    подряд ноты трех каналов. Формат ноты:
+;  60-70-100-110-120-140-150-160-170-20-30-40 - 12 полутонов
+;  младшие три бита - номер октавы, 360 - "заглушка" -R-
+
+; ------------------------------------------------------------
+
+	SONG=6000	;Адрес исходной	мелодии
+	TRANS=42000	;Адрес трансляции мелодии
+
+START:	CALL	COMP
+
+	TST	@#161200	;Использовалось	при
+	BNE	PLAY		;отладке программы
+	MOV	#WRITE1,WRI	;на ПК-11/16
+	MOV	#1,R0
+	MOV	#100600,@#174216
+
+	MOV	#161016,R5	;инициализация первой
+	MOV	#66,(R5)	;ИС КР580ВИ53
+	MOV	#166,(R5)
+	MOV	#266,(R5)
+	MOV	#161026,R5	;второй...
+	MOV	#34,(R5)
+	MOV	#134,(R5)
+	MOV	#234,(R5)
+
+PLAY:	MOV	#INI,@#100	;НАЧАЛО ПРОИГРЫВАЮЩЕГО БЛОКА
+	MOV	#TRANS,AS
+	MOV	#1,DELAY
+	MOV	#1,ASP
+	MOV	AS,TS
+	MOV	#STOP,TA
+	MOV	#STOP,TB
+	MOV	#STOP,TC
+	CLR	@#32
+	MTPS	#0
+	CLR	@#177662
+	JMP	IND
+
+INT:	JSR	R4,@#110346	;блок обработки	прерываний
+	MOV	R5,-(SP)	;при работе мелодии по
+	CLR	@#32		;прерыванию.
+	CALL	PLA
+	MOV	(SP)+,R5	;здесь не используется
+	JSR	R4,@#110362
+INI:	RTI
+
+PLA:	DEC	DELAY
+	BNE	ST
+	MOV	AS,R0
+	MOV	176(R0),DELAY
+	DEC	ASP
+	BNE	NT
+	MOV	174(R0),ASP
+10$:	MOV	TS,R0
+	CMP	(R0),#170000
+	BLO	20$
+	ADD	(R0),TS
+	MOV	#STOP,TA
+	MOV	#STOP,TB
+	MOV	#STOP,TC
+	BR	10$
+20$:	MOV	(R0)+,TP
+	ADD	AS,TP
+	MOV	R0,TS
+NT:	MOV	TP,R0
+	MOV	#NA,R5
+	MOV	#TA,R4
+	CLR	R3
+	CALL	SNT
+	MOV	#NB,R5
+	MOV	#TB,R4
+	MOV	#1,R3
+	CALL	SNT
+	MOV	#NC,R5
+	MOV	#TC,R4
+	MOV	#2,R3
+	CALL	SNT
+	MOV	R0,TP
+ST:	CLRB	TABLAY+7
+	MOV	#TA,R0
+	CLR	R5
+	CALL	STEP
+	MOV	#TB,R0
+	MOV	#1,R5
+	CALL	STEP
+	MOV	#TC,R0
+	MOV	#2,R5
+	CALL	STEP
+	JMP	@WRI
+
+WRITE1:	MOV	#TABLAY,R0	;занесение значений в
+	MOV	#161010,R1	;КР580ВИ53 (две	штуки)
+	MOV	#4,R3
+	MOV	#3,R4		;первая	ВИ53:
+10$:	MOV	(R0)+,R5	;161010,161012,161014 -
+	ASH	R3,R5		;регистры данных
+	MOV	R5,(R1)
+	SWAB	R5		;161016	- рег. управления
+	MOV	R5,(R1)+
+	SOB	R4,10$
+	MOV	#TABLAY+10,R0	;вторая	- с адреса 161020
+	MOV	#161020,R1	;так же
+	MOVB	TABLAY+7,R2
+	MOV	#1,R3
+	MOV	#3,R4
+20$:	MOVB	(R0)+,R5
+	BITB	R3,R2
+	BEQ	30$
+	CLR	R5
+30$:	MOVB	VOLTAB(R5),(R1)
+	TST	(R1)+
+	ASL	R3
+	SOB	R4,20$
+	RTS	PC
+
+WRITE2:	MOV	#TABLAY+15,R0	;занесение значений
+	MOV	#177714,R1	;в AY-3-8910(12)
+	MOV	#362,R2
+	MOV	#15,R3
+	TSTB	(R0)
+	BEQ	10$
+	MOV	R2,(R1)
+	MOVB	(R0),R5
+	COMB	R5
+	MOVB	R5,(R1)
+	CLRB	(R0)
+10$:	INC	R2
+20$:	MOV	R2,(R1)
+	MOVB	-(R0),R5
+	COMB	R5
+	MOVB	R5,(R1)
+	INC	R2
+	SOB	R3,20$
+	RTS	PC
+
+SNT:	MOVB	(R0)+,R1	;обработка очередной ноты
+	BMI	10$
+	MOVB	R1,(R5)
+	MOVB	(R0)+,R1
+	BMI	20$
+	ADD	AS,R1
+	MOV	200(R1),(R4)
+	ADD	AS,(R4)
+10$:	RTS	PC
+20$:	BIT	#100,R1
+	BNE	30$
+	MOV	#FUCKA,(R4)
+	BR	40$
+30$:	MOV	#FUCKB,(R4)
+40$:	BIC	#300,R1
+	MOVB	(R0)+,TABLAY+13
+	MOVB	R1,TABLAY+15
+	RTS	PC
+STEP:	MOV	(R0),R1
+	CMP	(R1),#170000
+	BLO	10$
+	ADD	(R1),(R0)
+	BR	STEP
+10$:	MOVB	(R1)+,TABLAY+10(R5)
+	ASRB	TABLAY+7
+	BISB	(R1),TABLAY+7
+	BITB	#40,(R1)+
+	BNE	20$
+	MOVB	(R1),TABLAY+6
+20$:	INC	R1
+	MOVB	NOTES(R5),R2
+	MOVB	(R1)+,R3
+	ADD	R3,R2
+	BIC	#177400,R2
+	ASL	R2
+	MOV	PERIOD(R2),R2
+	ADD	(R1)+,R2
+	ASL	R5
+	MOV	R2,TABLAY(R5)
+	MOV	R1,(R0)
+	RTS	PC
+
+FUCKA:	.BYTE	20,44
+	.BLKB	4
+	.WORD	177772
+FUCKB:	.BYTE	20,40
+	.BLKB	4
+	.WORD	177772
+STOP:	.WORD	0,0,0,177772
+DELAY:	.WORD	1
+TP:	.WORD	0
+ASP:	.WORD	1
+TS:	.WORD	0
+TA:	.WORD	STOP
+TB:	.WORD	STOP
+TC:	.WORD	STOP
+NOTES:
+NA:	.BYTE	0
+NB:	.BYTE	0
+NC:	.WORD	0
+AS:	.WORD	TRANS
+
+TABLAY:	.BLKB	20
+
+	; таблица ниже предназначена для обслуживания КР580ВИ53
+	; для AY-3-8910 не требуется
+VOLTAB:	.BYTE 0,377,300,200,140,100,60,40,30,20,14,10,6,4,3,2
+	.EVEN
+
+WRI:	.WORD	WRITE2
+
+PERIOD:
+.WORD 007370,007020,006540,006200,005730,005450,005210,004760
+.WORD 004540,004340,004130,003740,003574,003410,003260,003100
+.WORD 002754,002624,002504,002370,002260,002160,002054,001760
+.WORD 001676,001604,001530,001440,001366,001312,001242,001174
+.WORD 001130,001070,001026,000770,000737,000702,000654,000620
+.WORD 000573,000545,000521,000476,000454,000434,000413,000374
+.WORD 000357,000341,000326,000310,000275,000262,000250,000237
+.WORD 000226,000216,000205,000176,000167,000160,000153,000144
+.WORD 000136,000131,000124,000117,000113,000107,000102,000077
+.WORD 000073,000070,000065,000062,000057,000054,000052,000047
+.WORD 000045,000043,000041,000037,000035,000034,000032,000031
+.WORD 000027,000026,000025,000023,000022,000021,000020,000017
+
+; КОНЕЦ КОДА ПРОИГРЫВАЮЩЕГО БЛОКА
+
+; ------------------------------------------------------------
+
+; далее собственно SOUND TRACKER SONG COMPILER v2.05
+
+COMP:	MOV	#160016,@#10
+	CALL	CLRTAB
+	MOVB	SONG+4636,R5	;определение кол-ва PATTERN'ов
+	INC	R5
+	MOV	R5,-(SP)
+	MOV	#SONG+3636,R1
+10$:	MOV	(R1)+,R3	;определяем, какие PATTERN'ы
+	MOVB	R3,R3		;используются
+	MOVB	R5,TABL(R3)
+	SOB	R5,10$
+	MOV	#TABL,R0
+	MOV	#400,R1
+	MOV	#1,R2
+	CALL	RETAB		;нумеруем их по	порядку,
+	MOV	(SP)+,R5	;исключая неиспользованные
+	MOV	#SONG+3636,R1
+20$:	MOV	(R1),R0		;перенумеровываем PATTERN'ы
+	MOVB	R0,R0		;в исходной мелодии
+	MOVB	TABL(R0),(R1)
+	TST	(R1)+
+	SOB	R5,20$
+	DEC	R2		;в R2 -	количество PATTERN'ов
+	MOV	R2,NUM
+
+SETSAM:	MOV	R2,-(SP)	;расстановка номеров инструм.
+	MOV	#3,FLAG
+	CLR	ADR
+10$:	CLR	R5
+	CLR	ADRT
+	MOVB	SONG+4636,R1
+	INC	R1
+	MOV	#SONG+3636,R0
+20$:	MOVB	(R0)+,R2	;берем по порядку воспроизвед.
+	INC	R0
+	MUL	#1100,R2	;умножаем на длину
+	ADD	#5701-1100+SONG,R3	;нач. адр. PATTERN'а
+	ADD	ADR,R3
+	MOVB	5700+SONG,R2	;кол-во	нот в нем
+30$:	BITB	#360,(R3)	;нота есть?
+	BEQ	70$		;нет...
+	MOVB	1(R3),R4
+	BIC	#177417,R4	;берем номер сэмпла
+	BEQ	40$		;если равен нулю
+	CLRB	R5
+	BISB	R4,R5		;запоминаем
+40$:	BISB	R5,1(R3)	;восстанавливаем, если был нуль
+	SWAB	R5
+	MOVB	1(R3),R4
+	BIC	#177760,R4	;берем признак орнамента
+	BEQ	50$		;нет
+	MOV	R4,ADRT		;запоминаем
+	CLRB	R5
+	BISB	2(R3),R5	;запоминаем инф. байт
+	CMPB	#17,ADRT
+	BNE	50$
+	BICB	#360,R5		;очищаем по маске, если	орнам.
+50$:	MOVB	R5,2(R3)	;восстанавливаем инф. байт
+	BICB	#17,1(R3)
+	BISB	ADRT,1(R3)	;восстанавливаем признак
+60$:	SWAB	R5
+70$:	ADD	#11,R3		;переходим на след. ноту трека
+	SOB	R2,30$
+	SOB	R1,20$
+	ADD	#3,ADR		;смещаемся на один канал
+	DEC	FLAG
+	BNE	10$
+
+ANAL:	MOV	(SP)+,R2
+	MUL	#300,R2		;анализ	используемых инструм.
+	CALL	CLRTAB
+	MOV	#SONG+5701,R0
+10$:	BITB	#360,(R0)+	;нота есть?
+	BEQ	30$		;нет...
+	MOVB	1(R0),R2
+	BIC	#177760,R2	;берем номер орнамента
+	MOVB	(R0),R1
+	BIC	#177760,R1	;берем признак орнамента
+	CMP	#17,R1		;есть?
+	BEQ	20$		;есть...
+	CMP	R1,#10		;признак огибающей?
+	BHIS	30$		;да...
+	CLR	R2		;тогда орнамента нет
+20$:	MOVB	(R0),R1
+	BIC	#177417,R1	;берем номер сэмпла
+	BIS	R2,R1		;совмещаем с орнаментом
+	MOVB	R1,TABL-20(R1)	;помечаем в таблице
+30$:	TST	(R0)+
+	SOB	R3,10$
+
+	MOV	#TABL-20,R0
+	MOV	#10,R1
+	CLR	(R0)+
+	SOB	R1,.-2
+	MOV	#360,R1
+	MOV	#2,R2
+	CALL	RETAB		;нумеруем по порядку
+
+A:	MOV	#SONG,ADR	;обработка инструментов
+	MOV	#TABL,ADRT
+	MOV	#TRANS+202,ADRI
+	MOV	#SONG+4637,ADRP
+	MOV	#TRANS+300,R3
+	MOV	#360,Q
+	MOV	#300,TRANS+200
+	MOV	(PC)+,(R3)+
+	.BYTE	0,44
+	CLR	(R3)+
+	CLR	(R3)+
+	MOV	#177772,(R3)+	;"ЗАГЛУШКА" -R-
+10$:	MOV	ADRT,R0
+	TSTB	(R0)
+	BEQ	70$
+	MOV	ADR,R0
+	MOVB	201(R0),R5
+	MOV	R5,R1
+	INC	R5
+	MOV	R5,R2
+	ASL	R5
+	ADD	R2,R5
+	ASL	R5
+	NEG	R5
+	MOV	R5,-(SP)
+	MOV	#40,R4
+	MOVB	200(R0),R2
+	BEQ	20$
+	MOV	R2,R4
+	ADD	R1,R4
+20$:	MOV	ADRI,R1
+	MOV	R3,(R1)
+	SUB	#TRANS,(R1)+
+	MOV	R1,ADRI
+	MOV	ADRP,R5
+30$:	MOVB	(R0),(R3)+
+	MOVB	40(R0),R1
+	CLR	R2
+	BIT	#100,R1
+	BEQ	40$
+	ADD	#4,R2
+40$:	BIT	#200,R1
+	BEQ	50$
+	ADD	#40,R2
+50$:	MOVB	R2,(R3)+
+	BICB	#300,R1
+	MOVB	R1,(R3)+
+	MOVB	(R5)+,(R3)+
+	MOV	R0,R1
+	SUB	ADR,R1
+	ASL	R1
+	ADD	ADR,R1
+	MOV	100(R1),R2
+	BIC	#10000,R2
+	BIT	#10000,100(R1)
+	BNE	60$
+	NEG	R2
+60$:	MOV	R2,(R3)+
+	INC	R0
+	SOB	R4,30$
+	MOV	(SP)+,(R3)+
+70$:	INC	ADRT
+	ADD	#40,ADRP
+	CMP	ADRP,#SONG+5637
+	BLO	80$
+	MOV	#SONG+4637,ADRP
+	ADD	#202,ADR
+80$:	DEC	Q
+	BNE	10$
+
+B:	MOV	#SONG+5701,ADRT	;трансляция мелодии
+	MOV	#TABL2,ADRP
+	MOV	NUM,R4
+	MOV	#3,FLAG
+B1:	MOV	ADRP,R5
+	MOV	ADRT,R0
+	MOV	R3,(R5)
+	SUB	#TRANS,(R5)+
+	MOV	R5,ADRP
+	MOVB	SONG+5700,R5
+	MOV	R5,-(SP)
+	ASL	R5
+	ADD	(SP)+,R5
+10$:	CALL	NOTE
+	BCS	50$
+	MOVB	R1,(R3)+
+	BMI	60$
+	MOVB	1(R0),R2
+	MOV	R2,R1
+	CLC
+	RORB	R1
+	ASRB	R1
+	ASRB	R1
+	ASRB	R1
+	BIC	#177760,R1
+	BIC	#177760,R2
+	CMP	R2,#10
+	BLO	30$
+	CMP	R2,#17
+	BEQ	30$
+	BIS	#200,R2
+	DEC	R1
+	MUL	#202,R1
+	ADD	#SONG+42,R1
+	BITB	#100,(R1)
+	BNE	20$
+	BIS	#300,R2
+20$:	MOVB	R2,(R3)+
+	MOVB	2(R0),(R3)+
+	BR	60$
+30$:	MOVB	1(R0),R1
+	BIC	#177417,R1
+	CMP	R2,#17
+	BNE	40$
+	MOVB	2(R0),R2
+	BIC	#177760,R2
+	BIS	R2,R1
+40$:	MOVB	TABL-20(R1),(R3)+
+	BR	60$
+50$:	CLRB	1(R0)
+	CLRB	2(R0)
+	CLRB	(R3)+
+	CLRB	(R3)+
+60$:	ADD	#3,R0
+	DEC	FLAG
+	DEC	R5
+	BNE	10$
+	ADD	#1100,ADRT
+	DEC	R4
+	BEQ	C
+	JMP	B1
+
+C:	MOVB	SONG+4636,R5	;трансляция списка
+	INC	R5
+	MOV	#SONG+3636,R0
+	MOV	#TRANS,R1
+10$:	MOVB	(R0)+,R2
+	INC	R0
+	ASL	R2
+	MOV	TABL2-2(R2),(R1)+
+	SOB	R5,10$
+	MOV	R1,R0
+	SUB	#TRANS,R0
+	NEG	R0
+	MOV	R0,(R1)+
+	MOVB	SONG+5677,TRANS+176
+	MOVB	SONG+5700,TRANS+174
+	RTS	PC
+
+CLRTAB:	MOV	#TABL,R0
+	MOV	#200,R1
+	CLR	(R0)+
+	SOB	R1,.-2
+	RTS	PC
+
+RETAB:	MOV	R2,R3	;перенумеровка чисел в табл. по	порядку
+10$:	TSTB	(R0)
+	BEQ	20$
+	MOVB	R2,(R0)
+	ADD	R3,R2
+20$:	INC	R0
+	SOB	R1,10$
+	RTS	PC
+
+NOTE:	MOVB	(R0),R1		;обработка ноты
+	BMI	70$
+	BITB	#370,R1
+	BEQ	50$
+	BIC	#177400,R1
+	MOV	R1,R2
+	BIC	#370,R2
+	ASR	R1
+	ASR	R1
+	ASR	R1
+	CMP	R1,#13
+	BLO	10$
+	DEC	R1
+10$:	CMP	R1,#5
+	BHI	20$
+	ADD	#15,R1
+20$:	SUB	#6,R1
+	TST	R2
+	BEQ	40$
+30$:	ADD	#14,R1
+	SOB	R2,30$
+40$:	BR	60$
+50$:	MOV	#200,R1
+60$:	CLC
+	RTS	PC
+70$:	CLR	R1
+	SEC
+	RTS	PC
+
+Q:	HALT
+FLAG:	HALT
+NUM:	HALT
+ADR:	HALT
+ADRI:	HALT
+ADRT:	HALT
+ADRP:	HALT
+TTTT:	HALT
+	.BLKB	20
+TABL:	.BLKB	400
+TABL2:	.BLKB	100
+	.EVEN
+
+IND:	WAIT			;индикаторы уровня
+	CALL	PLA
+	MOV	#TABLAY+10,R5
+	MOV	#72000,R4
+	MOV	#3,R3
+10$:	MOV	#3,R2
+20$:	MOVB	(R5),R1
+	CMP	R1,#20
+	BLO	30$
+	MOV	#14,R1
+30$:	MOV	R1,R0
+	SUB	#20,R0
+	NEG	R0
+	BEQ	50$
+40$:	CLR	(R4)+
+	SOB	R0,40$
+50$:	MOV	R1,R0
+	ASL	R0
+	BEQ	70$
+60$:	MOV	#177777,(R4)+
+	SOB	R0,60$
+70$:	MOV	R1,R0
+	SUB	#20,R0
+	NEG	R0
+	BEQ	90$
+80$:	CLR	(R4)+
+	SOB	R0,80$
+90$:	SOB	R2,20$
+	INC	R5
+	ADD	#2000,R4
+	SOB	R3,10$
+	BR	IND
+	.END	START
